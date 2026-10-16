@@ -1,0 +1,123 @@
+<div class="mem app-container">
+  <app-page-header [title]="'documentWorkspace.members' | t" />
+
+  <!-- Add member (workspace admins only) -->
+  @if (isAdmin()) {
+  <app-card class="mem__invite">
+    <div class="mem__invite-head">
+      <span class="mem__tile"><app-icon name="users" [size]="20" /></span>
+      <div class="mem__invite-text">
+        <h2 class="mem__invite-title">{{ 'documentWorkspace.members.add.title' | t }}</h2>
+        <p class="mem__invite-sub">{{ 'documentWorkspace.members.add.subtitle' | t }}</p>
+      </div>
+    </div>
+
+    <form [formGroup]="addForm" (ngSubmit)="add()" novalidate>
+      <div class="mem__invite-row">
+        <div class="mem__invite-email">
+          <app-text-field
+            formControlName="email"
+            type="email"
+            icon="user"
+            [placeholder]="'documentWorkspace.invite.emailPlaceholder' | t"
+            [invalid]="emailInvalid()"
+          />
+        </div>
+        <app-button type="submit" variant="primary" icon="plus" [loading]="adding()">
+          {{ 'documentWorkspace.members.add.send' | t }}
+        </app-button>
+      </div>
+
+      <span class="mem__label">{{ 'documentWorkspace.members.add.roleLabel' | t }}</span>
+      <div class="mem__roles" role="radiogroup" [attr.aria-label]="'documentWorkspace.members.add.roleLabel' | t">
+        @for (r of roles; track r) {
+          <button
+            type="button"
+            role="radio"
+            class="mem__role"
+            [class.mem__role--active]="selectedRole() === r"
+            [attr.aria-checked]="selectedRole() === r"
+            (click)="setRole(r)"
+          >
+            <span class="mem__role-name">
+              {{ roleLabel(r) }}
+              @if (selectedRole() === r) {
+                <app-icon name="check" [size]="14" />
+              }
+            </span>
+            <span class="mem__role-desc">{{ roleDescription(r) }}</span>
+          </button>
+        }
+      </div>
+    </form>
+  </app-card>
+  }
+
+  @if (loading()) {
+    <div class="mem__loading"><app-spinner /></div>
+  } @else {
+    <!-- Members -->
+    <section class="mem__section">
+      <h2 class="mem__section-title">
+        {{ 'documentWorkspace.members' | t }}
+        <span class="mem__count">{{ members().length }}</span>
+      </h2>
+      <app-card flush>
+        @for (m of members(); track m.id) {
+          <div class="mem__row">
+            <app-avatar [name]="m.fullName || m.email" [photoUrl]="m.photoUrl" [size]="40" />
+            <div class="mem__info">
+              <span class="mem__name">{{ m.fullName || m.email }}</span>
+              <span class="mem__meta">
+                @if (m.fullName) {
+                  {{ m.email }} ·
+                }
+                {{ 'documentWorkspace.members.joined' | t: { time: (m.joinedAt | relativeTime) } }}
+              </span>
+            </div>
+
+            @if (isOwnerMember(m)) {
+              <app-badge tone="accent">{{ 'documentWorkspace.role.OWNER' | t }}</app-badge>
+            } @else {
+              @if (m.status === 'SUSPENDED') {
+                <app-badge tone="warning">{{ 'documentWorkspace.members.suspended' | t }}</app-badge>
+              }
+              @if (assignableRoles(m).length > 0) {
+                <span class="mem__select">
+                  <select
+                    [value]="m.role"
+                    [attr.aria-label]="roleLabel(m.role)"
+                    (change)="changeRole(m, $any($event.target).value)"
+                  >
+                    @for (r of assignableRoles(m); track r) {
+                      <option [value]="r" [selected]="r === m.role">{{ roleLabel(r) }}</option>
+                    }
+                  </select>
+                  <app-icon name="chevron-down" [size]="14" />
+                </span>
+              } @else {
+                <app-badge [tone]="m.role === 'ADMIN' ? 'accent' : 'neutral'">{{ roleLabel(m.role) }}</app-badge>
+              }
+              @if (canSuspend(m)) {
+                <button type="button" class="mem__btn" (click)="toggleSuspended(m)">
+                  {{ (m.status === 'SUSPENDED' ? 'documentWorkspace.members.reactivate' : 'documentWorkspace.members.suspend') | t }}
+                </button>
+              }
+              @if (canRemove(m)) {
+                <button
+                  type="button"
+                  class="mem__remove"
+                  [attr.aria-label]="'documentWorkspace.confirmRemoveMember.title' | t"
+                  [title]="'documentWorkspace.confirmRemoveMember.title' | t"
+                  (click)="removeMember(m)"
+                >
+                  <app-icon name="x" [size]="16" />
+                </button>
+              }
+            }
+          </div>
+        }
+      </app-card>
+    </section>
+  }
+</div>

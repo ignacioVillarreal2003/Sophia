@@ -1,0 +1,202 @@
+spring:
+  application:
+    name: notification
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/sophia_notification}
+    username: ${DB_USERNAME:sophia}
+    password: ${DB_PASSWORD:sophia}
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:10}
+      minimum-idle: 2
+      connection-timeout: 10000
+      max-lifetime: 1800000
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+          batch_size: 50
+        order_inserts: true
+        order_updates: true
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      ssl:
+        enabled: ${REDIS_SSL:false}
+
+  cache:
+    type: redis
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:29092}
+    security:
+      protocol: ${KAFKA_SECURITY_PROTOCOL:PLAINTEXT}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      acks: all
+      properties:
+        enable.idempotence: true
+    consumer:
+      group-id: notification
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      enable-auto-commit: false
+      auto-offset-reset: earliest
+    listener:
+      ack-mode: record
+
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail.smtp.auth: ${MAIL_SMTP_AUTH:false}
+      mail.smtp.starttls.enable: ${MAIL_SMTP_STARTTLS:false}
+      mail.smtp.connectiontimeout: 5000
+      mail.smtp.timeout: 5000
+      mail.smtp.writetimeout: 5000
+
+  jackson:
+    default-property-inclusion: non_null
+    time-zone: UTC
+
+  task:
+    scheduling:
+      pool:
+        size: ${SCHEDULING_POOL_SIZE:4}
+
+  lifecycle:
+    timeout-per-shutdown-phase: ${SHUTDOWN_TIMEOUT:30s}
+
+server:
+  port: ${SERVER_PORT:8082}
+  shutdown: graceful
+  forward-headers-strategy: framework
+  compression:
+    enabled: true
+    mime-types: application/json
+    min-response-size: 1024
+
+sophia:
+  security:
+    jwt:
+      json-web-key-set-uri: ${JWT_JSON_WEB_KEY_SET_URI:}
+      secret: ${JWT_SECRET:}
+      issuer: ${JWT_ISSUER:sophia-authentication}
+    cors:
+      allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200,http://localhost:3000}
+      allowed-methods: GET,POST,PUT,PATCH,DELETE,OPTIONS
+      allowed-headers: "*"
+      exposed-headers: X-Request-Id
+      allow-credentials: true
+      max-age: 3600
+    rate-limit:
+      enabled: ${RATE_LIMIT_ENABLED:true}
+      requests: ${RATE_LIMIT_REQUESTS:300}
+      window: ${RATE_LIMIT_WINDOW:1m}
+  commands:
+    topic: ${NOTIFICATION_COMMANDS_TOPIC:sophia.notifications.commands}
+    dead-letter-topic: ${NOTIFICATION_COMMANDS_DEAD_LETTER_TOPIC:sophia.notifications.commands.dlt}
+    partitions: ${NOTIFICATION_COMMANDS_PARTITIONS:6}
+    replicas: ${KAFKA_TOPIC_REPLICAS:1}
+    concurrency: ${NOTIFICATION_COMMANDS_CONCURRENCY:3}
+  user-events:
+    topic: ${USER_EVENTS_TOPIC:sophia.authentication.user-events}
+    dead-letter-topic: ${USER_EVENTS_DEAD_LETTER_TOPIC:sophia.authentication.user-events.dlt}
+    replicas: ${KAFKA_TOPIC_REPLICAS:1}
+    concurrency: ${USER_EVENTS_CONCURRENCY:2}
+  stream:
+    heartbeat-interval: ${STREAM_HEARTBEAT_INTERVAL:20s}
+  email:
+    enabled: ${EMAIL_ENABLED:true}
+    from: ${EMAIL_FROM:no-reply@sophia.local}
+    dispatch-interval: ${EMAIL_DISPATCH_INTERVAL:10s}
+    max-attempts: ${EMAIL_MAX_ATTEMPTS:5}
+    base-backoff: ${EMAIL_BASE_BACKOFF:1m}
+    backlog-refresh-interval: ${EMAIL_BACKLOG_REFRESH_INTERVAL:30s}
+    per-recipient-limit: ${EMAIL_PER_RECIPIENT_LIMIT:20}
+    per-recipient-window: ${EMAIL_PER_RECIPIENT_WINDOW:1h}
+  frontend:
+    base-url: ${FRONTEND_BASE_URL:http://localhost:4200}
+    verify-email-path: /verify-email
+    reset-password-path: /reset-password
+    confirm-email-change-path: /confirm-email-change
+    invitation-path: /invitations/accept
+    notification-settings-path: /settings/notifications
+  retention:
+    read-notifications: ${READ_NOTIFICATIONS_RETENTION:90d}
+    notifications: ${NOTIFICATIONS_RETENTION:365d}
+    completed-emails: ${COMPLETED_EMAILS_RETENTION:7d}
+    processed-messages: ${PROCESSED_MESSAGES_RETENTION:7d}
+    audit-log: ${AUDIT_LOG_RETENTION:365d}
+  monitoring:
+    username: ${MONITORING_USERNAME:prometheus}
+    password: ${MONITORING_PASSWORD:prometheus}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: when-authorized
+      group:
+        readiness:
+          include: readinessState,db,redis
+        liveness:
+          include: livenessState
+  info:
+    git:
+      mode: full
+  metrics:
+    tags:
+      application: ${spring.application.name}
+  tracing:
+    sampling:
+      probability: ${TRACING_SAMPLING_PROBABILITY:0.1}
+  otlp:
+    tracing:
+      endpoint: ${OTLP_TRACING_ENDPOINT:http://localhost:4318/v1/traces}
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      mail:
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 60s
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+    enabled: ${SWAGGER_ENABLED:true}
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: ${SWAGGER_ENABLED:true}
+    operations-sorter: alpha
+    tags-sorter: alpha
+
+logging:
+  level:
+    root: INFO
+    com.sophia: INFO

@@ -1,0 +1,36 @@
+<app-page-header
+  [title]="(isEdit() ? 'admin.permissions.form.editTitle' : 'admin.permissions.form.newTitle') | t"
+  backLink="/admin/permissions"
+>
+  @if (isEdit()) {
+    <app-button variant="danger" (click)="deletePermission()">{{ 'admin.permissions.delete' | t }}</app-button>
+  }
+  <app-button [loading]="saving()" (click)="submit()">
+    {{ (isEdit() ? 'common.saveChanges' : 'admin.permissions.form.create') | t }}
+  </app-button>
+</app-page-header>
+
+@if (loading()) {
+  <div class="pmf__loading">
+    <app-spinner/>
+  </div>
+} @else {
+  <app-card>
+    <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <app-text-field
+        [label]="'admin.permissions.form.name' | t"
+        formControlName="name"
+        required
+        [hint]="'admin.permissions.form.nameHint' | t"
+        [invalid]="!!errorOf('name')"
+        [error]="errorOf('name') ?? ''"
+      />
+      <app-text-field
+        [label]="'admin.permissions.form.category' | t"
+        formControlName="category"
+        [placeholder]="'admin.permissions.form.categoryPlaceholder' | t"
+      />
+      <app-textarea [label]="'admin.permissions.form.description' | t" formControlName="description" [rows]="2"/>
+    </form>
+  </app-card>
+}

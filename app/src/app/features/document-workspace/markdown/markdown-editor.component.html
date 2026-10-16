@@ -1,0 +1,132 @@
+<div class="mde" [class.mde--readonly]="readonly()">
+  @if (!readonly()) {
+    <div class="mde__toolbar" role="toolbar" [attr.aria-label]="'markdown.toolbar' | t">
+      <div class="mde__group">
+        <button type="button" class="mde__btn mde__btn--text" [title]="'markdown.h1' | t" (click)="heading(1)">H1</button>
+        <button type="button" class="mde__btn mde__btn--text" [title]="'markdown.h2' | t" (click)="heading(2)">H2</button>
+        <button type="button" class="mde__btn mde__btn--text" [title]="'markdown.h3' | t" (click)="heading(3)">H3</button>
+      </div>
+      <div class="mde__group">
+        <button type="button" class="mde__btn mde__btn--bold" [title]="('markdown.bold' | t) + ' (Ctrl+B)'" (click)="wrap('**', '**', 'bold')">B</button>
+        <button type="button" class="mde__btn mde__btn--italic" [title]="('markdown.italic' | t) + ' (Ctrl+I)'" (click)="wrap('*', '*', 'italic')">I</button>
+        <button type="button" class="mde__btn mde__btn--strike" [title]="('markdown.strike' | t) + ' (Ctrl+Shift+X)'" (click)="wrap('~~', '~~', 'text')">S</button>
+        <button type="button" class="mde__btn mde__btn--mark" [title]="('markdown.highlight' | t) + ' (Ctrl+Shift+H)'" (click)="wrap('==', '==', 'text')">A</button>
+        <button type="button" class="mde__btn" [title]="('markdown.code' | t) + ' (Ctrl+E)'" (click)="wrap('`', '`', 'code')"><app-icon name="code" [size]="16" /></button>
+      </div>
+      <div class="mde__group">
+        <button type="button" class="mde__btn mde__btn--text" [title]="'markdown.bullets' | t" (click)="list('bullet')">•≡</button>
+        <button type="button" class="mde__btn mde__btn--text" [title]="'markdown.numbers' | t" (click)="list('number')">1≡</button>
+        <button type="button" class="mde__btn" [title]="('markdown.tasks' | t) + ' (Ctrl+Shift+L)'" (click)="list('task')"><app-icon name="check-circle" [size]="16" /></button>
+        <button type="button" class="mde__btn mde__btn--text" [title]="'markdown.quote' | t" (click)="prefixLines('> ')">❝</button>
+      </div>
+      <div class="mde__group">
+        <button type="button" class="mde__btn" [title]="('markdown.link' | t) + ' (Ctrl+K)'" (click)="link()"><app-icon name="link" [size]="16" /></button>
+        <button type="button" class="mde__btn mde__btn--text" [title]="'markdown.wikilink' | t" (click)="insertBlock('[[]]', 2)">[[ ]]</button>
+        <button type="button" class="mde__btn" [title]="'markdown.image' | t" (click)="insertBlock('![alt](https://)', 2)"><app-icon name="image" [size]="16" /></button>
+        <button type="button" class="mde__btn" [title]="'markdown.table' | t" (click)="insertBlock('| Column 1 | Column 2 | Column 3 |\n| --- | --- | --- |\n|  |  |  |\n|  |  |  |\n')"><app-icon name="table" [size]="16" /></button>
+        <button type="button" class="mde__btn mde__btn--text" [title]="'markdown.codeBlock' | t" (click)="codeBlock()">{{ '{ }' }}</button>
+        <button type="button" class="mde__btn mde__btn--text" [title]="'markdown.callout' | t" (click)="insertBlock('> [!note] Title\n> ', 11)">ℹ︎</button>
+        <button type="button" class="mde__btn mde__btn--text" [title]="'markdown.divider' | t" (click)="insertBlock('---\n')">―</button>
+      </div>
+
+      <span class="mde__spacer"></span>
+
+      <div class="mde__group mde__group--modes" role="tablist">
+        <button type="button" role="tab" class="mde__mode" [class.is-active]="mode() === 'edit'" [attr.aria-selected]="mode() === 'edit'" (click)="setMode('edit')">{{ 'markdown.mode.edit' | t }}</button>
+        <button type="button" role="tab" class="mde__mode mde__mode--split" [class.is-active]="mode() === 'split'" [attr.aria-selected]="mode() === 'split'" (click)="setMode('split')">{{ 'markdown.mode.split' | t }}</button>
+        <button type="button" role="tab" class="mde__mode" [class.is-active]="mode() === 'preview'" [attr.aria-selected]="mode() === 'preview'" (click)="setMode('preview')">{{ 'markdown.mode.preview' | t }}</button>
+      </div>
+      <button type="button" class="mde__btn mde__btn--text" [class.is-active]="showOutline()" [title]="'markdown.outline' | t" (click)="showOutline.set(!showOutline())">☰</button>
+    </div>
+  } @else {
+    <div class="mde__toolbar mde__toolbar--readonly">
+      <span class="mde__readonly-note">{{ 'markdown.readonly' | t }}</span>
+      <span class="mde__spacer"></span>
+      <button type="button" class="mde__btn mde__btn--text" [class.is-active]="showOutline()" [title]="'markdown.outline' | t" (click)="showOutline.set(!showOutline())">☰</button>
+    </div>
+  }
+
+  <div class="mde__body" [class.mde__body--split]="effectiveMode() === 'split'">
+    @if (effectiveMode() !== 'preview') {
+      <div class="mde__pane mde__pane--source">
+        <textarea
+          #source
+          class="mde__source"
+          spellcheck="true"
+          [readOnly]="readonly()"
+          [attr.placeholder]="'markdown.placeholder' | t"
+          [value]="value()"
+          (input)="onInput($event)"
+          (keydown)="onKeydown($event)"
+          (keyup)="onKeyup($event)"
+          (click)="onKeyup($event)"
+          (paste)="onPaste($event)"
+          (drop)="onDrop($event)"
+          (scroll)="onSourceScroll($event)"
+          (blur)="popup.set(null)"
+        ></textarea>
+      </div>
+    }
+    @if (effectiveMode() !== 'edit') {
+      <div class="mde__pane mde__pane--preview" #previewPane>
+        <div class="mde__page">
+          <app-markdown-view
+            [source]="value()"
+            [readonly]="readonly()"
+            (sourceChange)="onPreviewSource($event)"
+            (wikilink)="wikilink.emit($event)"
+          />
+        </div>
+      </div>
+    }
+
+    @if (showOutline()) {
+      <aside class="mde__outline" [attr.aria-label]="'markdown.outline' | t">
+        <h3 class="mde__outline-title">{{ 'markdown.outline' | t }}</h3>
+        @for (entry of outline(); track entry.line) {
+          <button type="button" class="mde__outline-item" [style.padding-left.px]="8 + (entry.level - 1) * 12" (click)="goTo(entry)">
+            {{ entry.text }}
+          </button>
+        } @empty {
+          <p class="mde__outline-empty">{{ 'markdown.outline.empty' | t }}</p>
+        }
+      </aside>
+    }
+  </div>
+
+  <div class="mde__status">
+    <span>{{ 'markdown.stats.words' | t: { count: stats().words } }}</span>
+    <span>{{ 'markdown.stats.chars' | t: { count: stats().characters } }}</span>
+    <span>{{ 'markdown.stats.read' | t: { minutes: stats().readingMinutes } }}</span>
+    @if (stats().tasksTotal > 0) {
+      <span class="mde__tasks">
+        <span class="mde__progress"><span class="mde__progress-bar" [style.width.%]="(stats().tasksDone / stats().tasksTotal) * 100"></span></span>
+        {{ stats().tasksDone }}/{{ stats().tasksTotal }}
+      </span>
+    }
+    @if (!readonly()) {
+      <span class="mde__hint">{{ 'markdown.hint' | t }}</span>
+    }
+  </div>
+
+  @if (popup(); as pop) {
+    @if (popupItems().length > 0) {
+      <div class="mde__popup" [style.left.px]="pop.x" [style.top.px]="pop.y" role="listbox">
+        @for (item of popupItems(); track item.key; let i = $index) {
+          <button
+            type="button"
+            role="option"
+            class="mde__popup-item"
+            [class.is-active]="i === popupIndex()"
+            [attr.aria-selected]="i === popupIndex()"
+            (mousedown)="$event.preventDefault(); applyPopupItem(item)"
+            (mouseenter)="popupIndex.set(i)"
+          >
+            <span class="mde__popup-hint">{{ item.hint }}</span>
+            <span>{{ item.label }}</span>
+          </button>
+        }
+      </div>
+    }
+  }
+</div>

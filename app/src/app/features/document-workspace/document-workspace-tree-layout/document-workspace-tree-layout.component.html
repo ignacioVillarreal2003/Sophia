@@ -1,0 +1,7 @@
+@if (documentWorkspaces.active()?.status === 'READ_ONLY') {
+  <div class="ro" role="status">
+    <app-icon name="lock" [size]="16" />
+    <span>{{ 'documentWorkspace.readOnly' | t }}</span>
+  </div>
+}
+<router-outlet />

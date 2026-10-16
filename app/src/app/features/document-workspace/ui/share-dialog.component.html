@@ -1,0 +1,104 @@
+<div class="sh">
+  <header class="sh__head">
+    <h2 class="sh__title"><app-icon name="share" [size]="18" /> {{ 'share.title' | t }}</h2>
+    <app-button variant="text" size="sm" icon="x" iconOnly (click)="ref.close()" />
+  </header>
+
+  <!-- Grant row -->
+  <div class="sh__grant">
+    <app-select-field
+      [options]="memberOptions()"
+      [placeholder]="'share.memberPlaceholder' | t"
+      [ngModel]="selectedUser()"
+      (ngModelChange)="selectedUser.set($event)"
+    />
+    <div class="sh__modes">
+      @for (mode of allModes; track mode) {
+        <button
+          class="sh__mode"
+          [class.sh__mode--on]="hasMode(mode)"
+          (click)="toggleMode(mode)"
+          type="button"
+        >
+          {{ modeLabel(mode) }}
+        </button>
+      }
+    </div>
+    <app-button variant="primary" size="sm" [loading]="granting()" (click)="grant()">
+      {{ 'share.grantAccess' | t }}
+    </app-button>
+  </div>
+
+  <!-- Existing entries -->
+  <div class="sh__list">
+    @if (loading()) {
+      <div class="sh__loading"><app-spinner [size]="20" /></div>
+    } @else if (entries().length === 0) {
+      <p class="sh__empty">{{ 'share.noAccessEntries' | t }}</p>
+    } @else {
+      @for (entry of entries(); track entry.id) {
+        <div class="sh__row">
+          <app-avatar [name]="nameOf(entry)" [size]="30" />
+          <div class="sh__info">
+            <span class="sh__name">{{ nameOf(entry) }}</span>
+            <div class="sh__badges">
+              @for (mode of entry.modes; track mode) {
+                <app-badge tone="accent">{{ modeLabel(mode) }}</app-badge>
+              }
+            </div>
+          </div>
+          <app-button variant="text" size="sm" icon="x" iconOnly (click)="revoke(entry)" />
+        </div>
+      }
+    }
+  </div>
+
+  <!-- Public link -->
+  <section class="sh__public">
+    <h3 class="sh__public-title"><app-icon name="globe" [size]="16" /> {{ 'share.public.title' | t }}</h3>
+
+    @if (!publicEligible()) {
+      <p class="sh__empty">{{ 'share.public.notEligible' | t }}</p>
+    } @else if (!publicEnabled()) {
+      <p class="sh__empty">{{ 'share.public.disabled' | t }}</p>
+    } @else {
+      <p class="sh__public-desc">{{ 'share.public.desc' | t }}</p>
+
+      @if (freshUrl(); as url) {
+        <div class="sh__fresh">
+          <input class="sh__fresh-input" type="text" readonly [value]="url" (focus)="$any($event.target).select()" />
+          <app-button variant="primary" size="sm" [icon]="copied() ? 'check' : 'copy'" (click)="copyFresh()">
+            {{ (copied() ? 'share.public.copied' : 'share.public.copy') | t }}
+          </app-button>
+        </div>
+        <p class="sh__public-note">{{ 'share.public.once' | t }}</p>
+      }
+
+      <div class="sh__create">
+        <span class="sh__select">
+          <select [value]="expiresInDays() ?? 0" [attr.aria-label]="'share.public.expiry.label' | t" (change)="setExpiry($any($event.target).value)">
+            @for (opt of expiryOptions; track opt.value) {
+              <option [value]="opt.value" [selected]="(expiresInDays() ?? 0) === opt.value">{{ opt.key | t }}</option>
+            }
+          </select>
+          <app-icon name="chevron-down" [size]="14" />
+        </span>
+        <app-button variant="secondary" size="sm" icon="link" [loading]="creatingLink()" (click)="createLink()">
+          {{ 'share.public.create' | t }}
+        </app-button>
+      </div>
+
+      @for (link of links(); track link.id) {
+        <div class="sh__link">
+          <app-icon name="link" [size]="16" class="sh__link-icon" />
+          <span class="sh__link-text">
+            {{ 'share.public.createdOn' | t: { date: (link.createdAt | date: 'mediumDate') ?? '' } }}
+            ·
+            {{ link.expiresAt ? ('share.public.expiresOn' | t: { date: (link.expiresAt | date: 'mediumDate') ?? '' }) : ('share.public.neverExpires' | t) }}
+          </span>
+          <button type="button" class="sh__link-revoke" (click)="revokeLink(link)">{{ 'share.public.revoke' | t }}</button>
+        </div>
+      }
+    }
+  </section>
+</div>

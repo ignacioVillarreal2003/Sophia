@@ -1,0 +1,2 @@
+ALTER TABLE audit_logs ALTER COLUMN action TYPE VARCHAR(128);
+ALTER TABLE audit_logs ALTER COLUMN resource_type TYPE VARCHAR(64);

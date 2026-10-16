@@ -1,0 +1,119 @@
+@use 'mixins' as *;
+
+.nadm__intro {
+  margin-bottom: var(--space-md);
+  color: var(--text-muted);
+  font-size: var(--type-caption-size);
+  line-height: 1.5;
+}
+
+.nadm__card {
+  margin-bottom: var(--space-lg);
+}
+
+.nadm__card-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--divider);
+}
+
+.nadm__card-title {
+  font-size: var(--type-caption-size);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.nadm__card-hint {
+  font-size: var(--type-fine-size);
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.nadm__loading {
+  display: grid;
+  place-items: center;
+  padding: var(--space-xl);
+}
+
+.nadm__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 12px 16px;
+
+  &:not(:last-child) {
+    border-bottom: 1px solid var(--divider);
+  }
+
+  &:hover {
+    background: var(--surface-sunken);
+  }
+}
+
+.nadm__icon {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-pill);
+  background: var(--surface-sunken);
+  color: var(--accent);
+}
+
+.nadm__info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.nadm__name {
+  font-size: var(--type-caption-size);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.nadm__code {
+  margin-left: 6px;
+  font-family: var(--font-mono, monospace);
+  font-size: var(--type-fine-size);
+  font-weight: 400;
+  color: var(--text-subtle);
+}
+
+.nadm__desc {
+  font-size: var(--type-fine-size);
+  color: var(--text-muted);
+  @include truncate(1);
+}
+
+.nadm__time {
+  flex-shrink: 0;
+  font-size: var(--type-fine-size);
+  color: var(--text-subtle);
+}
+
+.nadm__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  flex-shrink: 0;
+}
+
+.nadm__replay {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+  flex-wrap: wrap;
+}
+
+.nadm__replay-result {
+  margin-top: var(--space-sm);
+  font-size: var(--type-caption-size);
+  color: var(--text-muted);
+}

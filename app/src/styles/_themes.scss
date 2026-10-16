@@ -1,0 +1,52 @@
+:root {
+  --accent: var(--primary);
+  --accent-focus: var(--ring);
+  --accent-hover: var(--primary);
+  --on-accent: var(--primary-foreground);
+
+  --canvas: var(--background);
+  --surface: var(--card);
+  --surface-raised: var(--popover);
+  --surface-sunken: var(--muted);
+  --surface-muted: var(--muted);
+  --surface-inverse: var(--foreground);
+  --overlay-scrim: rgba(0, 0, 0, 0.4);
+
+  --text: var(--foreground);
+  --text-strong: var(--foreground);
+  --text-muted: var(--muted-foreground);
+  --text-subtle: var(--muted-foreground);
+  --text-disabled: color-mix(in srgb, var(--muted-foreground) 60%, transparent);
+  --on-inverse: var(--background);
+  --on-inverse-muted: color-mix(in srgb, var(--background) 70%, transparent);
+
+  --border-strong: color-mix(in srgb, var(--foreground) 20%, var(--border));
+  --border-soft: color-mix(in srgb, var(--border) 50%, transparent);
+  --divider: var(--border);
+
+  --success: #16a34a;
+  --warning: #d97706;
+  --danger: var(--destructive);
+  --danger-surface: color-mix(in srgb, var(--destructive) 12%, transparent);
+  --on-danger: var(--destructive-foreground);
+  --info: var(--primary);
+
+  --sec-public: var(--muted-foreground);
+  --sec-internal: var(--primary);
+  --sec-confidential: var(--warning);
+  --sec-secret: var(--destructive);
+
+  --focus-ring: 0 0 0 2px var(--background), 0 0 0 4px var(--ring);
+}
+
+:root.dark {
+  color-scheme: dark;
+  // Each palette's dark variant also defines a raw shadcn-style --accent
+  // (a muted near-background tint, not a brand color) under
+  // `[data-palette='x'].dark`, which outranks this file's plain `:root` on
+  // specificity — silently overriding the `var(--primary)` mapping above
+  // and leaving accent-colored buttons/badges nearly invisible in dark
+  // mode. Reassert it here at matching specificity to win the tie.
+  --accent: var(--primary);
+  --accent-hover: var(--primary);
+}

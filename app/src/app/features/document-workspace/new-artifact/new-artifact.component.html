@@ -1,0 +1,141 @@
+<div class="na app-container">
+  <app-page-header [title]="'newItem.title' | t">
+    <button type="button" class="na__back" (click)="cancel()">
+      <app-icon name="arrow-left" [size]="16" />
+      <span>{{ 'common.back' | t }}</span>
+    </button>
+  </app-page-header>
+
+  <!-- Type -->
+  <section class="na__section">
+    <h2 class="na__section-title">{{ 'newItem.chooseType' | t }}</h2>
+    <div class="na__types" role="radiogroup" [attr.aria-label]="'newItem.chooseType' | t">
+      @for (opt of types; track opt.type) {
+        <button
+          type="button"
+          role="radio"
+          class="na__type"
+          [class.na__type--active]="selected() === opt.type"
+          [attr.aria-checked]="selected() === opt.type"
+          (click)="select(opt.type)"
+        >
+          <span class="na__type-icon"><app-icon [name]="opt.icon" [size]="20" /></span>
+          <span class="na__type-text">
+            <span class="na__type-name">{{ 'newItem.type.' + opt.type | t }}</span>
+            <span class="na__type-desc">{{ 'newItem.type.' + opt.type + '.desc' | t }}</span>
+          </span>
+        </button>
+      }
+    </div>
+  </section>
+
+  <!-- Data for the chosen type -->
+  <app-card class="na__card">
+    <div class="na__head">
+      <span class="na__preview-icon" [style.--na-color]="selected() === 'FOLDER' && draft().color ? draft().color : 'var(--text-muted)'">
+        <app-icon [name]="option().icon" [size]="20" />
+      </span>
+      <div class="na__head-text">
+        <h2 class="na__head-title">{{ draft().name || ('newItem.type.' + selected() | t) }}</h2>
+        <p class="na__head-sub">{{ 'newItem.location' | t }}: <strong>{{ location() }}</strong></p>
+      </div>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <div class="na__field">
+        <app-text-field
+          formControlName="name"
+          [label]="'newItem.field.name' | t"
+          [placeholder]="'newItem.field.namePlaceholder' | t"
+          [invalid]="!!nameError()"
+          [error]="nameError()"
+          required
+        />
+      </div>
+
+      @if (selected() === 'FOLDER') {
+        <div class="na__field">
+          <app-textarea
+            formControlName="description"
+            [label]="'newItem.field.description' | t"
+            [placeholder]="'newItem.field.descriptionPlaceholder' | t"
+            [rows]="3"
+          />
+        </div>
+      }
+
+      @switch (selected()) {
+        @case ('FOLDER') {
+          <div class="na__field">
+            <label class="na__label">{{ 'details.field.color' | t }}</label>
+            <div class="na__swatches">
+              @for (c of swatches; track c) {
+                <button
+                  type="button"
+                  class="na__swatch"
+                  [class.na__swatch--active]="draft().color === c"
+                  [style.--swatch]="c"
+                  [attr.aria-label]="c"
+                  [attr.aria-pressed]="draft().color === c"
+                  (click)="setColor(c)"
+                >
+                  @if (draft().color === c) {
+                    <app-icon name="check" [size]="16" />
+                  }
+                </button>
+              }
+            </div>
+          </div>
+        }
+      }
+
+      @if (starters().length > 0) {
+        <div class="na__field">
+          <label class="na__label">{{ 'newItem.starter' | t }}</label>
+          <div class="na__starters" role="radiogroup">
+            @for (st of starters(); track st.id) {
+              <button
+                type="button"
+                role="radio"
+                class="na__starter"
+                [class.na__starter--active]="starter() === st.id"
+                [attr.aria-checked]="starter() === st.id"
+                (click)="starter.set(st.id)"
+              >
+                <span class="na__starter-name">{{ 'newItem.starter.' + selected() + '.' + st.id | t }}</span>
+              </button>
+            }
+          </div>
+        </div>
+      }
+
+      <div class="na__actions">
+        <app-button variant="ghost" type="button" (click)="cancel()">{{ 'common.cancel' | t }}</app-button>
+        <app-button variant="primary" type="submit" [loading]="submitting()">{{ 'newItem.create' | t }}</app-button>
+      </div>
+    </form>
+  </app-card>
+
+  <!-- From the user's computer -->
+  <section class="na__section">
+    <h2 class="na__section-title">{{ 'newItem.fromComputer' | t }}</h2>
+    <div class="na__types">
+      <label class="na__type na__type--file" [class.na__type--busy]="busyFrom() === 'upload'">
+        <input type="file" multiple hidden (change)="onUploadPicked($event)" />
+        <span class="na__type-icon"><app-icon name="upload" [size]="20" /></span>
+        <span class="na__type-text">
+          <span class="na__type-name">{{ 'explorer.upload' | t }}</span>
+          <span class="na__type-desc">{{ 'newItem.upload.desc' | t }}</span>
+        </span>
+      </label>
+      <label class="na__type na__type--file" [class.na__type--busy]="busyFrom() === 'import'">
+        <input type="file" accept=".md,.markdown,.html,.txt,.docx,.pdf,.zip,.xlsx,.csv" hidden (change)="onImportPicked($event)" />
+        <span class="na__type-icon"><app-icon name="download" [size]="20" /></span>
+        <span class="na__type-text">
+          <span class="na__type-name">{{ 'explorer.import' | t }}</span>
+          <span class="na__type-desc">{{ 'newItem.import.desc' | t }}</span>
+        </span>
+      </label>
+    </div>
+  </section>
+</div>

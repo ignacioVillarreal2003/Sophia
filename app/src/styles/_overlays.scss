@@ -1,0 +1,117 @@
+.menu {
+  min-width: 200px;
+  max-width: 320px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-overlay);
+  animation: overlay-pop 0.14s var(--ease-standard);
+  outline: none;
+}
+
+.menu__label {
+  padding: 6px 10px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text-subtle);
+}
+
+.menu__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px;
+  border-radius: var(--radius-sm);
+  font-size: var(--type-caption-size);
+  letter-spacing: var(--type-caption-ls);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-standard);
+
+  &:hover:not(:disabled),
+  &.cdk-focused,
+  &:focus-visible {
+    background: var(--surface-sunken);
+    outline: none;
+  }
+
+  &:disabled {
+    color: var(--text-disabled);
+    cursor: default;
+  }
+
+  &--danger {
+    color: var(--danger);
+  }
+
+  app-icon,
+  .menu__item-icon {
+    color: var(--text-subtle);
+  }
+
+  &--danger app-icon {
+    color: var(--danger);
+  }
+
+  .menu__item-trailing {
+    margin-left: auto;
+    color: var(--text-subtle);
+    font-size: 12px;
+  }
+}
+
+.menu__divider {
+  height: 1px;
+  margin: 3px 4px;
+  background: var(--divider);
+}
+
+.app-dialog-panel {
+  background: var(--surface-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-overlay);
+  overflow: hidden;
+  max-height: 90vh;
+  animation: overlay-pop 0.16s var(--ease-standard);
+}
+
+.tooltip {
+  padding: 5px 9px;
+  background: var(--surface-inverse);
+  color: var(--on-inverse);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  letter-spacing: -0.12px;
+  max-width: 240px;
+  animation: overlay-fade 0.12s var(--ease-standard);
+  pointer-events: none;
+}
+
+@keyframes overlay-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes overlay-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

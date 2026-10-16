@@ -1,0 +1,25 @@
+form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.usrc__row2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-sm);
+}
+
+.usrc__section-label {
+  font-size: var(--type-caption-size);
+  font-weight: 600;
+  color: var(--text);
+  margin-top: var(--space-xs);
+}
+
+.usrc__checks {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: var(--space-xs);
+}

@@ -1,0 +1,120 @@
+<div class="ntf app-container">
+  <app-page-header [title]="'nav.notifications' | t">
+    @if (streamStatus() === 'live') {
+      <span class="ntf__live" [title]="'notifications.stream.live' | t">
+        <span class="ntf__live-dot"></span>{{ 'notifications.stream.live' | t }}
+      </span>
+    } @else if (streamStatus() === 'reconnecting') {
+      <span class="ntf__live ntf__live--off" [title]="'notifications.stream.reconnecting' | t">
+        <span class="ntf__live-dot"></span>{{ 'notifications.stream.reconnecting' | t }}
+      </span>
+    }
+    <app-button size="sm" icon="check" [disabled]="unread() === 0" (click)="markAll()">
+      {{ 'notifications.markAllRead' | t }}
+    </app-button>
+  </app-page-header>
+
+  <div class="ntf__filters">
+    <div class="ntf__search-row">
+      <input
+        class="ntf__search"
+        type="search"
+        [formControl]="search"
+        [placeholder]="'notifications.filter.searchPlaceholder' | t"
+      />
+      <app-button
+        variant="ghost"
+        size="sm"
+        [class.ntf__chip--active]="unreadOnly()"
+        (click)="toggleUnreadOnly()"
+      >
+        {{ 'notifications.filter.unreadOnly' | t }} @if (unread() > 0) { ({{ unread() }}) }
+      </app-button>
+      <app-filter-toggle
+        [open]="filtersOpen()"
+        [ariaLabel]="'notifications.filter.more' | t"
+        (toggle)="toggleFilters()"
+      />
+    </div>
+
+    <div class="ntf__select-row" [class.ntf__select-row--open]="filtersOpen()">
+      <app-select-field
+        [formControl]="category"
+        [options]="categoryOptions()"
+        [label]="'notifications.filter.category' | t"
+      />
+      <app-select-field
+        [formControl]="severity"
+        [options]="severityOptions()"
+        [label]="'notifications.filter.severity' | t"
+      />
+      @if (hasFilters()) {
+        <app-button variant="text" size="sm" (click)="clearFilters()">
+          {{ 'notifications.filter.clear' | t }}
+        </app-button>
+      }
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="ntf__loading"><app-spinner /></div>
+  } @else if (items().length === 0) {
+    <app-empty-state
+      icon="bell"
+      [title]="'common.empty' | t"
+      [description]="(hasFilters() ? 'notifications.emptyFiltered' : 'notifications.emptyDescription') | t"
+    />
+  } @else {
+    <app-card flush>
+      @for (n of items(); track n.id) {
+        <div class="ntf__row" [class.ntf__row--unread]="!n.read">
+          <button class="ntf__main" (click)="open(n)">
+            <span class="ntf__icon"><app-icon [name]="iconFor(n.category)" [size]="18" /></span>
+            <div class="ntf__body">
+              <span class="ntf__title">{{ n.title }}</span>
+              @if (n.body) { <span class="ntf__text">{{ n.body }}</span> }
+              <span class="ntf__meta">
+                <app-badge [tone]="toneFor(n.severity)">{{ ('notifications.severity.' + n.severity) | t }}</app-badge>
+                <span class="ntf__category">{{ categoryLabel(n.category) }}</span>
+                <span class="ntf__time">{{ n.createdAt | relativeTime }}</span>
+              </span>
+            </div>
+          </button>
+
+          <div class="ntf__actions">
+            @if (!n.read) {
+              <button
+                class="ntf__action"
+                type="button"
+                [title]="'notifications.markRead' | t"
+                [attr.aria-label]="'notifications.markRead' | t"
+                (click)="markRead(n)"
+              >
+                <app-icon name="check" [size]="16" />
+              </button>
+            }
+            <button
+              class="ntf__action ntf__action--danger"
+              type="button"
+              [disabled]="busyId() === n.id"
+              [title]="'common.delete' | t"
+              [attr.aria-label]="'common.delete' | t"
+              (click)="remove(n)"
+            >
+              <app-icon name="trash" [size]="16" />
+            </button>
+          </div>
+
+          @if (!n.read) { <span class="ntf__dot"></span> }
+        </div>
+      }
+    </app-card>
+    <app-pagination
+      [page]="page()"
+      [totalPages]="totalPages()"
+      [first]="first()"
+      [last]="last()"
+      (pageChange)="onPageChange($event)"
+    />
+  }
+</div>

@@ -1,0 +1,110 @@
+<app-page-header [title]="'settings.profile.title' | t"/>
+
+@if (user(); as u) {
+  <app-card class="pf__card">
+    <div class="pf__head">
+      <button
+        type="button"
+        class="pf__avatar-btn"
+        [disabled]="uploadingPhoto()"
+        (click)="triggerPhotoUpload()"
+        [attr.aria-label]="'settings.profile.changePhotoAria' | t"
+      >
+        <app-avatar [name]="u.fullName" [photoUrl]="u.photoUrl" [size]="72"/>
+        <span class="pf__avatar-overlay">
+          @if (uploadingPhoto()) {
+            <app-spinner [size]="16"/>
+          } @else {
+            <app-icon name="camera" [size]="14"/>
+          }
+        </span>
+      </button>
+      <input
+        #fileInput
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        class="visually-hidden"
+        (change)="onPhotoSelected($event)"
+      />
+      <div class="pf__head-info">
+        <h3 class="pf__name">{{ u.fullName }}</h3>
+        <p class="pf__email">{{ u.email }}</p>
+        <div class="pf__badges">
+          @for (role of u.roles; track role) {
+            <app-badge tone="accent">{{ role }}</app-badge>
+          }
+          @if (u.emailVerified) {
+            <app-badge tone="success">{{ 'settings.profile.verified' | t }}</app-badge>
+          } @else {
+            <app-badge tone="warning">{{ 'settings.profile.emailUnverified' | t }}</app-badge>
+          }
+        </div>
+        @if (u.photoUrl) {
+          <app-button
+            class="pf__remove-photo"
+            variant="text"
+            size="sm"
+            [disabled]="removingPhoto()"
+            (click)="removePhoto()"
+          >
+            {{ 'settings.profile.removePhoto' | t }}
+          </app-button>
+        }
+      </div>
+    </div>
+
+    @if (!u.emailVerified) {
+      <div class="pf__hint">
+        {{ 'settings.profile.unverifiedHint' | t }}
+        @if (verificationSent()) {
+          {{ 'settings.profile.checkEmailToConfirm' | t }}
+        } @else {
+          <app-button
+            class="pf__hint-action"
+            variant="text"
+            size="sm"
+            [disabled]="resendingVerification()"
+            (click)="resendVerification()"
+          >
+            {{ 'settings.profile.resendVerification' | t }}
+          </app-button>
+        }
+      </div>
+    }
+
+    @if (incomplete()) {
+      <div class="pf__hint">
+        {{ 'settings.profile.incompleteHint' | t }}
+      </div>
+    }
+
+    <form [formGroup]="form" (ngSubmit)="save()" class="pf__form" novalidate>
+      <div class="pf__grid-fields">
+        <app-text-field
+          formControlName="firstName"
+          [label]="'auth.field.firstName' | t"
+          [placeholder]="'settings.profile.firstNamePlaceholder' | t"
+        />
+        <app-text-field
+          formControlName="lastName"
+          [label]="'auth.field.lastName' | t"
+          [placeholder]="'settings.profile.lastNamePlaceholder' | t"
+        />
+      </div>
+      <div class="pf__actions">
+        <app-button variant="primary" type="submit" [loading]="saving()">
+          {{ 'common.saveChanges' | t }}
+        </app-button>
+      </div>
+    </form>
+
+    @if (u.lastLoginAt) {
+      <dl class="pf__meta">
+        <div>
+          <dt>{{ 'settings.profile.lastLogin' | t }}</dt>
+          <dd [title]="u.lastLoginAt">{{ u.lastLoginAt | relativeTime }}</dd>
+        </div>
+      </dl>
+    }
+  </app-card>
+}

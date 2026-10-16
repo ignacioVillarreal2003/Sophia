@@ -1,0 +1,71 @@
+<div class="ct">
+  <header class="ct__head">
+    <h3 class="ct__title"><app-icon name="message-circle" [size]="16" /> {{ 'comments.title' | t }}</h3>
+    <app-button variant="text" size="sm" icon="x" iconOnly (click)="close.emit()" />
+  </header>
+
+  <div class="ct__list">
+    @if (loading()) {
+      <div class="ct__loading"><app-spinner [size]="20" /></div>
+    } @else if (comments().length === 0) {
+      <app-empty-state icon="message-circle" [title]="'comments.empty' | t" [description]="'comments.emptyDescription' | t" />
+    } @else {
+      @for (c of comments(); track c.id) {
+        <div class="ct__comment" [class.ct__comment--resolved]="c.resolved">
+          <app-avatar [name]="c.author.fullName" [photoUrl]="c.author.photoUrl" [size]="30" />
+          <div class="ct__comment-body">
+            <div class="ct__comment-head">
+              <span class="ct__author">{{ c.author.fullName }}</span>
+              <span class="ct__time">{{ c.createdAt | relativeTime }}</span>
+            </div>
+            <p class="ct__text">{{ c.body }}</p>
+
+            <div class="ct__actions">
+              <button class="ct__action" (click)="startReply(c.id)">{{ 'comments.reply' | t }}</button>
+              <button class="ct__action" (click)="toggleResolve(c)">
+                {{ (c.resolved ? 'comments.reopen' : 'comments.resolve') | t }}
+              </button>
+              @if (c.author.id === me()?.id) {
+                <button class="ct__action ct__action--danger" (click)="remove(c)">{{ 'comments.delete' | t }}</button>
+              }
+            </div>
+
+            @for (reply of c.replies ?? []; track reply.id) {
+              <div class="ct__reply">
+                <app-avatar [name]="reply.author.fullName" [photoUrl]="reply.author.photoUrl" [size]="24" />
+                <div>
+                  <span class="ct__author">{{ reply.author.fullName }}</span>
+                  <p class="ct__text">{{ reply.body }}</p>
+                </div>
+              </div>
+            }
+
+            @if (replyTo() === c.id) {
+              <div class="ct__reply-box">
+                <input
+                  class="ct__input"
+                  [value]="replyDraft()"
+                  (input)="replyDraft.set($any($event.target).value)"
+                  (keydown.enter)="postReply(c)"
+                  [placeholder]="'comments.replyPlaceholder' | t"
+                />
+                <app-button variant="primary" size="sm" (click)="postReply(c)">{{ 'comments.send' | t }}</app-button>
+              </div>
+            }
+          </div>
+        </div>
+      }
+    }
+  </div>
+
+  <footer class="ct__compose">
+    <input
+      class="ct__input"
+      [value]="draft()"
+      (input)="draft.set($any($event.target).value)"
+      (keydown.enter)="post()"
+      [placeholder]="'comments.composePlaceholder' | t"
+    />
+    <app-button variant="primary" size="sm" icon="arrow-right" iconOnly [loading]="posting()" (click)="post()" />
+  </footer>
+</div>

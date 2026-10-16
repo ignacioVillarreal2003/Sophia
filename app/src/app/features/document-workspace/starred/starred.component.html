@@ -1,0 +1,39 @@
+<div class="st app-container">
+  <app-page-header [title]="'documentWorkspace.starred' | t" />
+
+  @if (loading()) {
+    <div class="st__loading"><app-spinner /></div>
+  } @else if (items().length === 0) {
+    <app-empty-state icon="star" [title]="'common.empty' | t" [description]="'starred.empty' | t" />
+  } @else {
+    <app-card flush>
+      @for (fav of items(); track fav.id) {
+        <div
+          class="st__row"
+          tabindex="0"
+          role="button"
+          [style.--item-color]="colorOf(fav.artifact)"
+          (click)="open(fav.artifact)"
+          (keydown.enter)="open(fav.artifact)"
+        >
+          <span class="st__icon" [class.st__icon--tint]="fav.artifact.type === 'FOLDER'">
+            <app-icon [name]="icon(fav.artifact.type)" [size]="18" />
+          </span>
+          <div class="st__info">
+            <span class="st__name">{{ fav.artifact.name }}</span>
+            <span class="st__meta">{{ fav.artifact.updatedAt | relativeTime }}</span>
+          </div>
+          <button
+            type="button"
+            class="st__star"
+            [attr.aria-label]="'explorer.menu.unstar' | t"
+            [title]="'explorer.menu.unstar' | t"
+            (click)="unstar(fav, $event)"
+          >
+            <app-icon name="star-filled" [size]="18" />
+          </button>
+        </div>
+      }
+    </app-card>
+  }
+</div>

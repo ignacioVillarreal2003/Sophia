@@ -1,0 +1,485 @@
+@use 'mixins' as *;
+
+:host {
+  display: block;
+}
+
+.exp {
+  position: relative;
+  // Fill the viewport below the app header, so right-clicking anywhere in the empty space opens the create menu.
+  min-height: calc(100vh - var(--nav-height));
+  padding: var(--space-xl);
+
+  @include below($bp-phone) {
+    padding: var(--space-md);
+  }
+}
+
+.exp__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+
+.exp__crumbs {
+  display: block;
+  min-width: 0;
+}
+
+.exp__bar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-lg);
+}
+
+// Filters and sorting, wrapped on a row under the search box
+.exp__filters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.exp__search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.exp__search-icon {
+  position: absolute;
+  left: 14px;
+  color: var(--text-subtle);
+  pointer-events: none;
+}
+
+.exp__search-input {
+  width: 100%;
+  height: 40px;
+  padding: 0 16px 0 40px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--border);
+  font-family: var(--font-text);
+  font-size: var(--type-caption-size);
+  color: var(--text);
+  outline: none;
+  transition: box-shadow var(--duration-fast) var(--ease-standard);
+
+  &::placeholder { color: var(--text-subtle); }
+  &:focus {
+    box-shadow: inset 0 0 0 1.5px var(--accent-focus),
+      0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent);
+  }
+}
+
+// Native selects dressed as pills (type / sort).
+.exp__select {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+
+  select {
+    appearance: none;
+    height: 40px;
+    padding: 0 34px 0 14px;
+    border: none;
+    border-radius: var(--radius-md);
+    background: var(--surface);
+    box-shadow: inset 0 0 0 1px var(--border);
+    font-family: var(--font-text);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    cursor: pointer;
+    transition: box-shadow var(--duration-fast) var(--ease-standard);
+
+    &:hover { box-shadow: inset 0 0 0 1px var(--border-strong, var(--border)); }
+    &:focus-visible { outline: 2px solid var(--accent-focus); outline-offset: 2px; }
+  }
+
+  app-icon {
+    position: absolute;
+    right: 12px;
+    color: var(--text-subtle);
+    pointer-events: none;
+  }
+}
+
+.exp__clear {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 12px;
+  border-radius: var(--radius-md);
+  font-family: var(--font-text);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+
+  &:hover { background: var(--surface-sunken); color: var(--text); }
+}
+
+// ---- grid / list switch ----
+.exp__view {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.exp__view-btn {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 30px;
+  border-radius: var(--radius-sm);
+  color: var(--text-subtle);
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
+
+  &:hover:not(.exp__view-btn--active) { color: var(--text); }
+  &--active {
+    background: var(--text);
+    color: var(--surface);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--accent-focus);
+    outline-offset: 1px;
+  }
+}
+
+.exp__loading {
+  display: grid;
+  place-items: center;
+  padding: var(--space-section);
+}
+
+.exp__section {
+  margin-bottom: var(--space-xl);
+}
+
+.exp__section-title {
+  margin-bottom: var(--space-sm);
+  font-size: var(--type-caption-size);
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+// ---- folders: compact pills ----
+.exp__folders {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: var(--space-sm);
+}
+
+.exp__folder {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 56px;
+  padding: 0 8px 0 16px;
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--border);
+  color: var(--text);
+  cursor: pointer;
+  user-select: none;
+  transition: background var(--duration-fast) var(--ease-standard),
+    box-shadow var(--duration-fast) var(--ease-standard);
+
+  &:hover { background: var(--surface-muted); }
+  &:focus-visible { outline: 2px solid var(--accent-focus); outline-offset: 2px; }
+
+  &--selected {
+    background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+    box-shadow: inset 0 0 0 1.5px var(--accent);
+  }
+
+  // Something is being dragged over this folder
+  &--drop {
+    background: color-mix(in srgb, var(--accent) 14%, var(--surface));
+    box-shadow: inset 0 0 0 2px var(--accent);
+  }
+}
+
+.exp__folder-icon {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--item-color, var(--text-muted)) 16%, var(--surface));
+  color: color-mix(in srgb, var(--item-color, var(--text-muted)) 75%, var(--text));
+}
+
+.exp__folder-name {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--type-body-strong-size);
+  font-weight: 600;
+  @include truncate;
+}
+
+// ---- files: preview card + footer ----
+.exp__files {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--space-md);
+}
+
+.exp__file {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--border);
+  cursor: pointer;
+  user-select: none;
+  transition: box-shadow var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-standard);
+
+  &:hover {
+    box-shadow: inset 0 0 0 1px var(--border-strong, var(--border)), 0 6px 16px -10px color-mix(in srgb, var(--text) 30%, transparent);
+  }
+  &:focus-visible { outline: 2px solid var(--accent-focus); outline-offset: 2px; }
+
+  &--selected {
+    box-shadow: inset 0 0 0 2px var(--accent);
+  }
+}
+
+.exp__preview {
+  display: grid;
+  place-items: center;
+  height: 132px;
+  margin: 8px 8px 0;
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  color: var(--text-subtle);
+}
+
+.exp__file-foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 6px 10px 14px;
+}
+
+.exp__file-icon {
+  flex-shrink: 0;
+  color: var(--accent);
+}
+
+.exp__file-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.exp__file-name {
+  font-size: var(--type-caption-size);
+  font-weight: 600;
+  color: var(--text);
+  @include truncate;
+}
+
+.exp__file-meta {
+  font-size: 12px;
+  color: var(--text-subtle);
+}
+
+// ---- list view ----
+.exp__list {
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--border);
+  overflow: hidden;
+}
+
+.exp__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: 10px 12px 10px 18px;
+  cursor: pointer;
+  user-select: none;
+  transition: background var(--duration-fast) var(--ease-standard);
+
+  &:not(:last-child) { border-bottom: 1px solid var(--divider); }
+  &:hover { background: var(--surface-muted); }
+  &:focus-visible { outline: 2px solid var(--accent-focus); outline-offset: -2px; }
+  &--selected { background: color-mix(in srgb, var(--accent) 10%, var(--surface)); }
+}
+
+.exp__row-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+  color: var(--text-muted);
+
+  &--tint {
+    background: color-mix(in srgb, var(--item-color, var(--text-muted)) 16%, var(--surface));
+    color: color-mix(in srgb, var(--item-color, var(--text-muted)) 75%, var(--text));
+  }
+}
+
+.exp__row-name {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--type-body-strong-size);
+  font-weight: 600;
+  @include truncate;
+}
+
+.exp__row-meta {
+  flex-shrink: 0;
+  font-size: 13px;
+  color: var(--text-subtle);
+
+  @include below($bp-phone) { display: none; }
+}
+
+// ---- shared ⋮ button ----
+.exp__more {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  color: var(--text-subtle);
+  cursor: pointer;
+  opacity: 0;
+  transition: background var(--duration-fast) var(--ease-standard),
+    opacity var(--duration-fast) var(--ease-standard);
+
+  &:hover { background: color-mix(in srgb, var(--text) 10%, transparent); color: var(--text); }
+  &:focus-visible { opacity: 1; outline: 2px solid var(--accent-focus); }
+
+  .exp__folder:hover &,
+  .exp__file:hover &,
+  .exp__row:hover &,
+  .exp__folder:focus-within &,
+  .exp__file:focus-within &,
+  .exp__row:focus-within &,
+  .exp__folder--selected &,
+  .exp__file--selected &,
+  .exp__row--selected & { opacity: 1; }
+
+  @media (hover: none) { opacity: 1; }
+}
+
+// ---- empty state ----
+.exp__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 96px var(--space-md);
+  text-align: center;
+}
+
+.exp__empty-icon {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  margin-bottom: 8px;
+  border-radius: var(--radius-lg);
+  background: var(--surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--border);
+  color: var(--text-subtle);
+}
+
+.exp__empty-title {
+  font-size: var(--type-tagline-size);
+  font-weight: 600;
+}
+
+.exp__empty-desc {
+  max-width: 360px;
+  color: var(--text-subtle);
+  font-size: var(--type-caption-size);
+  line-height: 1.5;
+}
+
+// ---- drag & drop ----
+.exp__drop-overlay {
+  position: absolute;
+  inset: var(--space-sm);
+  z-index: var(--z-sticky);
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--accent) 8%, var(--canvas));
+  border: 2px dashed var(--accent);
+  pointer-events: none;
+}
+
+.exp__drop-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+// ---- drag & drop feedback (kept quiet on purpose) ----
+.exp__folder,
+.exp__file,
+.exp__row {
+  // The item being carried just fades.
+  &--dragging { opacity: 0.45; }
+}
+
+// The folder under the pointer gets a clean accent ring, nothing moves.
+.exp__folder--drop {
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+// List rows share one rounded, clipped container: a ring would be cut off at the first and last
+// row's curved corners, so they only tint, with a straight accent bar on the left edge.
+.exp__row--drop {
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+// Soft acknowledgement once an item lands in a folder.
+.exp__folder--received {
+  animation: exp-received 0.6s var(--ease-standard);
+}
+
+@keyframes exp-received {
+  from { background: color-mix(in srgb, var(--accent) 16%, var(--surface)); }
+  to { background: var(--surface); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .exp__folder--received { animation: none; }
+}
+
+.exp__star {
+  flex-shrink: 0;
+  color: #e0a100;
+}

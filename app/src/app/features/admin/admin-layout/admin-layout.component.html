@@ -1,0 +1,16 @@
+<div class="adm" [class.adm--expanded]="expanded()">
+  <app-icon-rail
+    [items]="railItems()"
+    [title]="title()"
+    [expandLabel]="expandLabel()"
+    [collapseLabel]="collapseLabel()"
+    [storageKey]="railStorageKey"
+    [(expanded)]="expanded"
+  />
+
+  <div class="adm-content">
+    <div class="app-container">
+      <router-outlet/>
+    </div>
+  </div>
+</div>

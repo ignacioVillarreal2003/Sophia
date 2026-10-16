@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Sophia</title>
+  <base href="/">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="Sophia — espacio de trabajo documental colaborativo.">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#1d1d1f" media="(prefers-color-scheme: dark)">
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap"
+    rel="stylesheet">
+</head>
+<body>
+<app-root>
+  <div class="app-boot-splash" aria-hidden="true">
+    <div class="app-boot-splash__mark"></div>
+  </div>
+</app-root>
+<style>
+  .app-boot-splash {
+    position: fixed;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    background: #ffffff;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .app-boot-splash {
+      background: #1d1d1f;
+    }
+  }
+
+  .app-boot-splash__mark {
+    width: 34px;
+    height: 34px;
+    border-radius: 9999px;
+    border: 3px solid rgba(0, 102, 204, 0.2);
+    border-top-color: #0066cc;
+    animation: app-boot-spin 0.8s linear infinite;
+  }
+
+  @keyframes app-boot-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+</style>
+</body>
+</html>

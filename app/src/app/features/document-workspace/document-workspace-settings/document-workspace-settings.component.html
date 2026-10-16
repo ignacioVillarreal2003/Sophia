@@ -1,0 +1,284 @@
+<div class="wss app-container">
+  <app-page-header [title]="'documentWorkspace.settings' | t" />
+
+  @if (loading()) {
+    <div class="wss__loading"><app-spinner /></div>
+  } @else if (documentWorkspace(); as ws) {
+    <!-- General -->
+    <app-card class="wss__card">
+      <h2 class="wss__section-title">{{ 'documentWorkspace.settings.general' | t }}</h2>
+
+      <div class="wss__preview" aria-hidden="true">
+        <app-workspace-logo [logoUrl]="ws.logoUrl" [color]="color()" [size]="48" [iconSize]="22" />
+        <span class="wss__preview-text">
+          <span class="wss__preview-name">{{ draft().name || ws.name }}</span>
+          @if (draft().description) {
+            <span class="wss__preview-desc">{{ draft().description }}</span>
+          }
+        </span>
+      </div>
+
+      <form [formGroup]="form" (ngSubmit)="save()" novalidate>
+        <div class="wss__field">
+          <label class="wss__label">{{ 'documentWorkspace.settings.logo.label' | t }}</label>
+          <div class="wss__logo-row">
+            <label class="wss__btn" [class.wss__btn--busy]="logoBusy()">
+              <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden (change)="onLogoPicked($event)" />
+              <app-icon name="upload" [size]="15" />
+              <span>{{ (ws.logoUrl ? 'documentWorkspace.settings.logo.replace' : 'documentWorkspace.settings.logo.upload') | t }}</span>
+            </label>
+            @if (ws.logoUrl) {
+              <button type="button" class="wss__btn" [disabled]="logoBusy()" (click)="removeLogo()">
+                <app-icon name="trash" [size]="15" />
+                <span>{{ 'documentWorkspace.settings.logo.remove' | t }}</span>
+              </button>
+            }
+            <span class="wss__hint">{{ 'documentWorkspace.settings.logo.hint' | t }}</span>
+          </div>
+        </div>
+
+        <div class="wss__field">
+          <app-text-field formControlName="name" [label]="'documentWorkspace.name' | t" required />
+        </div>
+
+        <div class="wss__field">
+          <app-textarea formControlName="description" [label]="'documentWorkspace.description' | t" [rows]="3" />
+        </div>
+
+        <div class="wss__field">
+          <label class="wss__label">{{ 'documentWorkspace.colorLabel' | t }}</label>
+          <div class="wss__swatches">
+            @for (c of swatches; track c) {
+              <button
+                type="button"
+                class="wss__swatch"
+                [class.wss__swatch--active]="color().toLowerCase() === c.toLowerCase()"
+                [style.--swatch]="c"
+                (click)="setColor(c)"
+                [attr.aria-label]="c"
+                [attr.aria-pressed]="color().toLowerCase() === c.toLowerCase()"
+              >
+                @if (color().toLowerCase() === c.toLowerCase()) {
+                  <app-icon name="check" [size]="16" />
+                }
+              </button>
+            }
+          </div>
+        </div>
+
+        <div class="wss__field">
+          <label class="wss__label" for="wss-language">{{ 'documentWorkspace.settings.language.label' | t }}</label>
+          <span class="wss__select">
+            <select id="wss-language" [value]="draft().language" (change)="form.controls.language.setValue($any($event.target).value)">
+              @for (l of languages; track l.code) {
+                <option [value]="l.code" [selected]="l.code === draft().language">{{ l.label }}</option>
+              }
+            </select>
+            <app-icon name="chevron-down" [size]="14" />
+          </span>
+          <p class="wss__hint wss__hint--block">{{ 'documentWorkspace.settings.language.hint' | t }}</p>
+        </div>
+
+        <div class="wss__actions">
+          <app-button variant="primary" type="submit" [loading]="saving()" [disabled]="!dirty()">
+            {{ 'common.save' | t }}
+          </app-button>
+        </div>
+      </form>
+    </app-card>
+
+    <!-- Information (read only) -->
+    <app-card class="wss__card">
+      <h2 class="wss__section-title">{{ 'documentWorkspace.settings.info' | t }}</h2>
+      <dl class="wss__info">
+        <div class="wss__info-row">
+          <dt>{{ 'documentWorkspace.settings.createdBy' | t }}</dt>
+          <dd>{{ owner()?.fullName || owner()?.email || '—' }}</dd>
+        </div>
+        <div class="wss__info-row">
+          <dt>{{ 'details.field.created' | t }}</dt>
+          <dd>{{ ws.createdAt | wsDate }}</dd>
+        </div>
+        <div class="wss__info-row">
+          <dt>{{ 'details.field.modified' | t }}</dt>
+          <dd>{{ ws.updatedAt | wsDate }}</dd>
+        </div>
+        <div class="wss__info-row">
+          <dt>{{ 'documentWorkspace.settings.updatedBy' | t }}</dt>
+          <dd>@if (updatedBy(); as u) {
+              {{ u.fullName || u.email }}
+            } @else if (ws.updatedBy) {
+              {{ 'documentWorkspace.settings.systemAdmin' | t }}
+            } @else {
+              —
+            }</dd>
+        </div>
+      </dl>
+    </app-card>
+
+    <!-- Content defaults -->
+    <app-card class="wss__card">
+      <h2 class="wss__section-title">{{ 'documentWorkspace.settings.content' | t }}</h2>
+
+      <div class="wss__setting">
+        <div class="wss__setting-text">
+          <label class="wss__setting-title" for="wss-retention">{{ 'documentWorkspace.settings.retention.title' | t }}</label>
+          <p class="wss__setting-desc">{{ 'documentWorkspace.settings.retention.desc' | t }}</p>
+        </div>
+        <span class="wss__select">
+          <select id="wss-retention" [value]="retentionDays()" (change)="setRetention($any($event.target).value)">
+            @for (days of retentionOptions(); track days) {
+              <option [value]="days" [selected]="days === retentionDays()">{{ retentionLabel(days) }}</option>
+            }
+          </select>
+          <app-icon name="chevron-down" [size]="14" />
+        </span>
+      </div>
+    </app-card>
+
+    <!-- Storage -->
+    <app-card class="wss__card">
+      <h2 class="wss__section-title">{{ 'documentWorkspace.settings.storage.title' | t }}</h2>
+
+      @if (usage(); as u) {
+        <div class="wss__usage">
+          <div class="wss__usage-head">
+            <span class="wss__usage-used">{{ formatBytes(u.usedBytes) }}</span>
+            <span class="wss__usage-of">
+              @if (u.quotaMb) {
+                {{ 'documentWorkspace.settings.storage.of' | t: { total: quotaLabel(u.quotaMb) } }}
+              } @else {
+                {{ 'documentWorkspace.settings.storage.noLimit' | t }}
+              }
+            </span>
+          </div>
+          @if (u.quotaMb) {
+            <div class="wss__bar" role="progressbar" [attr.aria-valuenow]="usedPercent()" aria-valuemin="0" aria-valuemax="100">
+              <span class="wss__bar-fill" [class.wss__bar-fill--high]="usedPercent() >= 90" [style.width.%]="usedPercent()"></span>
+            </div>
+          }
+        </div>
+      }
+
+      <p class="wss__setting-desc wss__setting-desc--flush">{{ 'documentWorkspace.settings.storage.managed' | t }}</p>
+    </app-card>
+
+    <!-- Regional format -->
+    <app-card class="wss__card">
+      <h2 class="wss__section-title">{{ 'documentWorkspace.settings.regional.title' | t }}</h2>
+
+      <div class="wss__setting">
+        <div class="wss__setting-text">
+          <label class="wss__setting-title" for="wss-timezone">{{ 'documentWorkspace.settings.regional.timezone' | t }}</label>
+          <p class="wss__setting-desc">{{ 'documentWorkspace.settings.regional.timezoneDesc' | t }}</p>
+        </div>
+        <span class="wss__select">
+          <select id="wss-timezone" [value]="timezone()" (change)="setTimezone($any($event.target).value)">
+            @for (zone of timezones; track zone) {
+              <option [value]="zone" [selected]="zone === timezone()">{{ zone }}</option>
+            }
+          </select>
+          <app-icon name="chevron-down" [size]="14" />
+        </span>
+      </div>
+
+      <div class="wss__setting">
+        <div class="wss__setting-text">
+          <label class="wss__setting-title" for="wss-dateformat">{{ 'documentWorkspace.settings.regional.dateFormat' | t }}</label>
+          <p class="wss__setting-desc">{{ 'documentWorkspace.settings.regional.dateFormatDesc' | t }}</p>
+        </div>
+        <span class="wss__select">
+          <select id="wss-dateformat" [value]="dateFormat()" (change)="setDateFormat($any($event.target).value)">
+            @for (f of dateFormats; track f.value) {
+              <option [value]="f.value" [selected]="f.value === dateFormat()">{{ f.example }}</option>
+            }
+          </select>
+          <app-icon name="chevron-down" [size]="14" />
+        </span>
+      </div>
+    </app-card>
+
+    <!-- Sharing -->
+    <app-card class="wss__card">
+      <h2 class="wss__section-title">{{ 'documentWorkspace.settings.sharing.title' | t }}</h2>
+      <div class="wss__setting">
+        <div class="wss__setting-text">
+          <span class="wss__setting-title">{{ 'documentWorkspace.settings.sharing.public' | t }}</span>
+          <p class="wss__setting-desc">{{ 'documentWorkspace.settings.sharing.publicDesc' | t }}</p>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          class="wss__switch"
+          [class.wss__switch--on]="publicSharing()"
+          [attr.aria-checked]="publicSharing()"
+          [attr.aria-label]="'documentWorkspace.settings.sharing.public' | t"
+          (click)="setPublicSharing(!publicSharing())"
+        >
+          <span class="wss__switch-knob"></span>
+        </button>
+      </div>
+
+      <div class="wss__setting">
+        <div class="wss__setting-text">
+          <span class="wss__setting-title">{{ 'documentWorkspace.settings.sharing.stop.title' | t }}</span>
+          <p class="wss__setting-desc">
+            {{ 'documentWorkspace.settings.sharing.stop.desc' | t: { count: activeLinks() } }}
+          </p>
+        </div>
+        <button type="button" class="wss__btn wss__btn--danger" [disabled]="activeLinks() === 0" (click)="stopSharingAll()">
+          <app-icon name="x" [size]="15" />
+          <span>{{ 'documentWorkspace.settings.sharing.stop.button' | t }}</span>
+        </button>
+      </div>
+    </app-card>
+
+    <!-- Items view -->
+    <app-card class="wss__card">
+      <h2 class="wss__section-title">{{ 'documentWorkspace.settings.view.title' | t }}</h2>
+      <p class="wss__section-desc">{{ 'documentWorkspace.settings.view.desc' | t }}</p>
+      <div class="wss__views" role="radiogroup" [attr.aria-label]="'documentWorkspace.settings.view.title' | t">
+        <button
+          type="button"
+          role="radio"
+          class="wss__view"
+          [class.wss__view--active]="view() === 'grid'"
+          [attr.aria-checked]="view() === 'grid'"
+          (click)="setView('grid')"
+        >
+          <span class="wss__view-icon"><app-icon name="grid" [size]="20" /></span>
+          <span class="wss__view-text">
+            <span class="wss__view-name">{{ 'explorer.view.grid' | t }}</span>
+            <span class="wss__view-desc">{{ 'documentWorkspace.settings.view.gridDesc' | t }}</span>
+          </span>
+        </button>
+        <button
+          type="button"
+          role="radio"
+          class="wss__view"
+          [class.wss__view--active]="view() === 'list'"
+          [attr.aria-checked]="view() === 'list'"
+          (click)="setView('list')"
+        >
+          <span class="wss__view-icon"><app-icon name="menu" [size]="20" /></span>
+          <span class="wss__view-text">
+            <span class="wss__view-name">{{ 'explorer.view.list' | t }}</span>
+            <span class="wss__view-desc">{{ 'documentWorkspace.settings.view.listDesc' | t }}</span>
+          </span>
+        </button>
+      </div>
+    </app-card>
+
+    <!-- Delete -->
+    <app-card class="wss__card wss__danger">
+      <div class="wss__danger-text">
+        <h3 class="wss__danger-title">{{ 'documentWorkspace.dangerZone.title' | t }}</h3>
+        <p class="wss__danger-desc">{{ 'documentWorkspace.dangerZone.description' | t }}</p>
+      </div>
+      <button type="button" class="wss__delete" (click)="remove()">
+        <app-icon name="trash" [size]="16" />
+        <span>{{ 'documentWorkspace.dangerZone.button' | t }}</span>
+      </button>
+    </app-card>
+  }
+</div>

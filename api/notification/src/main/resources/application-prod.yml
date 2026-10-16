@@ -1,0 +1,32 @@
+spring:
+  datasource:
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:20}
+
+sophia:
+  commands:
+    replicas: ${KAFKA_TOPIC_REPLICAS:3}
+  user-events:
+    replicas: ${KAFKA_TOPIC_REPLICAS:3}
+  monitoring:
+    username: ${MONITORING_USERNAME:prometheus}
+    password: ${MONITORING_PASSWORD}
+
+logging:
+  level:
+    root: INFO
+    com.sophia: INFO
+
+springdoc:
+  api-docs:
+    enabled: ${SWAGGER_ENABLED:false}
+  swagger-ui:
+    enabled: ${SWAGGER_ENABLED:false}
+
+management:
+  endpoint:
+    health:
+      show-details: never
+  tracing:
+    sampling:
+      probability: ${TRACING_SAMPLING_PROBABILITY:0.1}

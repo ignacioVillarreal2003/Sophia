@@ -1,0 +1,135 @@
+@mixin type-hero {
+  font-family: var(--font-display);
+  font-size: var(--type-hero-size);
+  font-weight: var(--type-hero-weight);
+  line-height: var(--type-hero-lh);
+  letter-spacing: var(--type-hero-ls);
+}
+
+@mixin type-display-lg {
+  font-family: var(--font-display);
+  font-size: var(--type-display-lg-size);
+  font-weight: var(--type-display-lg-weight);
+  line-height: var(--type-display-lg-lh);
+  letter-spacing: -0.01em;
+}
+
+@mixin type-display-md {
+  font-family: var(--font-text);
+  font-size: var(--type-display-md-size);
+  font-weight: var(--type-display-md-weight);
+  line-height: var(--type-display-md-lh);
+  letter-spacing: var(--type-display-md-ls);
+}
+
+@mixin type-lead {
+  font-family: var(--font-display);
+  font-size: var(--type-lead-size);
+  font-weight: var(--type-lead-weight);
+  line-height: var(--type-lead-lh);
+}
+
+@mixin type-tagline {
+  font-family: var(--font-display);
+  font-size: var(--type-tagline-size);
+  font-weight: var(--type-tagline-weight);
+  line-height: var(--type-tagline-lh);
+  letter-spacing: var(--type-tagline-ls);
+}
+
+@mixin type-body {
+  font-family: var(--font-text);
+  font-size: var(--type-body-size);
+  font-weight: var(--type-body-weight);
+  line-height: var(--type-body-lh);
+  letter-spacing: var(--type-body-ls);
+}
+
+@mixin type-body-strong {
+  font-family: var(--font-text);
+  font-size: var(--type-body-strong-size);
+  font-weight: var(--type-body-strong-weight);
+  letter-spacing: var(--type-body-ls);
+}
+
+@mixin type-caption {
+  font-family: var(--font-text);
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-caption-weight);
+  line-height: var(--type-caption-lh);
+  letter-spacing: var(--type-caption-ls);
+}
+
+@mixin type-caption-strong {
+  @include type-caption;
+  font-weight: var(--type-caption-strong-weight);
+}
+
+@mixin type-fine {
+  font-family: var(--font-text);
+  font-size: var(--type-fine-size);
+  line-height: var(--type-fine-lh);
+  letter-spacing: var(--type-fine-ls);
+}
+
+@mixin focus-ring {
+  &:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+  }
+}
+
+@mixin frosted {
+  background-color: color-mix(in srgb, var(--surface-sunken) 80%, transparent);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+}
+
+@mixin truncate($lines: 1) {
+  @if $lines == 1 {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  } @else {
+    display: -webkit-box;
+    -webkit-line-clamp: $lines;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
+@mixin scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+
+  &::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: var(--border-strong);
+    border-radius: var(--radius-pill);
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+$bp-small-phone: 480px;
+$bp-phone: 640px;
+$bp-tablet-portrait: 734px;
+$bp-tablet-landscape: 833px;
+$bp-small-desktop: 1068px;
+$bp-desktop: 1440px;
+
+@mixin below($bp) {
+  @media (max-width: $bp) {
+    @content;
+  }
+}
+
+@mixin above($bp) {
+  @media (min-width: $bp + 1px) {
+    @content;
+  }
+}

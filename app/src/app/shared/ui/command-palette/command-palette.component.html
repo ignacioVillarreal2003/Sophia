@@ -1,0 +1,43 @@
+@if (open()) {
+  <div class="cp" (click)="close()">
+    <div class="cp__panel" (click)="$event.stopPropagation()">
+      <div class="cp__search">
+        <app-icon name="search" [size]="18" class="cp__search-icon" />
+        <input
+          class="cp__input"
+          [value]="query()"
+          (input)="onInput($any($event.target).value)"
+          (keydown)="onKeydown($event)"
+          [placeholder]="'commandPalette.searchPlaceholder' | t"
+          autofocus
+          #cpInput
+        />
+        <kbd class="cp__kbd">Esc</kbd>
+      </div>
+
+      <div class="cp__results">
+        @for (item of results(); track item.id; let i = $index) {
+          <button
+            class="cp__item"
+            [class.cp__item--active]="activeIndex() === i"
+            (mouseenter)="activeIndex.set(i)"
+            (click)="runAt(i)"
+          >
+            <app-icon [name]="item.icon" [size]="16" />
+            <span class="cp__item-label">{{ item.label }}</span>
+            @if (item.hint) {
+              <span class="cp__item-hint">{{ item.hint }}</span>
+            }
+          </button>
+        } @empty {
+          <div class="cp__empty">{{ 'commandPalette.noResults' | t }}</div>
+        }
+      </div>
+
+      <div class="cp__footer">
+        <span><kbd>↑</kbd><kbd>↓</kbd> {{ 'commandPalette.navigate' | t }}</span>
+        <span><kbd>↵</kbd> {{ 'commandPalette.select' | t }}</span>
+      </div>
+    </div>
+  </div>
+}

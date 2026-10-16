@@ -1,0 +1,28 @@
+package com.sophia.documentworkspace.support;
+
+import com.sophia.documentworkspace.domain.entity.BaseEntity;
+
+import java.lang.reflect.Field;
+import java.util.UUID;
+
+/** Assigns ids to unmanaged entities in unit tests (normally set by JPA). */
+public final class TestIds {
+
+    private TestIds() {
+    }
+
+    public static <T extends BaseEntity> T withId(T entity, UUID id) {
+        try {
+            Field field = BaseEntity.class.getDeclaredField("id");
+            field.setAccessible(true);
+            field.set(entity, id);
+            return entity;
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException("Failed to assign test id", e);
+        }
+    }
+
+    public static <T extends BaseEntity> T withRandomId(T entity) {
+        return withId(entity, UUID.randomUUID());
+    }
+}

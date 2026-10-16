@@ -1,0 +1,57 @@
+@use 'mixins' as *;
+
+.tpl {
+  padding-block: var(--space-xl);
+}
+
+.tpl__loading {
+  display: grid;
+  place-items: center;
+  padding: var(--space-section);
+}
+
+.tpl__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-md);
+}
+
+.tpl__card {
+  display: flex;
+  gap: var(--space-md);
+}
+
+.tpl__card-icon {
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  color: var(--accent);
+  display: grid;
+  place-items: center;
+}
+
+.tpl__card-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.tpl__card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tpl__card-name {
+  font-size: var(--type-body-strong-size);
+  font-weight: 600;
+  @include truncate;
+}
+
+.tpl__card-desc {
+  margin-top: 4px;
+  font-size: var(--type-caption-size);
+  color: var(--text-muted);
+  @include truncate(2);
+}

@@ -1,0 +1,125 @@
+<div class="awd">
+  <app-page-header [title]="workspace()?.name ?? ('admin.workspaces.title' | t)" backLink="/admin/workspaces" />
+
+  @if (loading()) {
+    <div class="awd__loading"><app-spinner /></div>
+  } @else if (detail(); as d) {
+    @if (workspace(); as ws) {
+      <!-- Identity -->
+      <section class="awd__card awd__identity">
+        <app-workspace-logo [logoUrl]="ws.logoUrl" [color]="ws.color" [size]="56" [iconSize]="24" />
+        <div class="awd__identity-text">
+          <span class="awd__identity-name">{{ ws.name }}</span>
+          @if (d.description) {
+            <span class="awd__identity-desc">{{ d.description }}</span>
+          }
+          <span class="awd__identity-meta">
+            {{ 'admin.workspaces.col.owner' | t }}: {{ ws.ownerEmail || '—' }}
+            · {{ 'details.field.created' | t }} {{ ws.createdAt | date: 'mediumDate' }}
+          </span>
+        </div>
+      </section>
+
+      <!-- Counters -->
+      <section class="awd__stats">
+        <div class="awd__stat"><span class="awd__stat-n">{{ ws.memberCount }}</span><span class="awd__stat-l">{{ 'documentWorkspace.members' | t }}</span></div>
+        <div class="awd__stat"><span class="awd__stat-n">{{ d.stats.items }}</span><span class="awd__stat-l">{{ 'admin.workspaces.detail.items' | t }}</span></div>
+        <div class="awd__stat"><span class="awd__stat-n">{{ d.stats.trashedItems }}</span><span class="awd__stat-l">{{ 'nav.trash' | t }}</span></div>
+        <div class="awd__stat"><span class="awd__stat-n">{{ d.stats.activePublicLinks }}</span><span class="awd__stat-l">{{ 'admin.workspaces.detail.publicLinks' | t }}</span></div>
+      </section>
+
+      <!-- Status -->
+      <section class="awd__card">
+        <h2 class="awd__title">{{ 'admin.workspaces.col.status' | t }}</h2>
+        <p class="awd__desc">{{ 'admin.workspaces.detail.statusDesc' | t }}</p>
+        <div class="awd__statuses" role="radiogroup" [attr.aria-label]="'admin.workspaces.col.status' | t">
+          @for (s of statuses; track s.value) {
+            <button
+              type="button"
+              role="radio"
+              class="awd__status awd__status--{{ s.value }}"
+              [class.awd__status--active]="ws.status === s.value"
+              [attr.aria-checked]="ws.status === s.value"
+              [disabled]="busy()"
+              (click)="setStatus(s.value)"
+            >
+              <span class="awd__status-icon"><app-icon [name]="s.icon" [size]="20" /></span>
+              <span class="awd__status-text">
+                <span class="awd__status-name">{{ 'admin.workspaces.status.' + s.value | t }}</span>
+                <span class="awd__status-desc">{{ 'admin.workspaces.detail.status.' + s.value | t }}</span>
+              </span>
+            </button>
+          }
+        </div>
+      </section>
+
+      <!-- Limits -->
+      <section class="awd__card">
+        <h2 class="awd__title">{{ 'documentWorkspace.settings.storage.title' | t }}</h2>
+        <div class="awd__usage">
+          <span class="awd__usage-used">{{ formatBytes(ws.usedBytes) }}</span>
+          <span class="awd__usage-of">
+            @if (ws.storageQuotaMb) {
+              {{ 'documentWorkspace.settings.storage.of' | t: { total: quotaLabel(ws.storageQuotaMb) } }}
+            } @else {
+              {{ 'documentWorkspace.settings.storage.noLimit' | t }}
+            }
+          </span>
+        </div>
+        @if (ws.storageQuotaMb) {
+          <div class="awd__bar" role="progressbar" [attr.aria-valuenow]="usedPercent()" aria-valuemin="0" aria-valuemax="100">
+            <span class="awd__bar-fill" [class.awd__bar-fill--high]="usedPercent() >= 90" [style.width.%]="usedPercent()"></span>
+          </div>
+        }
+        <div class="awd__setting">
+          <label for="awd-quota">{{ 'documentWorkspace.settings.storage.quota' | t }}</label>
+          <span class="awd__select">
+            <select id="awd-quota" [value]="ws.storageQuotaMb ?? 0" [disabled]="busy()" (change)="setQuota($any($event.target).value)">
+              @for (mb of quotaOptions(); track mb) {
+                <option [value]="mb" [selected]="mb === (ws.storageQuotaMb ?? 0)">{{ quotaLabel(mb) }}</option>
+              }
+            </select>
+            <app-icon name="chevron-down" [size]="14" />
+          </span>
+        </div>
+      </section>
+
+      <!-- Configuration (read only) -->
+      <section class="awd__card">
+        <h2 class="awd__title">{{ 'admin.workspaces.detail.config' | t }}</h2>
+        <dl class="awd__info">
+          <div class="awd__info-row"><dt>{{ 'documentWorkspace.settings.language.label' | t }}</dt><dd>{{ d.language }}</dd></div>
+          <div class="awd__info-row"><dt>{{ 'documentWorkspace.settings.regional.timezone' | t }}</dt><dd>{{ d.timezone }}</dd></div>
+          <div class="awd__info-row"><dt>{{ 'documentWorkspace.settings.regional.dateFormat' | t }}</dt><dd>{{ d.dateFormat }}</dd></div>
+          <div class="awd__info-row">
+            <dt>{{ 'documentWorkspace.settings.retention.title' | t }}</dt>
+            <dd>{{ d.trashRetentionDays ? ('documentWorkspace.settings.retention.days' | t: { count: d.trashRetentionDays }) : ('documentWorkspace.settings.retention.default' | t) }}</dd>
+          </div>
+          <div class="awd__info-row">
+            <dt>{{ 'documentWorkspace.settings.sharing.public' | t }}</dt>
+            <dd>{{ (d.publicSharingEnabled ? 'common.yes' : 'common.no') | t }}</dd>
+          </div>
+        </dl>
+      </section>
+
+      <!-- Members -->
+      <section class="awd__card awd__card--flush">
+        <h2 class="awd__title awd__title--padded">{{ 'documentWorkspace.members' | t }} <span class="awd__count">{{ d.members.length }}</span></h2>
+        @for (m of d.members; track m.userId) {
+          <div class="awd__person">
+            <app-avatar [name]="m.displayName || m.email" [size]="34" />
+            <span class="awd__person-text">
+              <span class="awd__person-name">{{ m.displayName || m.email }}</span>
+              <span class="awd__person-sub">{{ m.email }} · {{ 'details.field.created' | t }} {{ m.joinedAt | date: 'mediumDate' }}</span>
+            </span>
+            <span class="awd__pill">{{ 'documentWorkspace.role.' + m.role | t }}</span>
+            @if (m.status === 'SUSPENDED') {
+              <span class="awd__pill awd__pill--warn">{{ 'admin.workspaces.status.SUSPENDED' | t }}</span>
+            }
+          </div>
+        }
+      </section>
+
+    }
+  }
+</div>

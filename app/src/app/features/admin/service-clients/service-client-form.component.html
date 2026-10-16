@@ -1,0 +1,38 @@
+<app-page-header
+  [title]="(isEdit() ? 'admin.serviceClients.form.editTitle' : 'admin.serviceClients.form.newTitle') | t"
+  backLink="/admin/service-clients"
+>
+  @if (isEdit()) {
+    <app-button (click)="rotateSecret()">{{ 'admin.serviceClients.rotateSecret' | t }}</app-button>
+    <app-button variant="danger" (click)="deleteClient()">{{ 'admin.serviceClients.delete' | t }}</app-button>
+  }
+  <app-button [loading]="saving()" (click)="submit()">
+    {{ (isEdit() ? 'common.saveChanges' : 'admin.serviceClients.form.create') | t }}
+  </app-button>
+</app-page-header>
+
+@if (loading()) {
+  <div class="scf__loading">
+    <app-spinner/>
+  </div>
+} @else {
+  <app-card>
+    <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <app-text-field
+        [label]="'admin.serviceClients.form.name' | t"
+        formControlName="name"
+        required
+        [placeholder]="'admin.serviceClients.form.namePlaceholder' | t"
+      />
+      <app-textarea [label]="'admin.serviceClients.form.description' | t" formControlName="description" [rows]="2"/>
+
+      <span class="scf__section-label">{{ 'admin.serviceClients.form.scopes' | t }}</span>
+      <app-chip-select [formControl]="scopesControl" [options]="scopeOptions()"/>
+      @if (!scopesLast()) {
+        <div class="scf__load-more">
+          <app-load-more-button [loading]="loadingMoreScopes()" (clicked)="loadMoreScopes()"/>
+        </div>
+      }
+    </form>
+  </app-card>
+}

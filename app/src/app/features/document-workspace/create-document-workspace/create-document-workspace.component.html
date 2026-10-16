@@ -1,0 +1,62 @@
+<div class="cw app-container">
+  <app-page-header [title]="'documentWorkspace.create.title' | t" backLink="..">
+    <app-button [loading]="loading()" (click)="submit()">{{ 'documentWorkspace.create.title' | t }}</app-button>
+  </app-page-header>
+
+  <app-card class="cw__card">
+    <div class="cw__preview" [style.--ws-color]="color()" aria-hidden="true">
+      <span class="cw__preview-icon"><app-icon name="book" [size]="20" /></span>
+      <span class="cw__preview-text">
+        <span class="cw__preview-name" [class.cw__preview-name--empty]="!draft().name">
+          {{ draft().name || ('documentWorkspace.namePlaceholder' | t) }}
+        </span>
+        @if (draft().description) {
+          <span class="cw__preview-desc">{{ draft().description }}</span>
+        }
+      </span>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <div class="cw__field">
+        <app-text-field
+          formControlName="name"
+          [label]="'documentWorkspace.name' | t"
+          [placeholder]="'documentWorkspace.namePlaceholder' | t"
+          [invalid]="!!errorOf('name')"
+          [error]="errorOf('name') ?? ''"
+          required
+        />
+      </div>
+
+      <div class="cw__field">
+        <app-textarea
+          formControlName="description"
+          [label]="'documentWorkspace.description' | t"
+          [rows]="3"
+          [placeholder]="'documentWorkspace.descriptionPlaceholder' | t"
+        />
+      </div>
+
+      <div class="cw__field">
+        <label class="cw__label">{{ 'documentWorkspace.colorLabel' | t }}</label>
+        <div class="cw__swatches">
+          @for (c of swatches; track c) {
+            <button
+              type="button"
+              class="cw__swatch"
+              [class.cw__swatch--active]="color() === c"
+              [style.--swatch]="c"
+              (click)="color.set(c)"
+              [attr.aria-label]="c"
+              [attr.aria-pressed]="color() === c"
+            >
+              @if (color() === c) {
+                <app-icon name="check" [size]="16" />
+              }
+            </button>
+          }
+        </div>
+      </div>
+    </form>
+  </app-card>
+</div>

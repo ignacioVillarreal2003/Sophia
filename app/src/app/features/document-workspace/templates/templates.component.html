@@ -1,0 +1,26 @@
+<div class="tpl app-container">
+  <app-page-header [title]="'nav.templates' | t" [subtitle]="'templates.subtitle' | t" />
+
+  @if (loading()) {
+    <div class="tpl__loading"><app-spinner /></div>
+  } @else if (templates().length === 0) {
+    <app-empty-state icon="layout-template" [title]="'common.empty' | t" [description]="'templates.emptyDescription' | t" />
+  } @else {
+    <div class="tpl__grid">
+      @for (t of templates(); track t.id) {
+        <app-card interactive (click)="use(t)">
+          <div class="tpl__card">
+            <div class="tpl__card-icon"><app-icon [name]="'layout-template'" [size]="22" /></div>
+            <div class="tpl__card-body">
+              <div class="tpl__card-head">
+                <h3 class="tpl__card-name">{{ t.name }}</h3>
+                @if (t.published) { <app-badge tone="success">{{ 'templates.published' | t }}</app-badge> }
+              </div>
+              <p class="tpl__card-desc">{{ t.description || ('common.empty' | t) }}</p>
+            </div>
+          </div>
+        </app-card>
+      }
+    </div>
+  }
+</div>

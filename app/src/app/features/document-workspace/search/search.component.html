@@ -1,0 +1,37 @@
+<div class="srch app-container">
+  <div class="srch__box">
+    <app-icon name="search" [size]="20" class="srch__icon" />
+    <input
+      class="srch__input"
+      [value]="query()"
+      (input)="onInput($any($event.target).value)"
+      [placeholder]="'common.search' | t"
+      autofocus
+      type="search"
+    />
+    @if (loading()) { <app-spinner [size]="18" /> }
+  </div>
+
+  <div class="srch__results">
+    @if (!searched() && !query()) {
+      <app-empty-state icon="search" [title]="'nav.search' | t" [description]="'search.emptyDescription' | t" />
+    } @else if (loading() && hits().length === 0) {
+      <div class="srch__loading"><app-spinner /></div>
+    } @else if (hits().length === 0) {
+      <app-empty-state icon="search" [title]="'common.empty' | t" [description]="'search.noResults' | t" />
+    } @else {
+      <p class="srch__count">{{ 'search.resultCount' | t: { count: hits().length } }}</p>
+      @for (hit of hits(); track hit.id) {
+        <button class="srch__hit" (click)="open(hit)">
+          <span class="srch__hit-icon"><app-icon [name]="icon(hit.type)" [size]="18" /></span>
+          <span class="srch__hit-body">
+            <span class="srch__hit-name">{{ hit.name }}</span>
+            @if (hit.snippet) {
+              <span class="srch__hit-snippet">{{ hit.snippet }}</span>
+            }
+          </span>
+        </button>
+      }
+    }
+  </div>
+</div>

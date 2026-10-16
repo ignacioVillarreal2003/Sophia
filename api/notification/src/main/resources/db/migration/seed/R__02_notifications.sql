@@ -1,0 +1,33 @@
+INSERT INTO notifications
+    (id, recipient_id, created_by, category, type, severity, priority, group_key, target_type, target_id,
+     title, body, data, read_at, created_at)
+VALUES
+    ('c0000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-00000000000f', NULL,
+     'AUTHENTICATION_SECURITY', 'EMAIL_VERIFIED', 'SUCCESS', 0, NULL, NULL, NULL,
+     'Email verified', 'Your email address has been verified.', NULL,
+     NOW() - INTERVAL '10 days', NOW() - INTERVAL '10 days'),
+    ('c0000000-0000-0000-0000-000000000002', 'a0000000-0000-0000-0000-00000000000f', NULL,
+     'DOCUMENT_WORKSPACE_WORKSPACE', 'MEMBERSHIP', 'INFO', 0, NULL, 'WORKSPACE',
+     'b0000000-0000-0000-0000-000000000001',
+     'You were added to Demo Workspace', 'You joined the workspace as OWNER', NULL,
+     NOW() - INTERVAL '6 days', NOW() - INTERVAL '6 days'),
+    ('c0000000-0000-0000-0000-000000000003', 'a0000000-0000-0000-0000-00000000000f',
+     'a0000000-0000-0000-0000-000000000010', 'DOCUMENT_WORKSPACE_SHARING', 'SHARED', 'INFO', 0, NULL,
+     'ARTIFACT', 'b0000000-0000-0000-0000-000000000013',
+     'Content shared with you', 'You were granted EDITOR access to Roadmap', NULL,
+     NULL, NOW() - INTERVAL '3 days'),
+    ('c0000000-0000-0000-0000-000000000004', 'a0000000-0000-0000-0000-00000000000f',
+     'a0000000-0000-0000-0000-000000000010', 'DOCUMENT_WORKSPACE_COMMENT', 'COMMENT', 'INFO', 0, NULL,
+     'ARTIFACT', 'b0000000-0000-0000-0000-000000000012',
+     'New comment on Getting Started', 'Demo Teammate commented: "Looks great, thanks!"', NULL,
+     NULL, NOW() - INTERVAL '1 day'),
+    ('c0000000-0000-0000-0000-000000000005', 'a0000000-0000-0000-0000-00000000000f',
+     'a0000000-0000-0000-0000-000000000010', 'DOCUMENT_WORKSPACE_MENTION', 'MENTION', 'INFO', 0, NULL,
+     'ARTIFACT', 'b0000000-0000-0000-0000-000000000013',
+     'You were mentioned', 'Demo Teammate mentioned you in a comment on Roadmap', NULL,
+     NULL, NOW() - INTERVAL '18 hours'),
+    ('c0000000-0000-0000-0000-000000000006', 'a0000000-0000-0000-0000-00000000000f', NULL,
+     'SYSTEM', 'SYSTEM_ANNOUNCEMENT', 'WARNING', 0, NULL, NULL, NULL,
+     'Scheduled maintenance', 'Sophia will undergo maintenance this weekend from 2AM-4AM UTC.', NULL,
+     NOW() - INTERVAL '2 days', NOW() - INTERVAL '2 days')
+ON CONFLICT (id) DO NOTHING;

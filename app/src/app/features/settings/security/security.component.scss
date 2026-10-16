@@ -1,0 +1,41 @@
+app-card {
+  margin-bottom: var(--space-lg);
+}
+
+.sec__label {
+  font-size: var(--type-body-strong-size);
+  font-weight: 600;
+  margin-bottom: var(--space-md);
+}
+
+.sec__field {
+  margin-bottom: var(--space-md);
+}
+
+.sec__actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--space-md);
+}
+
+.sec__hint {
+  color: var(--text-muted);
+  font-size: var(--type-caption-size);
+  line-height: 1.5;
+  margin-top: var(--space-xs);
+  margin-bottom: var(--space-md);
+}
+
+.sec__google-loading {
+  display: flex;
+  justify-content: center;
+  padding: 10px 0;
+}
+
+.sec__danger {
+  border-color: color-mix(in srgb, var(--danger) 30%, var(--border));
+
+  .sec__label {
+    color: var(--danger);
+  }
+}

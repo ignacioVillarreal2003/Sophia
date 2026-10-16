@@ -1,0 +1,52 @@
+<div class="wt app-container">
+  <app-page-header [title]="'nav.trash' | t">
+    @if (items().length > 0) {
+      <button type="button" class="wt__empty" (click)="emptyTrash()">
+        <app-icon name="trash" [size]="16" />
+        <span>{{ 'trash.empty' | t }}</span>
+      </button>
+    }
+  </app-page-header>
+
+  @if (loading()) {
+    <div class="wt__loading"><app-spinner /></div>
+  } @else if (items().length === 0) {
+    <app-empty-state icon="trash" [title]="'common.empty' | t" [description]="'trash.emptyDescription' | t" />
+  } @else {
+    <app-card flush>
+      @for (item of items(); track item.id) {
+        <div class="wt__row">
+          <span class="wt__icon"><app-icon [name]="icon(item.type)" [size]="18" /></span>
+          <div class="wt__info">
+            <span class="wt__name">{{ item.name }}</span>
+            <span class="wt__meta">{{ 'trash.deleted' | t: { time: (item.deletedAt | relativeTime) } }}</span>
+          </div>
+          <div class="wt__actions">
+            <button type="button" class="wt__btn" [disabled]="busyId() === item.id" (click)="restore(item)">
+              <app-icon name="history" [size]="15" />
+              <span>{{ 'common.restore' | t }}</span>
+            </button>
+            <button
+              type="button"
+              class="wt__btn wt__btn--danger"
+              [disabled]="busyId() === item.id"
+              [attr.aria-label]="'trash.deletePermanently' | t"
+              [title]="'trash.deletePermanently' | t"
+              (click)="purge(item)"
+            >
+              <app-icon name="trash" [size]="15" />
+              <span>{{ 'trash.deletePermanently' | t }}</span>
+            </button>
+          </div>
+        </div>
+      }
+    </app-card>
+    <app-pagination
+      [page]="page()"
+      [totalPages]="totalPages()"
+      [first]="first()"
+      [last]="last()"
+      (pageChange)="onPageChange($event)"
+    />
+  }
+</div>

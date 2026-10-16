@@ -1,0 +1,97 @@
+[data-palette='caffeine'] {
+  --background: rgb(249, 249, 249);
+  --foreground: rgb(32, 32, 32);
+  --card: rgb(252, 252, 252);
+  --card-foreground: rgb(32, 32, 32);
+  --popover: rgb(252, 252, 252);
+  --popover-foreground: rgb(32, 32, 32);
+  --primary: rgb(100, 74, 64);
+  --primary-foreground: rgb(255, 255, 255);
+  --secondary: rgb(255, 223, 181);
+  --secondary-foreground: rgb(88, 45, 29);
+  --muted: rgb(239, 239, 239);
+  --muted-foreground: rgb(100, 100, 100);
+  --accent: rgb(232, 232, 232);
+  --accent-foreground: rgb(32, 32, 32);
+  --destructive: rgb(229, 77, 46);
+  --destructive-foreground: rgb(255, 255, 255);
+  --border: rgb(216, 216, 216);
+  --input: rgb(216, 216, 216);
+  --ring: rgb(100, 74, 64);
+  --chart-1: rgb(100, 74, 64);
+  --chart-2: rgb(255, 223, 181);
+  --chart-3: rgb(232, 232, 232);
+  --chart-4: rgb(255, 230, 196);
+  --chart-5: rgb(102, 73, 62);
+  --sidebar: rgb(251, 251, 251);
+  --sidebar-foreground: rgb(37, 37, 37);
+  --sidebar-primary: rgb(52, 52, 52);
+  --sidebar-primary-foreground: rgb(251, 251, 251);
+  --sidebar-accent: rgb(247, 247, 247);
+  --sidebar-accent-foreground: rgb(52, 52, 52);
+  --sidebar-border: rgb(235, 235, 235);
+  --sidebar-ring: rgb(181, 181, 181);
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+  --font-serif: ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+
+  --radius: 0.5rem;
+  --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
+  --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
+  --shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 1px 2px -1px hsl(0 0% 0% / 0.10);
+  --shadow: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 1px 2px -1px hsl(0 0% 0% / 0.10);
+  --shadow-md: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 2px 4px -1px hsl(0 0% 0% / 0.10);
+  --shadow-lg: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 4px 6px -1px hsl(0 0% 0% / 0.10);
+  --shadow-xl: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 8px 10px -1px hsl(0 0% 0% / 0.10);
+  --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
+}
+
+[data-palette='caffeine'].dark {
+  --background: rgb(17, 17, 17);
+  --foreground: rgb(238, 238, 238);
+  --card: rgb(25, 25, 25);
+  --card-foreground: rgb(238, 238, 238);
+  --popover: rgb(25, 25, 25);
+  --popover-foreground: rgb(238, 238, 238);
+  --primary: rgb(255, 224, 194);
+  --primary-foreground: rgb(8, 26, 27);
+  --secondary: rgb(57, 48, 40);
+  --secondary-foreground: rgb(255, 224, 194);
+  --muted: rgb(34, 34, 34);
+  --muted-foreground: rgb(180, 180, 180);
+  --accent: rgb(42, 42, 42);
+  --accent-foreground: rgb(238, 238, 238);
+  --destructive: rgb(229, 77, 46);
+  --destructive-foreground: rgb(255, 255, 255);
+  --border: rgb(32, 30, 24);
+  --input: rgb(72, 72, 72);
+  --ring: rgb(255, 224, 194);
+  --chart-1: rgb(255, 224, 194);
+  --chart-2: rgb(57, 48, 40);
+  --chart-3: rgb(42, 42, 42);
+  --chart-4: rgb(66, 56, 46);
+  --chart-5: rgb(255, 224, 193);
+  --sidebar: rgb(24, 24, 27);
+  --sidebar-foreground: rgb(244, 244, 245);
+  --sidebar-primary: rgb(29, 78, 216);
+  --sidebar-primary-foreground: rgb(255, 255, 255);
+  --sidebar-accent: rgb(39, 39, 42);
+  --sidebar-accent-foreground: rgb(244, 244, 245);
+  --sidebar-border: rgb(39, 39, 42);
+  --sidebar-ring: rgb(212, 212, 216);
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+  --font-serif: ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+
+  --radius: 0.5rem;
+  --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
+  --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
+  --shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 1px 2px -1px hsl(0 0% 0% / 0.10);
+  --shadow: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 1px 2px -1px hsl(0 0% 0% / 0.10);
+  --shadow-md: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 2px 4px -1px hsl(0 0% 0% / 0.10);
+  --shadow-lg: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 4px 6px -1px hsl(0 0% 0% / 0.10);
+  --shadow-xl: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 8px 10px -1px hsl(0 0% 0% / 0.10);
+  --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
+}

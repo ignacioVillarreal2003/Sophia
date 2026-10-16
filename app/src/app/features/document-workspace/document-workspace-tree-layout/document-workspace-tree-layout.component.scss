@@ -1,0 +1,16 @@
+:host {
+  display: block;
+  height: 100%;
+}
+
+.ro {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: color-mix(in srgb, #d98e04 12%, var(--surface));
+  border-bottom: 1px solid color-mix(in srgb, #d98e04 30%, var(--border));
+  font-size: var(--type-caption-size);
+  font-weight: 600;
+  color: color-mix(in srgb, #d98e04 80%, var(--text));
+}

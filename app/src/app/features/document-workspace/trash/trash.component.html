@@ -1,0 +1,45 @@
+<div class="trash app-container">
+  <app-page-header [title]="'nav.trash' | t" />
+
+  @if (loading()) {
+    <div class="trash__loading"><app-spinner /></div>
+  } @else if (items().length === 0) {
+    <app-empty-state icon="trash" [title]="'common.empty' | t" [description]="'trash.emptyDescription' | t" />
+  } @else {
+    <app-card flush>
+      @for (item of items(); track item.id) {
+        <div class="trash__row" [style.--ws-color]="item.color || 'var(--accent)'">
+          <span class="trash__icon"><app-icon name="book" [size]="18" /></span>
+          <div class="trash__info">
+            <span class="trash__name">{{ item.name }}</span>
+            <span class="trash__meta">{{ 'trash.deleted' | t: { time: (item.deletedAt | relativeTime) } }}</span>
+          </div>
+          <div class="trash__actions">
+            <button type="button" class="trash__btn" [disabled]="busyId() === item.id" (click)="restore(item)">
+              <app-icon name="history" [size]="15" />
+              <span>{{ 'common.restore' | t }}</span>
+            </button>
+            <button
+              type="button"
+              class="trash__btn trash__btn--danger"
+              [disabled]="busyId() === item.id"
+              [attr.aria-label]="'trash.deletePermanently' | t"
+              [title]="'trash.deletePermanently' | t"
+              (click)="purge(item)"
+            >
+              <app-icon name="trash" [size]="15" />
+              <span>{{ 'trash.deletePermanently' | t }}</span>
+            </button>
+          </div>
+        </div>
+      }
+    </app-card>
+    <app-pagination
+      [page]="page()"
+      [totalPages]="totalPages()"
+      [first]="first()"
+      [last]="last()"
+      (pageChange)="onPageChange($event)"
+    />
+  }
+</div>

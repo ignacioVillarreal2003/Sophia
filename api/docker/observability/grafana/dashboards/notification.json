@@ -1,0 +1,314 @@
+{
+  "uid": "sophia-notification",
+  "title": "Sophia Notification",
+  "tags": ["sophia", "notification"],
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-6h", "to": "now" },
+  "timezone": "browser",
+  "editable": true,
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Service up",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 0 },
+      "targets": [{ "refId": "A", "expr": "up{service=\"notification\"}" }],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          },
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "Down" }, "1": { "text": "Up" } } }
+          ]
+        }
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Oldest pending email",
+      "description": "The signal that says the email path has stopped moving. Sustained growth means the dispatcher is stuck, SMTP is unreachable or the circuit breaker is open.",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 4, "w": 5, "x": 4, "y": 0 },
+      "targets": [
+        { "refId": "A", "expr": "max(notification_email_outbox_oldest_pending_age_seconds{service=\"notification\"})" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 300 },
+              { "color": "red", "value": 900 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Emails queued",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 4, "w": 5, "x": 9, "y": 0 },
+      "targets": [
+        { "refId": "A", "expr": "max(notification_email_outbox_pending{service=\"notification\"})" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 500 },
+              { "color": "red", "value": 1000 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Dead lettered (24h)",
+      "description": "Every one of these is a message nobody processed. Replay with POST /api/v1/dead-letters/replay once the cause is fixed.",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 4, "w": 5, "x": 14, "y": 0 },
+      "targets": [
+        { "refId": "A", "expr": "sum(increase(notification_messages_dead_lettered_total{service=\"notification\"}[24h]))" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Open SSE streams",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 4, "w": 5, "x": 19, "y": 0 },
+      "targets": [
+        { "refId": "A", "expr": "sum(notification_sse_connections{service=\"notification\"})" }
+      ],
+      "fieldConfig": { "defaults": { "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }] } } }
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Commands by result",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (result) (rate(notification_commands_total{service=\"notification\"}[5m]))",
+          "legendFormat": "{{result}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "fillOpacity": 10 } } }
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Commands by category",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (category) (rate(notification_commands_total{service=\"notification\",result=\"processed\"}[5m]))",
+          "legendFormat": "{{category}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "fillOpacity": 10 } } }
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Email outbox backlog",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+      "targets": [
+        { "refId": "A", "expr": "max(notification_email_outbox_pending{service=\"notification\"})", "legendFormat": "queued" },
+        {
+          "refId": "B",
+          "expr": "max(notification_email_outbox_oldest_pending_age_seconds{service=\"notification\"})",
+          "legendFormat": "oldest (s)"
+        }
+      ],
+      "fieldConfig": { "defaults": { "custom": { "fillOpacity": 10 } } }
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Email delivery",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (result) (rate(notification_emails_dispatched_total{service=\"notification\"}[5m]))",
+          "legendFormat": "dispatched {{result}}"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(rate(notification_emails_queued_total{service=\"notification\"}[5m]))",
+          "legendFormat": "queued"
+        },
+        {
+          "refId": "C",
+          "expr": "sum by (reason) (rate(notification_emails_skipped_total{service=\"notification\"}[5m]))",
+          "legendFormat": "skipped {{reason}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "fillOpacity": 10 } } }
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "In-app notifications created",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 20 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (category) (rate(notification_in_app_created_total{service=\"notification\"}[5m]))",
+          "legendFormat": "{{category}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "fillOpacity": 10 } } }
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "User lifecycle events applied",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 20 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (type) (rate(notification_user_events_total{service=\"notification\"}[5m]))",
+          "legendFormat": "{{type}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "fillOpacity": 10 } } }
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Rate limited calls",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 20 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (bucket) (rate(notification_rate_limited_total{service=\"notification\"}[5m]))",
+          "legendFormat": "{{bucket}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "fillOpacity": 10 } } }
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "HTTP request rate by status",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 28 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (status) (rate(http_server_requests_seconds_count{service=\"notification\"}[5m]))",
+          "legendFormat": "{{status}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "fillOpacity": 10 } } }
+    },
+    {
+      "id": 14,
+      "type": "timeseries",
+      "title": "Request latency",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 28 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket{service=\"notification\"}[5m])) by (le))",
+          "legendFormat": "p95"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.99, sum(rate(http_server_requests_seconds_bucket{service=\"notification\"}[5m])) by (le))",
+          "legendFormat": "p99"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s", "custom": { "fillOpacity": 0 } } }
+    },
+    {
+      "id": 15,
+      "type": "timeseries",
+      "title": "Kafka consumer lag",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 28 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (client_id) (kafka_consumer_fetch_manager_records_lag_max{service=\"notification\"})",
+          "legendFormat": "{{client_id}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "custom": { "fillOpacity": 0 } } }
+    },
+    {
+      "id": 16,
+      "type": "timeseries",
+      "title": "Hikari connections",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 36 },
+      "targets": [
+        { "refId": "A", "expr": "hikaricp_connections_active{service=\"notification\"}", "legendFormat": "active" },
+        { "refId": "B", "expr": "hikaricp_connections_idle{service=\"notification\"}", "legendFormat": "idle" },
+        { "refId": "C", "expr": "hikaricp_connections_pending{service=\"notification\"}", "legendFormat": "pending" },
+        { "refId": "D", "expr": "hikaricp_connections_max{service=\"notification\"}", "legendFormat": "max" }
+      ],
+      "fieldConfig": { "defaults": { "custom": { "fillOpacity": 0 } } }
+    },
+    {
+      "id": 17,
+      "type": "timeseries",
+      "title": "JVM heap",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 36 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(jvm_memory_used_bytes{service=\"notification\", area=\"heap\"})",
+          "legendFormat": "used"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(jvm_memory_max_bytes{service=\"notification\", area=\"heap\"})",
+          "legendFormat": "max"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "bytes", "custom": { "fillOpacity": 0 } } }
+    }
+  ]
+}

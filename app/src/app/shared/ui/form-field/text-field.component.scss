@@ -1,0 +1,82 @@
+@use 'mixins' as *;
+
+:host {
+  display: block;
+}
+
+.tf__label {
+  display: block;
+  margin-bottom: 6px;
+  @include type-caption-strong;
+  color: var(--text);
+}
+
+.tf__box {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  height: 44px;
+  padding-inline: 16px;
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  box-shadow: inset 0 0 0 1px var(--border);
+  transition: box-shadow var(--duration-fast) var(--ease-standard);
+
+  &:hover:not(.tf__box--disabled):not(.tf__box--invalid):not(:focus-within) {
+    box-shadow: inset 0 0 0 1px var(--border-strong);
+  }
+
+  &:focus-within {
+    box-shadow: inset 0 0 0 1.5px var(--accent-focus),
+      0 0 0 3px color-mix(in srgb, var(--accent-focus) 15%, transparent);
+  }
+
+  &--invalid {
+    box-shadow: inset 0 0 0 1.5px var(--danger);
+    &:focus-within {
+      box-shadow: inset 0 0 0 1.5px var(--danger),
+        0 0 0 3px color-mix(in srgb, var(--danger) 15%, transparent);
+    }
+  }
+
+  &--disabled {
+    opacity: 0.55;
+    background: var(--surface-sunken);
+  }
+}
+
+.tf__icon {
+  color: var(--text-subtle);
+}
+
+input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  @include type-body;
+  color: var(--text);
+
+  &::placeholder {
+    color: var(--text-subtle);
+  }
+}
+
+.tf__reveal {
+  color: var(--text-subtle);
+  display: inline-flex;
+  &:hover { color: var(--text-muted); }
+}
+
+.tf__error {
+  margin-top: 6px;
+  @include type-caption;
+  color: var(--danger);
+}
+
+.tf__hint {
+  margin-top: 6px;
+  @include type-caption;
+  color: var(--text-subtle);
+}

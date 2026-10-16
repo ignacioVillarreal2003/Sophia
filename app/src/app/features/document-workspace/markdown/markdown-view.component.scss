@@ -1,0 +1,183 @@
+// Global (view-encapsulation none) styles of rendered Markdown. Everything is scoped under .md-preview.
+.md-preview {
+  --md-code-bg: var(--surface-sunken, #f4f2ee);
+  --md-border: var(--border, #e4e1da);
+  font-family: var(--font-text);
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--text);
+  overflow-wrap: anywhere;
+
+  > :first-child { margin-top: 0; }
+  > :last-child { margin-bottom: 0; }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display, var(--font-text));
+    line-height: 1.25;
+    margin: 1.6em 0 0.5em;
+    letter-spacing: -0.01em;
+    scroll-margin-top: 72px;
+  }
+  h1 { font-size: 2em; padding-bottom: 0.25em; border-bottom: 1px solid var(--md-border); }
+  h2 { font-size: 1.5em; padding-bottom: 0.2em; border-bottom: 1px solid var(--md-border); }
+  h3 { font-size: 1.25em; }
+  h4 { font-size: 1.1em; }
+  h5, h6 { font-size: 1em; color: var(--text-muted); }
+
+  p { margin: 0.8em 0; }
+  a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+  strong { font-weight: 650; }
+  hr { border: none; border-top: 1px solid var(--md-border); margin: 2em 0; }
+
+  ul, ol { padding-left: 1.6em; margin: 0.6em 0; }
+  li { margin: 0.2em 0; }
+  li > p { margin: 0.3em 0; }
+
+  // Task lists: Notion-like rounded checkboxes.
+  li:has(> .md-task) { list-style: none; margin-left: -1.4em; }
+  .md-task {
+    appearance: none;
+    width: 1.05em;
+    height: 1.05em;
+    margin: 0 0.5em 0 0;
+    vertical-align: -0.15em;
+    border: 1.5px solid var(--text-subtle);
+    border-radius: 5px;
+    background: var(--surface);
+    cursor: pointer;
+    display: inline-grid;
+    place-items: center;
+    transition: background var(--duration-fast) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard);
+
+    &:hover { border-color: var(--accent); }
+    &:checked {
+      background: var(--accent);
+      border-color: var(--accent);
+      &::after {
+        content: '';
+        width: 0.3em;
+        height: 0.55em;
+        border: solid #fff;
+        border-width: 0 2px 2px 0;
+        transform: rotate(45deg) translate(-5%, -8%);
+      }
+    }
+    &:checked + * , &:checked ~ * { }
+  }
+  li:has(> .md-task:checked) { color: var(--text-muted); }
+  li:has(> .md-task:checked) > p, li:has(> .md-task:checked) {
+    text-decoration-color: var(--text-subtle);
+  }
+  &--readonly .md-task { cursor: default; }
+
+  blockquote {
+    margin: 1em 0;
+    padding: 0.2em 1em;
+    border-left: 3px solid var(--md-border);
+    color: var(--text-muted);
+  }
+
+  code {
+    font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+    font-size: 0.88em;
+    background: var(--md-code-bg);
+    padding: 0.15em 0.4em;
+    border-radius: 5px;
+  }
+
+  .md-code {
+    position: relative;
+    margin: 1em 0;
+    border: 1px solid var(--md-border);
+    border-radius: var(--radius-md);
+    background: var(--md-code-bg);
+
+    pre { margin: 0; padding: 14px 16px; overflow-x: auto; }
+    code { background: none; padding: 0; font-size: 0.85em; line-height: 1.6; }
+    .md-code-lang {
+      position: absolute;
+      top: 6px;
+      left: 12px;
+      font-size: 11px;
+      color: var(--text-subtle);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .md-copy {
+      position: absolute;
+      top: 6px;
+      right: 8px;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 6px;
+      background: var(--surface);
+      border: 1px solid var(--md-border);
+      color: var(--text-muted);
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity var(--duration-fast) var(--ease-standard);
+    }
+    &:hover .md-copy { opacity: 1; }
+    pre:has(code) { padding-top: 26px; }
+  }
+
+  table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    border-collapse: collapse;
+    margin: 1em 0;
+    font-size: 0.95em;
+
+    th, td { border: 1px solid var(--md-border); padding: 8px 12px; text-align: left; }
+    th { background: var(--md-code-bg); font-weight: 600; }
+    tr:nth-child(even) td { background: color-mix(in srgb, var(--md-code-bg) 40%, transparent); }
+  }
+
+  img { max-width: 100%; border-radius: var(--radius-md); }
+  mark { background: color-mix(in srgb, #ffd54a 55%, transparent); color: inherit; padding: 0 0.15em; border-radius: 3px; }
+
+  .md-wikilink {
+    color: var(--accent);
+    text-decoration: none;
+    border-bottom: 1px dashed color-mix(in srgb, var(--accent) 60%, transparent);
+    &:hover { border-bottom-style: solid; }
+  }
+
+  .md-tag {
+    display: inline-block;
+    padding: 0 8px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+    color: var(--accent);
+    font-size: 0.85em;
+    line-height: 1.6;
+  }
+
+  // Obsidian-style callouts: > [!tip] Title
+  .md-callout {
+    --callout: #2d6cdf;
+    margin: 1em 0;
+    padding: 12px 16px;
+    border-radius: var(--radius-md);
+    border-left: 4px solid var(--callout);
+    background: color-mix(in srgb, var(--callout) 9%, var(--surface));
+
+    &--tip, &--success { --callout: #1a9d5b; }
+    &--warning { --callout: #d98e04; }
+    &--danger { --callout: #d92d20; }
+    &--quote { --callout: #7a7a85; }
+
+    .md-callout__title { font-weight: 650; display: flex; gap: 8px; align-items: center; color: var(--callout); }
+    .md-callout__body > :first-child { margin-top: 6px; }
+    .md-callout__body > :last-child { margin-bottom: 0; }
+  }
+
+  // highlight.js (neutral palette that works in light and dark)
+  .hljs-comment, .hljs-quote { color: var(--text-subtle); font-style: italic; }
+  .hljs-keyword, .hljs-selector-tag, .hljs-literal, .hljs-section, .hljs-link { color: #b4308b; }
+  .hljs-string, .hljs-title, .hljs-name, .hljs-type, .hljs-attribute, .hljs-symbol, .hljs-bullet, .hljs-addition { color: #1a7f4b; }
+  .hljs-number, .hljs-built_in, .hljs-variable, .hljs-template-variable, .hljs-attr { color: #b45309; }
+  .hljs-deletion { color: #d92d20; }
+  .hljs-function .hljs-title, .hljs-title.function_ { color: #2d6cdf; }
+}

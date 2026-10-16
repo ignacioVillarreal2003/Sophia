@@ -1,0 +1,296 @@
+@if (loading()) {
+  <div class="usrd__loading">
+    <app-spinner/>
+  </div>
+} @else if (user(); as u) {
+  <app-page-header [title]="'admin.users.detailTitle' | t">
+    <app-button variant="secondary" icon="arrow-left" routerLink="/admin/users">
+      {{ 'common.back' | t }}
+    </app-button>
+  </app-page-header>
+
+  <app-card class="usrd__identity">
+    <div class="usrd__identity-head">
+      <app-avatar [name]="u.fullName" [photoUrl]="u.photoUrl" [size]="64"/>
+      <div class="usrd__identity-text">
+        <h2 class="usrd__title">{{ u.fullName }}</h2>
+        <p class="usrd__subtitle">{{ u.email }}</p>
+      </div>
+      <div class="usrd__identity-actions">
+        @if (canViewAudit()) {
+          <app-button
+            variant="secondary"
+            [routerLink]="['/admin/audit']"
+            [queryParams]="{ userId: u.id, userEmail: u.email }"
+          >
+            {{ 'admin.users.viewAuditLog' | t }}
+          </app-button>
+        }
+        @if (canUpdate() && !isSelf()) {
+          <app-button (click)="toggleStatus()">
+            {{ (u.active ? 'admin.users.deactivate' : 'admin.users.activate') | t }}
+          </app-button>
+        }
+        @if (canDelete()) {
+          <app-button variant="danger" (click)="deleteUser()">{{ 'admin.users.delete' | t }}</app-button>
+        }
+      </div>
+    </div>
+  </app-card>
+
+  <div class="usrd__grid">
+    <app-collapsible-section
+      icon="info"
+      [title]="'admin.users.status' | t"
+      [hint]="'admin.users.statusHint' | t"
+    >
+      <div class="usrd__badges">
+        @for (r of u.roles; track r) {
+          <app-badge tone="accent">{{ r }}</app-badge>
+        }
+        <app-badge
+          [tone]="u.active ? 'success' : 'neutral'">{{ (u.active ? 'admin.users.active' : 'admin.users.inactive') | t }}
+        </app-badge>
+        <app-badge [tone]="u.emailVerified ? 'success' : 'warning'">
+          {{ (u.emailVerified ? 'admin.users.emailVerified' : 'admin.users.emailUnverified') | t }}
+        </app-badge>
+      </div>
+
+      @if (u.permissions.length > 0) {
+        <div class="usrd__effective">
+          <span class="usrd__section-label">{{ 'admin.users.effectivePermissions' | t }}</span>
+          <div class="usrd__chips-static">
+            @for (p of u.permissions; track p) {
+              <app-badge tone="neutral">{{ p }}</app-badge>
+            }
+          </div>
+        </div>
+      }
+    </app-collapsible-section>
+
+    <app-collapsible-section
+      icon="user"
+      [title]="'admin.users.profile' | t"
+      [hint]="'admin.users.profileHint' | t"
+    >
+      <form [formGroup]="profileForm" (ngSubmit)="saveProfile()" novalidate>
+        <div class="usrd__row2">
+          <app-text-field
+            [label]="'auth.field.firstName' | t"
+            formControlName="firstName"
+            required
+            [invalid]="!!errorOf(profileForm, 'firstName')"
+            [error]="errorOf(profileForm, 'firstName') ?? ''"
+          />
+          <app-text-field
+            [label]="'auth.field.lastName' | t"
+            formControlName="lastName"
+            required
+            [invalid]="!!errorOf(profileForm, 'lastName')"
+            [error]="errorOf(profileForm, 'lastName') ?? ''"
+          />
+        </div>
+        <app-text-field
+          [label]="'auth.field.email' | t"
+          type="email"
+          formControlName="email"
+          required
+          [invalid]="!!errorOf(profileForm, 'email')"
+          [error]="errorOf(profileForm, 'email') ?? ''"
+        />
+
+        <div class="usrd__actions">
+          <app-button type="submit" [loading]="savingProfile()" [disabled]="!canUpdate()">
+            {{ 'admin.users.saveProfile' | t }}
+          </app-button>
+        </div>
+      </form>
+    </app-collapsible-section>
+
+    <app-collapsible-section
+      icon="settings"
+      [title]="'admin.users.preferences' | t"
+      [hint]="'admin.users.preferencesHint' | t"
+    >
+      <form [formGroup]="preferencesForm" (ngSubmit)="savePreferences()" novalidate>
+        <app-select-field [label]="'admin.users.theme' | t" formControlName="theme" [options]="themeOptions()"/>
+        <app-select-field [label]="'admin.users.themeMode' | t" formControlName="themeMode"
+                          [options]="themeModeOptions()"/>
+        <app-select-field [label]="'admin.users.timezone' | t" formControlName="timezone"
+                          [options]="timezoneOptions()"/>
+        <app-select-field [label]="'admin.users.language' | t" formControlName="locale" [options]="localeOptions()"/>
+
+        <div class="usrd__actions">
+          <app-button type="submit" [loading]="savingPreferences()" [disabled]="!canUpdate()">
+            {{ 'admin.users.savePreferences' | t }}
+          </app-button>
+        </div>
+      </form>
+    </app-collapsible-section>
+
+    @if (canResetPassword()) {
+      <app-collapsible-section
+        icon="lock"
+        [title]="'admin.users.setPassword' | t"
+        [hint]="'admin.users.setPasswordHint' | t"
+      >
+        <form [formGroup]="passwordForm" (ngSubmit)="setPassword()" novalidate>
+          <app-text-field
+            formControlName="newPassword"
+            type="password"
+            icon="lock"
+            [label]="'auth.field.newPassword' | t"
+            [invalid]="!!passwordErrorOf('newPassword')"
+            [error]="passwordErrorOf('newPassword') ?? ''"
+          />
+          <app-text-field
+            formControlName="confirmPassword"
+            type="password"
+            icon="lock"
+            [label]="'auth.field.confirmPassword' | t"
+            [invalid]="!!confirmPasswordError()"
+            [error]="confirmPasswordError() ?? ''"
+          />
+
+          <div class="usrd__actions">
+            <app-button type="submit" variant="danger" [loading]="settingPassword()">
+              {{ 'admin.users.saveSetPassword' | t }}
+            </app-button>
+          </div>
+        </form>
+      </app-collapsible-section>
+    }
+
+    @if (canManageVerification()) {
+      <app-collapsible-section
+        icon="check-circle"
+        [title]="'admin.users.verification' | t"
+        [hint]="(u.emailVerified ? 'admin.users.verificationHintVerified' : 'admin.users.verificationHint') | t"
+      >
+        <div class="usrd__actions">
+          @if (!u.emailVerified) {
+            <app-button [loading]="resendingVerification()" (click)="resendVerification()">
+              {{ 'admin.users.resendVerification' | t }}
+            </app-button>
+            <app-button [loading]="markingVerified()" (click)="markVerified()">
+              {{ 'admin.users.markVerified' | t }}
+            </app-button>
+          } @else {
+            <app-button variant="danger" [loading]="unverifyingEmail()" (click)="unverifyEmail()">
+              {{ 'admin.users.unverifyEmail' | t }}
+            </app-button>
+          }
+        </div>
+      </app-collapsible-section>
+    }
+
+    @if (canUnlinkGoogle() && u.googleLinked) {
+      <app-collapsible-section
+        icon="globe"
+        [title]="'admin.users.googleAccount' | t"
+        [hint]="'admin.users.googleAccountHint' | t"
+      >
+        <div class="usrd__actions">
+          <app-button variant="danger" [loading]="unlinkingGoogle()" (click)="unlinkGoogle()">
+            {{ 'admin.users.unlinkGoogle' | t }}
+          </app-button>
+        </div>
+      </app-collapsible-section>
+    }
+
+    @if (canViewSessions()) {
+      <app-collapsible-section
+        icon="monitor"
+        [title]="'admin.users.sessions' | t"
+        [hint]="'admin.users.sessionsHint' | t"
+        (openChange)="onSessionsToggled($event)"
+      >
+        @if (loadingSessions()) {
+          <div class="usrd__sessions-loading">
+            <app-spinner/>
+          </div>
+        } @else if (sessions().length === 0) {
+          <app-empty-state icon="monitor" [title]="'admin.users.sessionsEmpty' | t"/>
+        } @else {
+          <div class="usrd__sessions">
+            @for (s of sessions(); track s.id) {
+              <div class="usrd__session-row">
+                <span class="usrd__session-icon"><app-icon [name]="deviceIcon(s)" [size]="18"/></span>
+                <div class="usrd__session-info">
+                  <span class="usrd__session-name">{{ deviceLabelOf(s) }}</span>
+                  <span class="usrd__session-meta">
+                    @if (s.ipAddress) {
+                      {{ s.ipAddress }} ·
+                    }
+                    {{ 'admin.users.sessionActive' | t: {time: (s.lastActiveAt | relativeTime)} }}
+                  </span>
+                </div>
+                @if (canManageSessions()) {
+                  <app-button
+                    variant="ghost"
+                    size="sm"
+                    icon="x"
+                    iconOnly
+                    [disabled]="revokingSessionId() === s.id"
+                    (click)="revokeSession(s)"
+                    [attr.aria-label]="'admin.users.revokeSessionAria' | t"
+                  />
+                }
+              </div>
+            }
+          </div>
+          @if (!sessionsLast()) {
+            <div class="usrd__load-more">
+              <app-load-more-button [loading]="loadingMoreSessions()" (clicked)="loadMoreSessions()"/>
+            </div>
+          }
+          @if (canManageSessions()) {
+            <div class="usrd__actions">
+              <app-button variant="danger" [loading]="revokingAllSessions()" (click)="revokeAllSessions()">
+                {{ 'admin.users.revokeAllSessions' | t }}
+              </app-button>
+            </div>
+          }
+        }
+      </app-collapsible-section>
+    }
+
+    @if (canManageRoles()) {
+      <app-collapsible-section
+        icon="shield"
+        [title]="'admin.users.roles' | t"
+        [hint]="'admin.users.rolesHint' | t"
+      >
+        <app-chip-select [formControl]="rolesControl" [options]="roleChipOptions()"/>
+        @if (!rolesLast()) {
+          <div class="usrd__load-more">
+            <app-load-more-button [loading]="loadingMoreRoles()" (clicked)="loadMoreRoles()"/>
+          </div>
+        }
+        <div class="usrd__actions">
+          <app-button [loading]="savingRoles()" (click)="saveRoles()">{{ 'admin.users.saveRoles' | t }}</app-button>
+        </div>
+      </app-collapsible-section>
+
+      <app-collapsible-section
+        icon="lock"
+        [title]="'admin.users.directPermissions' | t"
+        [hint]="'admin.users.directPermissionsHint' | t"
+      >
+        <app-chip-select [formControl]="permissionsControl" [options]="permissionChipOptions()"/>
+        @if (!permissionsLast()) {
+          <div class="usrd__load-more">
+            <app-load-more-button [loading]="loadingMorePermissions()" (clicked)="loadMorePermissions()"/>
+          </div>
+        }
+        <div class="usrd__actions">
+          <app-button [loading]="savingPermissions()" (click)="savePermissions()">
+            {{ 'admin.users.savePermissions' | t }}
+          </app-button>
+        </div>
+      </app-collapsible-section>
+    }
+
+    <app-user-notifications-card [userId]="id()"/>
+  </div>
+}

@@ -1,0 +1,39 @@
+<app-page-header
+  [title]="(isEdit() ? 'admin.roles.form.editTitle' : 'admin.roles.form.newTitle') | t"
+  backLink="/admin/roles"
+>
+  @if (isEdit() && !role()?.system) {
+    <app-button variant="danger" (click)="deleteRole()">{{ 'admin.roles.delete' | t }}</app-button>
+  }
+  <app-button [loading]="saving()" (click)="submit()">
+    {{ (isEdit() ? 'common.saveChanges' : 'admin.roles.form.create') | t }}
+  </app-button>
+</app-page-header>
+
+@if (loading()) {
+  <div class="rlf__loading">
+    <app-spinner/>
+  </div>
+} @else {
+  <app-card>
+    <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <app-text-field
+        [label]="'admin.roles.form.name' | t"
+        formControlName="name"
+        required
+        [hint]="(nameLocked() ? 'admin.roles.form.nameHintLocked' : 'admin.roles.form.nameHint') | t"
+        [invalid]="!!errorOf('name')"
+        [error]="errorOf('name') ?? ''"
+      />
+      <app-textarea [label]="'admin.roles.form.description' | t" formControlName="description" [rows]="2"/>
+
+      <span class="rlf__section-label">{{ 'admin.roles.form.permissions' | t }}</span>
+      <app-chip-select [formControl]="permissionsControl" [options]="permissionChipOptions()"/>
+      @if (!permissionsLast()) {
+        <div class="rlf__load-more">
+          <app-load-more-button [loading]="loadingMorePermissions()" (clicked)="loadMorePermissions()"/>
+        </div>
+      }
+    </form>
+  </app-card>
+}

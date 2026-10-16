@@ -1,0 +1,45 @@
+<div class="act app-container">
+  <app-page-header [title]="'documentWorkspace.activity' | t" />
+
+  @if (loading()) {
+    <div class="act__loading"><app-spinner /></div>
+  } @else if (forbidden()) {
+    <app-empty-state icon="lock" [title]="'activity.forbidden' | t" [description]="'activity.forbiddenDesc' | t" />
+  } @else if (days().length === 0) {
+    <app-empty-state icon="clock" [title]="'common.empty' | t" [description]="'activity.empty' | t" />
+  } @else {
+    @for (day of days(); track day.key) {
+      <section class="act__day">
+        <h2 class="act__day-title">{{ dayLabel(day) ?? (day.date | wsDate: 'date') }}</h2>
+        <ul class="act__list">
+          @for (row of day.rows; track row.id) {
+            <li class="act__row" [class.act__row--failed]="row.failed">
+              <span class="act__icon act__icon--{{ row.visual.tone }}"><app-icon [name]="row.visual.icon" [size]="18" /></span>
+              <div class="act__text">
+                <span class="act__label">{{ row.label }}</span>
+                @if (row.detail) {
+                  <span class="act__detail">{{ row.detail }}</span>
+                }
+              </div>
+              <div class="act__who">
+                <app-avatar [name]="row.actor" [photoUrl]="row.photoUrl" [size]="24" />
+                <span class="act__actor">{{ row.actor }}</span>
+              </div>
+              <time class="act__time" [attr.datetime]="row.createdAt" [title]="row.createdAt | wsDate">
+                {{ row.createdAt | relativeTime }}
+              </time>
+            </li>
+          }
+        </ul>
+      </section>
+    }
+
+    <app-pagination
+      [page]="page()"
+      [totalPages]="totalPages()"
+      [first]="first()"
+      [last]="last()"
+      (pageChange)="onPageChange($event)"
+    />
+  }
+</div>

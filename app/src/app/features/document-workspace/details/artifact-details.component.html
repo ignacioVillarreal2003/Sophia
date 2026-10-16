@@ -1,0 +1,180 @@
+<div class="ad app-container">
+  <app-page-header [title]="'details.title' | t">
+    <button type="button" class="ad__back" (click)="back()">
+      <app-icon name="arrow-left" [size]="16" />
+      <span>{{ 'common.back' | t }}</span>
+    </button>
+  </app-page-header>
+
+  @if (loading()) {
+    <div class="ad__loading"><app-spinner /></div>
+  } @else if (artifact(); as a) {
+    <div class="ad__grid">
+      <div class="ad__col">
+        <!-- General: every editable property -->
+        <app-card>
+          <h2 class="ad__section-title">{{ 'details.section.general' | t }}</h2>
+
+          <div class="ad__preview" [style.--ad-color]="color()" aria-hidden="true">
+            <span class="ad__preview-icon"><app-icon [name]="icon()" [size]="20" /></span>
+            <span class="ad__preview-text">
+              <span class="ad__preview-name">{{ draft().name || a.name }}</span>
+              @if (draft().description) {
+                <span class="ad__preview-desc">{{ draft().description }}</span>
+              }
+            </span>
+          </div>
+
+          <form [formGroup]="form" (ngSubmit)="save()" novalidate>
+            <div class="ad__field">
+              <app-text-field formControlName="name" [label]="'details.field.name' | t" required />
+            </div>
+
+            <div class="ad__field">
+              <app-textarea
+                formControlName="description"
+                [label]="'details.field.description' | t"
+                [placeholder]="'details.field.descriptionPlaceholder' | t"
+                [rows]="3"
+              />
+            </div>
+
+            @if (isFolder()) {
+              <div class="ad__field">
+                <label class="ad__label">{{ 'details.field.color' | t }}</label>
+                <div class="ad__swatches">
+                  @for (c of swatches; track c) {
+                    <button
+                      type="button"
+                      class="ad__swatch"
+                      [class.ad__swatch--active]="draft().color === c"
+                      [style.--swatch]="c"
+                      [attr.aria-label]="c"
+                      [attr.aria-pressed]="draft().color === c"
+                      (click)="setColor(c)"
+                    >
+                      @if (draft().color === c) {
+                        <app-icon name="check" [size]="16" />
+                      }
+                    </button>
+                  }
+                </div>
+              </div>
+            }
+
+            <div class="ad__actions">
+              <app-button variant="primary" type="submit" [loading]="saving()" [disabled]="!dirty()">
+                {{ 'common.save' | t }}
+              </app-button>
+            </div>
+          </form>
+        </app-card>
+
+
+        <!-- Information -->
+        <app-card>
+          <h2 class="ad__section-title">{{ 'details.section.info' | t }}</h2>
+          <dl class="ad__info">
+            <div class="ad__info-row">
+              <dt>{{ 'details.field.type' | t }}</dt>
+              <dd>{{ typeLabel(a.type) }}</dd>
+            </div>
+            <div class="ad__info-row">
+              <dt>{{ 'details.field.location' | t }}</dt>
+              <dd>{{ location() }}</dd>
+            </div>
+            <div class="ad__info-row">
+              <dt>{{ 'details.field.owner' | t }}</dt>
+              <dd>{{ owner()?.fullName || owner()?.email || '—' }}</dd>
+            </div>
+            @if (isFolder() && itemCount() !== null) {
+              <div class="ad__info-row">
+                <dt>{{ 'details.field.items' | t }}</dt>
+                <dd>{{ itemCount() }}</dd>
+              </div>
+            }
+            @if (a.sizeBytes) {
+              <div class="ad__info-row">
+                <dt>{{ 'details.field.size' | t }}</dt>
+                <dd>{{ a.sizeBytes }} B</dd>
+              </div>
+            }
+            <div class="ad__info-row">
+              <dt>{{ 'details.field.created' | t }}</dt>
+              <dd>{{ a.createdAt | wsDate }}</dd>
+            </div>
+            <div class="ad__info-row">
+              <dt>{{ 'details.field.modified' | t }}</dt>
+              <dd>{{ a.updatedAt | wsDate }}</dd>
+            </div>
+          </dl>
+        </app-card>
+
+
+        <!-- Sharing -->
+        <app-card>
+          <div class="ad__share-head">
+            <h2 class="ad__section-title ad__section-title--flush">{{ 'details.section.sharing' | t }}</h2>
+            <button type="button" class="ad__btn" (click)="manageAccess()">
+              <app-icon name="share" [size]="15" />
+              <span>{{ 'details.sharing.manage' | t }}</span>
+            </button>
+          </div>
+
+          @if (sharedWith().length === 0) {
+            <p class="ad__muted">{{ 'share.noAccessEntries' | t }}</p>
+          } @else {
+            <ul class="ad__people">
+              @for (p of sharedWith(); track p.id) {
+                <li class="ad__person">
+                  <app-avatar [name]="p.name" [photoUrl]="p.photoUrl" [size]="32" />
+                  <span class="ad__person-name">{{ p.name }}</span>
+                  <span class="ad__person-modes">{{ p.modes }}</span>
+                </li>
+              }
+            </ul>
+          }
+        </app-card>
+
+        <!-- Actions -->
+        <app-card>
+          <h2 class="ad__section-title">{{ 'details.section.actions' | t }}</h2>
+          <div class="ad__actions-list">
+            <div class="ad__action">
+              <span class="ad__action-icon"><app-icon name="copy" [size]="18" /></span>
+              <span class="ad__action-text">
+                <span class="ad__action-title">{{ 'details.actions.copy.title' | t }}</span>
+                <span class="ad__action-desc">{{ 'details.actions.copy.desc' | t }}</span>
+              </span>
+              <button type="button" class="ad__btn" [disabled]="busy() !== null" (click)="copy()">
+                {{ 'explorer.menu.duplicate' | t }}
+              </button>
+            </div>
+
+            <div class="ad__action">
+              <span class="ad__action-icon"><app-icon name="arrow-right" [size]="18" /></span>
+              <span class="ad__action-text">
+                <span class="ad__action-title">{{ 'details.actions.move.title' | t }}</span>
+                <span class="ad__action-desc">{{ 'details.actions.move.desc' | t }}</span>
+              </span>
+              <button type="button" class="ad__btn" [disabled]="busy() !== null" (click)="move()">
+                {{ 'explorer.menu.move' | t }}
+              </button>
+            </div>
+
+            <div class="ad__action ad__action--danger">
+              <span class="ad__action-icon"><app-icon name="trash" [size]="18" /></span>
+              <span class="ad__action-text">
+                <span class="ad__action-title">{{ 'details.actions.trash.title' | t }}</span>
+                <span class="ad__action-desc">{{ 'details.actions.trash.desc' | t }}</span>
+              </span>
+              <button type="button" class="ad__btn ad__btn--danger" [disabled]="busy() !== null" (click)="trash()">
+                {{ 'explorer.menu.trash' | t }}
+              </button>
+            </div>
+          </div>
+        </app-card>
+      </div>
+    </div>
+  }
+</div>

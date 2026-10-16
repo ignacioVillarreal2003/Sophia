@@ -1,0 +1,176 @@
+spring:
+  application:
+    name: document-workspace
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/sophia_documents}
+    username: ${DB_USERNAME:sophia}
+    password: ${DB_PASSWORD:sophia}
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:10}
+      minimum-idle: 2
+      connection-timeout: 10000
+      max-lifetime: 1800000
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+          batch_size: 50
+        order_inserts: true
+        order_updates: true
+
+  flyway:
+    enabled: true
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+
+  cache:
+    type: redis
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:29092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      acks: all
+      properties:
+        enable.idempotence: true
+        max.in.flight.requests.per.connection: 5
+
+  servlet:
+    multipart:
+      max-file-size: ${UPLOAD_MAX_FILE_SIZE:512MB}
+      max-request-size: ${UPLOAD_MAX_REQUEST_SIZE:520MB}
+
+server:
+  port: ${SERVER_PORT:8081}
+  shutdown: graceful
+  forward-headers-strategy: framework
+
+sophia:
+  security:
+    jwt:
+      # Primary mechanism: RS256 against the authentication service's JSON
+      # Web Key Set endpoint. Alternative: HS256 shared secret. Exactly one
+      # is required; the service refuses to start when neither is configured.
+      json-web-key-set-uri: ${JWT_JSON_WEB_KEY_SET_URI:}
+      secret: ${JWT_SECRET:}
+      issuer: ${JWT_ISSUER:sophia-authentication}
+    cors:
+      allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
+      allowed-methods: GET,POST,PUT,PATCH,DELETE,OPTIONS
+      allowed-headers: "*"
+      exposed-headers: X-Request-Id
+      allow-credentials: true
+      max-age: 3600
+    rate-limit:
+      enabled: ${RATE_LIMIT_ENABLED:true}
+      requests: ${RATE_LIMIT_REQUESTS:300}
+      window: ${RATE_LIMIT_WINDOW:1m}
+  storage:
+    bucket: ${S3_BUCKET:sophia-documents}
+    endpoint: ${S3_ENDPOINT:}
+    region: ${S3_REGION:us-east-1}
+    access-key: ${S3_ACCESS_KEY:}
+    secret-key: ${S3_SECRET_KEY:}
+    path-style-access: ${S3_PATH_STYLE_ACCESS:true}
+    presigned-url-ttl: ${S3_PRESIGNED_URL_TTL:15m}
+    multipart-part-size: ${S3_MULTIPART_PART_SIZE:8MB}
+  search:
+    host: ${OPENSEARCH_HOST:localhost}
+    port: ${OPENSEARCH_PORT:9200}
+    scheme: ${OPENSEARCH_SCHEME:http}
+    username: ${OPENSEARCH_USERNAME:}
+    password: ${OPENSEARCH_PASSWORD:}
+    index-prefix: ${OPENSEARCH_INDEX_PREFIX:sophia}
+  events:
+    topic: ${EVENTS_TOPIC:sophia.document-workspace.events}
+    notification-commands-topic: ${NOTIFICATION_COMMANDS_TOPIC:sophia.notifications.commands}
+    relay-interval: ${EVENTS_RELAY_INTERVAL:2s}
+    relay-batch-size: ${EVENTS_RELAY_BATCH_SIZE:100}
+    relay-max-attempts: ${EVENTS_RELAY_MAX_ATTEMPTS:10}
+  workspaces:
+    default-storage-quota-mb: ${WORKSPACE_DEFAULT_STORAGE_QUOTA_MB:5120}
+  retention:
+    trash-retention-days: ${TRASH_RETENTION_DAYS:30}
+  realtime:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
+  uploads:
+    max-file-size: ${UPLOAD_MAX_FILE_SIZE:512MB}
+  monitoring:
+    username: ${MONITORING_USERNAME:prometheus}
+    password: ${MONITORING_PASSWORD:prometheus}
+
+logging:
+  level:
+    root: INFO
+    com.sophia: INFO
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: when-authorized
+      group:
+        readiness:
+          include: readinessState,db,redis
+        liveness:
+          include: livenessState
+  info:
+    git:
+      mode: full
+  metrics:
+    tags:
+      application: ${spring.application.name}
+  tracing:
+    sampling:
+      probability: ${TRACING_SAMPLING_PROBABILITY:0.1}
+  otlp:
+    tracing:
+      endpoint: ${OTLP_TRACING_ENDPOINT:http://localhost:4318/v1/traces}
+
+resilience4j:
+  retry:
+    instances:
+      opensearch:
+        max-attempts: 3
+        wait-duration: 300ms
+        retry-exceptions:
+          - com.sophia.documentworkspace.domain.exception.ApiException
+  circuitbreaker:
+    instances:
+      opensearch:
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        slow-call-duration-threshold: 3s
+        slow-call-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+        record-exceptions:
+          - com.sophia.documentworkspace.domain.exception.ApiException
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+    enabled: ${SWAGGER_ENABLED:true}
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: ${SWAGGER_ENABLED:true}
+    operations-sorter: alpha
+    tags-sorter: alpha

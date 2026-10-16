@@ -1,0 +1,43 @@
+management:
+  endpoint:
+    health:
+      show-details: never
+
+sophia:
+  security:
+    jwt:
+      private-key: ${JWT_PRIVATE_KEY}
+  events:
+    replicas: ${KAFKA_TOPIC_REPLICAS:3}
+  monitoring:
+    username: ${MONITORING_USERNAME:prometheus}
+    password: ${MONITORING_PASSWORD}
+  admin:
+    password: ${ADMIN_PASSWORD}
+  storage:
+    access-key: ${S3_ACCESS_KEY}
+    secret-key: ${S3_SECRET_KEY}
+
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:20}
+  mail:
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+
+server:
+  servlet:
+    session:
+      cookie:
+        secure: ${SESSION_COOKIE_SECURE:true}
+
+springdoc:
+  swagger-ui:
+    enabled: ${SWAGGER_ENABLED:false}
+  api-docs:
+    enabled: ${SWAGGER_ENABLED:false}

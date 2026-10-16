@@ -1,0 +1,91 @@
+<app-page-header [title]="'admin.serviceClients.title' | t">
+  @if (canManage()) {
+    <app-button variant="secondary" routerLink="new" icon="plus">{{ 'admin.serviceClients.new' | t }}</app-button>
+  }
+</app-page-header>
+
+<div class="scl__search">
+  <app-icon name="search" [size]="16" class="scl__search-icon"/>
+  <input
+    class="scl__search-input"
+    type="search"
+    [placeholder]="'admin.serviceClients.searchPlaceholder' | t"
+    (input)="onSearchInput($any($event.target).value)"
+  />
+</div>
+
+@if (loading()) {
+  <div class="scl__loading">
+    <app-spinner/>
+  </div>
+} @else if (clients().length === 0) {
+  <app-empty-state
+    icon="command"
+    [title]="(search() ? 'admin.serviceClients.noResults' : 'admin.serviceClients.empty') | t"
+  />
+} @else {
+  @if (canManage()) {
+    <div class="scl__bulk">
+      <div class="scl__bulk-selectall">
+        <app-checkbox [checked]="allSelected()" [disabled]="bulkBusy()" (checkedChange)="toggleSelectAll()"/>
+        <span (click)="toggleSelectAll()">
+          @if (selectedCount() === 0) {
+            {{ 'admin.serviceClients.bulk.selectAll' | t }}
+          } @else {
+            {{ 'admin.serviceClients.bulk.selectedCount' | t: {count: selectedCount()} }}
+          }
+        </span>
+      </div>
+
+      @if (selectedCount() > 0) {
+        <div class="scl__bulk-actions">
+          <app-button variant="danger" size="sm" [disabled]="bulkBusy()" (click)="bulkDelete()">
+            {{ 'admin.serviceClients.bulk.delete' | t }}
+          </app-button>
+          <button type="button" class="scl__bulk-clear" (click)="clearSelection()">
+            {{ 'admin.serviceClients.bulk.clear' | t }}
+          </button>
+        </div>
+      }
+    </div>
+  }
+
+  <app-card flush>
+    @for (client of clients(); track client.id) {
+      <a
+        [routerLink]="canManage() ? [client.id] : null"
+        class="scl__row"
+        [class.scl__row--static]="!canManage()"
+      >
+        @if (canManage()) {
+          <app-checkbox
+            [checked]="isSelected(client.id)"
+            (checkedChange)="toggleSelect(client.id)"
+            (click)="$event.stopPropagation(); $event.preventDefault()"
+          />
+        }
+        <div class="scl__info">
+          <span class="scl__name">
+            {{ client.name }}
+            <app-badge [tone]="client.active ? 'success' : 'neutral'">
+              {{ (client.active ? 'admin.serviceClients.active' : 'admin.serviceClients.inactive') | t }}
+            </app-badge>
+          </span>
+          @if (client.description) {
+            <span class="scl__desc">{{ client.description }}</span>
+          }
+        </div>
+        @if (canManage()) {
+          <app-icon name="chevron-right" [size]="16" class="scl__chevron"/>
+        }
+      </a>
+    }
+  </app-card>
+  <app-pagination
+    [page]="page()"
+    [totalPages]="totalPages()"
+    [first]="first()"
+    [last]="last()"
+    (pageChange)="onPageChange($event)"
+  />
+}

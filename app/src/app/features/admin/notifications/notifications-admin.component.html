@@ -1,0 +1,133 @@
+<app-page-header [title]="'admin.notifications.title' | t">
+  @if (canManageCategories()) {
+    <app-button icon="plus" size="sm" (click)="createCategory()">
+      {{ 'admin.notifications.categories.new' | t }}
+    </app-button>
+  }
+</app-page-header>
+
+<p class="nadm__intro">{{ 'admin.notifications.intro' | t }}</p>
+
+@if (canReadCategories()) {
+  <app-card flush class="nadm__card">
+    <div class="nadm__card-head">
+      <span class="nadm__card-title">{{ 'admin.notifications.categories.title' | t }}</span>
+      <span class="nadm__card-hint">{{ 'admin.notifications.categories.hint' | t }}</span>
+    </div>
+
+    @if (loadingCategories()) {
+      <div class="nadm__loading"><app-spinner/></div>
+    } @else if (categories().length === 0) {
+      <app-empty-state
+        icon="bell"
+        [title]="'admin.notifications.categories.empty' | t"
+        [description]="'admin.notifications.categories.emptyDescription' | t"
+      />
+    } @else {
+      @for (c of categories(); track c.code) {
+        <div class="nadm__row">
+          <span class="nadm__icon"><app-icon name="bell" [size]="15"/></span>
+          <div class="nadm__info">
+            <span class="nadm__name">
+              {{ c.name }} <span class="nadm__code">{{ c.code }}</span>
+            </span>
+            @if (c.description) { <span class="nadm__desc">{{ c.description }}</span> }
+          </div>
+          @if (c.mandatory) {
+            <app-badge tone="warning">{{ 'admin.notifications.categories.mandatoryBadge' | t }}</app-badge>
+          }
+          @if (c.system) {
+            <app-badge tone="neutral">{{ 'admin.notifications.categories.systemBadge' | t }}</app-badge>
+          }
+          <div class="nadm__actions">
+            @if (canUpdateCategories()) {
+              <app-button
+                size="sm"
+                icon="edit"
+                [disabled]="busyCode() === c.code"
+                (click)="editCategory(c)"
+              >{{ 'common.edit' | t }}</app-button>
+            }
+            @if (canDeleteCategories() && !c.system) {
+              <app-button
+                variant="danger"
+                size="sm"
+                icon="trash"
+                [disabled]="busyCode() === c.code"
+                (click)="deleteCategory(c)"
+              >{{ 'common.delete' | t }}</app-button>
+            }
+          </div>
+        </div>
+      }
+    }
+  </app-card>
+}
+
+@if (canReplay()) {
+  <app-card class="nadm__card">
+    <span class="nadm__card-title">{{ 'admin.notifications.deadLetters.title' | t }}</span>
+    <p class="nadm__card-hint">{{ 'admin.notifications.deadLetters.hint' | t }}</p>
+
+    <div class="nadm__replay">
+      <app-select-field
+        [formControl]="replayTopic"
+        [options]="topicOptions()"
+        [label]="'admin.notifications.deadLetters.topic' | t"
+      />
+      <app-button [loading]="replaying()" (click)="replay()">
+        {{ 'admin.notifications.deadLetters.replay' | t }}
+      </app-button>
+    </div>
+
+    @if (lastReplay(); as result) {
+      <p class="nadm__replay-result">
+        {{ 'admin.notifications.deadLetters.result' | t: {count: result.replayed, topic: result.topic} }}
+      </p>
+    }
+  </app-card>
+}
+
+@if (canReadAudit()) {
+  <app-card flush class="nadm__card">
+    <div class="nadm__card-head">
+      <span class="nadm__card-title">{{ 'admin.notifications.audit.title' | t }}</span>
+      <span class="nadm__card-hint">{{ 'admin.notifications.audit.hint' | t }}</span>
+    </div>
+
+    @if (loadingAudit()) {
+      <div class="nadm__loading"><app-spinner/></div>
+    } @else if (auditEntries().length === 0) {
+      <app-empty-state
+        icon="history"
+        [title]="'admin.notifications.audit.empty' | t"
+        [description]="'admin.notifications.audit.emptyDescription' | t"
+      />
+    } @else {
+      @for (e of auditEntries(); track e.id) {
+        <div class="nadm__row">
+          <span class="nadm__icon"><app-icon name="history" [size]="15"/></span>
+          <div class="nadm__info">
+            <span class="nadm__name">{{ e.action }}</span>
+            <span class="nadm__desc">
+              @if (e.resourceId) { {{ 'admin.notifications.audit.subject' | t }}: {{ e.resourceId }} }
+              @if (e.details) { · {{ e.details | json }} }
+              @if (e.requestId) { · {{ e.requestId }} }
+            </span>
+          </div>
+          <span class="nadm__time">{{ e.createdAt | relativeTime }}</span>
+        </div>
+      }
+    }
+  </app-card>
+
+  @if (auditTotalPages() > 1) {
+    <app-pagination
+      [page]="auditPage()"
+      [totalPages]="auditTotalPages()"
+      [first]="auditFirst()"
+      [last]="auditLast()"
+      (pageChange)="onAuditPageChange($event)"
+    />
+  }
+}

@@ -1,0 +1,97 @@
+[data-palette='darkmatter'] {
+  --background: rgb(255, 255, 255);
+  --foreground: rgb(17, 24, 39);
+  --card: rgb(255, 255, 255);
+  --card-foreground: rgb(17, 24, 39);
+  --popover: rgb(255, 255, 255);
+  --popover-foreground: rgb(17, 24, 39);
+  --primary: rgb(216, 121, 67);
+  --primary-foreground: rgb(255, 255, 255);
+  --secondary: rgb(82, 117, 117);
+  --secondary-foreground: rgb(255, 255, 255);
+  --muted: rgb(243, 244, 246);
+  --muted-foreground: rgb(107, 114, 128);
+  --accent: rgb(238, 238, 238);
+  --accent-foreground: rgb(17, 24, 39);
+  --destructive: rgb(239, 68, 68);
+  --destructive-foreground: rgb(250, 250, 250);
+  --border: rgb(229, 231, 235);
+  --input: rgb(229, 231, 235);
+  --ring: rgb(216, 121, 67);
+  --chart-1: rgb(95, 135, 135);
+  --chart-2: rgb(231, 138, 83);
+  --chart-3: rgb(251, 203, 151);
+  --chart-4: rgb(136, 136, 136);
+  --chart-5: rgb(153, 153, 153);
+  --sidebar: rgb(243, 244, 246);
+  --sidebar-foreground: rgb(17, 24, 39);
+  --sidebar-primary: rgb(216, 121, 67);
+  --sidebar-primary-foreground: rgb(255, 255, 255);
+  --sidebar-accent: rgb(255, 255, 255);
+  --sidebar-accent-foreground: rgb(17, 24, 39);
+  --sidebar-border: rgb(229, 231, 235);
+  --sidebar-ring: rgb(216, 121, 67);
+
+  --font-sans: 'Geist Mono', ui-monospace, monospace;
+  --font-serif: serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  --radius: 0.75rem;
+  --shadow-2xs: 0px 1px 4px 0px hsl(0 0% 0% / 0.03);
+  --shadow-xs: 0px 1px 4px 0px hsl(0 0% 0% / 0.03);
+  --shadow-sm: 0px 1px 4px 0px hsl(0 0% 0% / 0.05), 0px 1px 2px -1px hsl(0 0% 0% / 0.05);
+  --shadow: 0px 1px 4px 0px hsl(0 0% 0% / 0.05), 0px 1px 2px -1px hsl(0 0% 0% / 0.05);
+  --shadow-md: 0px 1px 4px 0px hsl(0 0% 0% / 0.05), 0px 2px 4px -1px hsl(0 0% 0% / 0.05);
+  --shadow-lg: 0px 1px 4px 0px hsl(0 0% 0% / 0.05), 0px 4px 6px -1px hsl(0 0% 0% / 0.05);
+  --shadow-xl: 0px 1px 4px 0px hsl(0 0% 0% / 0.05), 0px 8px 10px -1px hsl(0 0% 0% / 0.05);
+  --shadow-2xl: 0px 1px 4px 0px hsl(0 0% 0% / 0.13);
+}
+
+[data-palette='darkmatter'].dark {
+  --background: rgb(18, 17, 19);
+  --foreground: rgb(193, 193, 193);
+  --card: rgb(18, 18, 18);
+  --card-foreground: rgb(193, 193, 193);
+  --popover: rgb(18, 17, 19);
+  --popover-foreground: rgb(193, 193, 193);
+  --primary: rgb(231, 138, 83);
+  --primary-foreground: rgb(18, 17, 19);
+  --secondary: rgb(95, 135, 135);
+  --secondary-foreground: rgb(18, 17, 19);
+  --muted: rgb(34, 34, 34);
+  --muted-foreground: rgb(136, 136, 136);
+  --accent: rgb(51, 51, 51);
+  --accent-foreground: rgb(193, 193, 193);
+  --destructive: rgb(95, 135, 135);
+  --destructive-foreground: rgb(18, 17, 19);
+  --border: rgb(34, 34, 34);
+  --input: rgb(34, 34, 34);
+  --ring: rgb(231, 138, 83);
+  --chart-1: rgb(95, 135, 135);
+  --chart-2: rgb(231, 138, 83);
+  --chart-3: rgb(251, 203, 151);
+  --chart-4: rgb(136, 136, 136);
+  --chart-5: rgb(153, 153, 153);
+  --sidebar: rgb(18, 18, 18);
+  --sidebar-foreground: rgb(193, 193, 193);
+  --sidebar-primary: rgb(231, 138, 83);
+  --sidebar-primary-foreground: rgb(18, 17, 19);
+  --sidebar-accent: rgb(51, 51, 51);
+  --sidebar-accent-foreground: rgb(193, 193, 193);
+  --sidebar-border: rgb(34, 34, 34);
+  --sidebar-ring: rgb(231, 138, 83);
+
+  --font-sans: 'Geist Mono', ui-monospace, monospace;
+  --font-serif: serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  --radius: 0.75rem;
+  --shadow-2xs: 0px 1px 4px 0px hsl(0 0% 0% / 0.03);
+  --shadow-xs: 0px 1px 4px 0px hsl(0 0% 0% / 0.03);
+  --shadow-sm: 0px 1px 4px 0px hsl(0 0% 0% / 0.05), 0px 1px 2px -1px hsl(0 0% 0% / 0.05);
+  --shadow: 0px 1px 4px 0px hsl(0 0% 0% / 0.05), 0px 1px 2px -1px hsl(0 0% 0% / 0.05);
+  --shadow-md: 0px 1px 4px 0px hsl(0 0% 0% / 0.05), 0px 2px 4px -1px hsl(0 0% 0% / 0.05);
+  --shadow-lg: 0px 1px 4px 0px hsl(0 0% 0% / 0.05), 0px 4px 6px -1px hsl(0 0% 0% / 0.05);
+  --shadow-xl: 0px 1px 4px 0px hsl(0 0% 0% / 0.05), 0px 8px 10px -1px hsl(0 0% 0% / 0.05);
+  --shadow-2xl: 0px 1px 4px 0px hsl(0 0% 0% / 0.13);
+}

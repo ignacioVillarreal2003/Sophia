@@ -1,0 +1,89 @@
+<app-page-header [title]="'admin.roles.title' | t">
+  @if (canManage()) {
+    <app-button variant="secondary" routerLink="new" icon="plus">{{ 'admin.roles.new' | t }}</app-button>
+  }
+</app-page-header>
+
+<div class="rls__search">
+  <app-icon name="search" [size]="16" class="rls__search-icon"/>
+  <input
+    class="rls__search-input"
+    type="search"
+    [placeholder]="'admin.roles.searchPlaceholder' | t"
+    (input)="onSearchInput($any($event.target).value)"
+  />
+</div>
+
+@if (loading()) {
+  <div class="rls__loading">
+    <app-spinner/>
+  </div>
+} @else if (roles().length === 0) {
+  <app-empty-state
+    icon="shield"
+    [title]="(search() ? 'admin.roles.noResults' : 'admin.roles.empty') | t"
+  />
+} @else {
+  @if (canManage()) {
+    <div class="rls__bulk">
+      <div class="rls__bulk-selectall">
+        <app-checkbox [checked]="allSelected()" [disabled]="bulkBusy()" (checkedChange)="toggleSelectAll()"/>
+        <span (click)="toggleSelectAll()">
+          @if (selectedCount() === 0) {
+            {{ 'admin.roles.bulk.selectAll' | t }}
+          } @else {
+            {{ 'admin.roles.bulk.selectedCount' | t: {count: selectedCount()} }}
+          }
+        </span>
+      </div>
+
+      @if (selectedCount() > 0) {
+        <div class="rls__bulk-actions">
+          <app-button variant="danger" size="sm" [disabled]="bulkBusy()" (click)="bulkDelete()">
+            {{ 'admin.roles.bulk.delete' | t }}
+          </app-button>
+          <button type="button" class="rls__bulk-clear" (click)="clearSelection()">
+            {{ 'admin.roles.bulk.clear' | t }}
+          </button>
+        </div>
+      }
+    </div>
+  }
+
+  <app-card flush>
+    @for (role of roles(); track role.id) {
+      <a
+        [routerLink]="canManage() ? [role.id] : null"
+        class="rls__row"
+        [class.rls__row--static]="!canManage()"
+      >
+        @if (canManage()) {
+          <app-checkbox
+            [checked]="isSelected(role.id)"
+            [disabled]="role.system"
+            (checkedChange)="toggleSelect(role.id)"
+            (click)="$event.stopPropagation(); $event.preventDefault()"
+          />
+        }
+        <div class="rls__info">
+          <span class="rls__name">{{ role.name }}</span>
+          @if (role.description) {
+            <span class="rls__desc">{{ role.description }}</span>
+          }
+        </div>
+        @if (canManage()) {
+          <div class="rls__actions">
+            <app-icon name="chevron-right" [size]="16" class="rls__chevron"/>
+          </div>
+        }
+      </a>
+    }
+  </app-card>
+  <app-pagination
+    [page]="page()"
+    [totalPages]="totalPages()"
+    [first]="first()"
+    [last]="last()"
+    (pageChange)="onPageChange($event)"
+  />
+}

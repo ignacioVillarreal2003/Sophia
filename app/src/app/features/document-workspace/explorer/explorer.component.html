@@ -1,0 +1,325 @@
+<div
+  class="exp"
+  [class.exp--dragging]="draggingId() !== null"
+  appDropZone
+  (filesDropped)="onFilesDropped($event)"
+  #dz="dropZone"
+  [cdkContextMenuTriggerFor]="createMenu"
+>
+  <input #uploadEl type="file" multiple hidden (change)="onFileInput($event)" />
+  <input
+    #importEl
+    type="file"
+    accept=".md,.markdown,.html,.txt,.docx,.pdf,.zip"
+    hidden
+    (change)="onImportInput($event)"
+  />
+
+  <!-- Path from the workspace root down to the current folder, with the main "New" action opposite -->
+  <div class="exp__top">
+    @if (crumbs().length > 0) {
+      <app-breadcrumbs
+        class="exp__crumbs"
+        [items]="crumbs()"
+        [droppable]="draggingId() !== null"
+        (navigate)="navigateCrumb($event)"
+        (crumbDrop)="onCrumbDrop($event)"
+      />
+    } @else {
+      <span></span>
+    }
+    <app-button variant="primary" size="sm" icon="plus" (click)="create()">
+      {{ 'explorer.new' | t }}
+    </app-button>
+  </div>
+
+  <!-- Search on its own row; filters and sorting right below it -->
+  <div class="exp__bar">
+    <div class="exp__search">
+      <app-icon name="search" [size]="16" class="exp__search-icon" />
+      <input
+        class="exp__search-input"
+        type="search"
+        [placeholder]="'explorer.search.placeholder' | t"
+        [value]="search()"
+        (input)="search.set($any($event.target).value)"
+      />
+    </div>
+
+    <div class="exp__filters">
+      <span class="exp__select">
+        <select [value]="typeFilter()" [attr.aria-label]="'explorer.filter.type.label' | t" (change)="typeFilter.set($any($event.target).value)">
+          <option value="all">{{ 'explorer.filter.type.all' | t }}</option>
+          <option value="folders">{{ 'explorer.filter.type.folders' | t }}</option>
+          <option value="documents">{{ 'explorer.filter.type.documents' | t }}</option>
+          <option value="files">{{ 'explorer.filter.type.files' | t }}</option>
+        </select>
+        <app-icon name="chevron-down" [size]="14" />
+      </span>
+
+      <span class="exp__select">
+        <select [value]="personFilter()" [attr.aria-label]="'explorer.filter.people.label' | t" (change)="personFilter.set($any($event.target).value)">
+          <option value="">{{ 'explorer.filter.people.all' | t }}</option>
+          @for (m of members(); track m.userId) {
+            <option [value]="m.userId">{{ m.fullName || m.email }}</option>
+          }
+        </select>
+        <app-icon name="chevron-down" [size]="14" />
+      </span>
+
+      <span class="exp__select">
+        <select [value]="modifiedFilter()" [attr.aria-label]="'explorer.filter.modified.label' | t" (change)="modifiedFilter.set($any($event.target).value)">
+          <option value="any">{{ 'explorer.filter.modified.any' | t }}</option>
+          <option value="today">{{ 'explorer.filter.modified.today' | t }}</option>
+          <option value="week">{{ 'explorer.filter.modified.week' | t }}</option>
+          <option value="month">{{ 'explorer.filter.modified.month' | t }}</option>
+          <option value="year">{{ 'explorer.filter.modified.year' | t }}</option>
+        </select>
+        <app-icon name="chevron-down" [size]="14" />
+      </span>
+
+      <span class="exp__select">
+        <select [value]="sort()" [attr.aria-label]="'explorer.sort.label' | t" (change)="sort.set($any($event.target).value)">
+          <option value="modified">{{ 'explorer.sort.modified' | t }}</option>
+          <option value="name">{{ 'explorer.sort.name' | t }}</option>
+        </select>
+        <app-icon name="chevron-down" [size]="14" />
+      </span>
+
+      @if (filtersActive()) {
+        <button type="button" class="exp__clear" (click)="clearFilters()">
+          <app-icon name="x" [size]="14" />
+          <span>{{ 'common.filters.clear' | t }}</span>
+        </button>
+      }
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="exp__loading"><app-spinner /></div>
+  } @else if (items().length === 0) {
+    <div class="exp__empty">
+      <span class="exp__empty-icon"><app-icon name="folder-open" [size]="28" /></span>
+      <h2 class="exp__empty-title">{{ 'explorer.empty' | t }}</h2>
+      <p class="exp__empty-desc">{{ 'explorer.emptyDescription' | t }}</p>
+    </div>
+  } @else if (visible().length === 0) {
+    <div class="exp__empty">
+      <span class="exp__empty-icon"><app-icon name="search" [size]="28" /></span>
+      <h2 class="exp__empty-title">{{ 'explorer.noResults' | t }}</h2>
+      <p class="exp__empty-desc">{{ 'explorer.noResultsDesc' | t }}</p>
+    </div>
+  } @else if (view() === 'grid') {
+    @if (folders().length > 0) {
+      <section class="exp__section">
+        <h2 class="exp__section-title">{{ 'explorer.sections.folders' | t }}</h2>
+        <div class="exp__folders">
+          @for (item of folders(); track item.id) {
+            <div
+              class="exp__folder"
+              [class.exp__folder--selected]="selectedId() === item.id"
+              [class.exp__folder--drop]="dropTargetId() === item.id"
+              [class.exp__folder--received]="receivedId() === item.id"
+              [class.exp__folder--dragging]="draggingId() === item.id"
+              [style.--item-color]="colorOf(item)"
+              tabindex="0"
+              role="button"
+              draggable="true"
+              [cdkContextMenuTriggerFor]="itemMenu"
+              [cdkContextMenuTriggerData]="{ $implicit: item }"
+              (click)="onItemClick(item)"
+              (dblclick)="open(item)"
+              (keydown.enter)="open(item)"
+              (dragstart)="onDragStart($event, item)"
+              (dragend)="onDragEnd()"
+              (dragover)="onFolderDragOver($event, item)"
+              (dragleave)="onFolderDragLeave(item)"
+              (drop)="onFolderDrop($event, item)"
+            >
+              <span class="exp__folder-icon"><app-icon name="folder" [size]="18" /></span>
+              <span class="exp__folder-name">{{ item.name }}</span>
+              @if (starred().has(item.id)) {
+                <app-icon name="star-filled" [size]="14" class="exp__star" />
+              }
+              <button
+                type="button"
+                class="exp__more"
+                [attr.aria-label]="'explorer.menu.more' | t"
+                [cdkMenuTriggerFor]="itemMenu"
+                [cdkMenuTriggerData]="{ $implicit: item }"
+                (click)="$event.stopPropagation()"
+                (dblclick)="$event.stopPropagation()"
+              >
+                <app-icon name="more-vertical" [size]="16" />
+              </button>
+            </div>
+          }
+        </div>
+      </section>
+    }
+
+    @if (files().length > 0) {
+      <section class="exp__section">
+        <h2 class="exp__section-title">{{ 'explorer.sections.files' | t }}</h2>
+        <div class="exp__files">
+          @for (item of files(); track item.id) {
+            <div
+              class="exp__file"
+              [class.exp__file--selected]="selectedId() === item.id"
+              [class.exp__file--dragging]="draggingId() === item.id"
+              tabindex="0"
+              role="button"
+              draggable="true"
+              [cdkContextMenuTriggerFor]="itemMenu"
+              [cdkContextMenuTriggerData]="{ $implicit: item }"
+              (click)="onItemClick(item)"
+              (dblclick)="open(item)"
+              (keydown.enter)="open(item)"
+              (dragstart)="onDragStart($event, item)"
+              (dragend)="onDragEnd()"
+            >
+              <div class="exp__preview">
+                <app-icon [name]="icon(item.type)" [size]="40" />
+              </div>
+              <div class="exp__file-foot">
+                <app-icon [name]="icon(item.type)" [size]="16" class="exp__file-icon" />
+                <div class="exp__file-text">
+                  <span class="exp__file-name">{{ item.name }}</span>
+                  <span class="exp__file-meta">{{ item.updatedAt | relativeTime }}</span>
+                </div>
+                @if (starred().has(item.id)) {
+                  <app-icon name="star-filled" [size]="14" class="exp__star" />
+                }
+                <button
+                  type="button"
+                  class="exp__more"
+                  [attr.aria-label]="'explorer.menu.more' | t"
+                  [cdkMenuTriggerFor]="itemMenu"
+                  [cdkMenuTriggerData]="{ $implicit: item }"
+                  (click)="$event.stopPropagation()"
+                  (dblclick)="$event.stopPropagation()"
+                >
+                  <app-icon name="more-vertical" [size]="16" />
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      </section>
+    }
+  } @else {
+    <div class="exp__list">
+      @for (item of visible(); track item.id) {
+        <div
+          class="exp__row"
+          [class.exp__row--selected]="selectedId() === item.id"
+          [class.exp__row--drop]="dropTargetId() === item.id"
+          [class.exp__row--dragging]="draggingId() === item.id"
+          [style.--item-color]="colorOf(item)"
+          tabindex="0"
+          role="button"
+          draggable="true"
+          [cdkContextMenuTriggerFor]="itemMenu"
+          [cdkContextMenuTriggerData]="{ $implicit: item }"
+          (click)="onItemClick(item)"
+          (dblclick)="open(item)"
+          (keydown.enter)="open(item)"
+          (dragstart)="onDragStart($event, item)"
+          (dragend)="onDragEnd()"
+          (dragover)="onFolderDragOver($event, item)"
+          (dragleave)="onFolderDragLeave(item)"
+          (drop)="onFolderDrop($event, item)"
+        >
+          <span class="exp__row-icon" [class.exp__row-icon--tint]="item.type === 'FOLDER'">
+            <app-icon [name]="icon(item.type)" [size]="18" />
+          </span>
+          <span class="exp__row-name">{{ item.name }}</span>
+          @if (starred().has(item.id)) {
+            <app-icon name="star-filled" [size]="14" class="exp__star" />
+          }
+          <span class="exp__row-meta">{{ item.updatedAt | relativeTime }}</span>
+          <button
+            type="button"
+            class="exp__more"
+            [attr.aria-label]="'explorer.menu.more' | t"
+            [cdkMenuTriggerFor]="itemMenu"
+            [cdkMenuTriggerData]="{ $implicit: item }"
+            (click)="$event.stopPropagation()"
+            (dblclick)="$event.stopPropagation()"
+          >
+            <app-icon name="more-vertical" [size]="16" />
+          </button>
+        </div>
+      }
+    </div>
+  }
+
+  @if (dz.dragging()) {
+    <div class="exp__drop-overlay">
+      <div class="exp__drop-inner">
+        <app-icon name="upload" [size]="32" />
+        <p>{{ 'explorer.dropToUpload' | t }}</p>
+      </div>
+    </div>
+  }
+</div>
+
+<!-- Right-click on the empty area: create / upload, like Drive -->
+<ng-template #createMenu>
+  <div class="menu" cdkMenu>
+    <button class="menu__item" cdkMenuItem (click)="create('FOLDER')">
+      <app-icon name="folder" [size]="16" /> {{ 'explorer.newFolder' | t }}
+    </button>
+    <div class="menu__divider"></div>
+    <button class="menu__item" cdkMenuItem (click)="create('MARKDOWN_DOCUMENT')">
+      <app-icon name="file-text" [size]="16" /> {{ 'explorer.newDoc' | t }}
+    </button>
+    <button class="menu__item" cdkMenuItem (click)="create('CHECKLIST')">
+      <app-icon name="check-circle" [size]="16" /> {{ 'explorer.newChecklist' | t }}
+    </button>
+    <button class="menu__item" cdkMenuItem (click)="create('SPREADSHEET')">
+      <app-icon name="table" [size]="16" /> {{ 'explorer.newSheet' | t }}
+    </button>
+    <div class="menu__divider"></div>
+    <button class="menu__item" cdkMenuItem (click)="pickUpload()">
+      <app-icon name="upload" [size]="16" /> {{ 'explorer.upload' | t }}
+    </button>
+    <button class="menu__item" cdkMenuItem (click)="pickImport()">
+      <app-icon name="download" [size]="16" /> {{ 'explorer.import' | t }}
+    </button>
+  </div>
+</ng-template>
+
+<!-- Per-item menu (right-click or the ⋮ button) -->
+<ng-template #itemMenu let-item>
+  <div class="menu" cdkMenu>
+    <button class="menu__item" cdkMenuItem (click)="open(item)">
+      <app-icon name="folder-open" [size]="16" /> {{ 'explorer.menu.open' | t }}
+    </button>
+    <button class="menu__item" cdkMenuItem (click)="toggleStar(item)">
+      <app-icon [name]="starred().has(item.id) ? 'star-filled' : 'star'" [size]="16" />
+      {{ (starred().has(item.id) ? 'explorer.menu.unstar' : 'explorer.menu.star') | t }}
+    </button>
+    <button class="menu__item" cdkMenuItem (click)="share(item)">
+      <app-icon name="share" [size]="16" /> {{ 'explorer.menu.share' | t }}
+    </button>
+    <div class="menu__divider"></div>
+    <button class="menu__item" cdkMenuItem (click)="moveTo(item)">
+      <app-icon name="arrow-right" [size]="16" /> {{ 'explorer.menu.move' | t }}
+    </button>
+    <button class="menu__item" cdkMenuItem (click)="rename(item)">
+      <app-icon name="edit" [size]="16" /> {{ 'explorer.menu.rename' | t }}
+    </button>
+    <button class="menu__item" cdkMenuItem (click)="duplicate(item)">
+      <app-icon name="copy" [size]="16" /> {{ 'explorer.menu.duplicate' | t }}
+    </button>
+    <button class="menu__item" cdkMenuItem (click)="openDetails(item)">
+      <app-icon name="info" [size]="16" />
+      {{ (item.type === 'FOLDER' ? 'explorer.menu.details' : 'explorer.menu.detailsFile') | t }}
+    </button>
+    <div class="menu__divider"></div>
+    <button class="menu__item menu__item--danger" cdkMenuItem (click)="trash(item)">
+      <app-icon name="trash" [size]="16" /> {{ 'explorer.menu.trash' | t }}
+    </button>
+  </div>
+</ng-template>

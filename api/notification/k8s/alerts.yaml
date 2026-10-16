@@ -1,0 +1,106 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: sophia-notification
+  labels:
+    app.kubernetes.io/name: sophia-notification
+    release: prometheus
+spec:
+  groups:
+    - name: sophia-notification-delivery
+      rules:
+        - alert: NotificationEmailOutboxStalled
+          expr: notification_email_outbox_oldest_pending_age_seconds{application="notification"} > 900
+          for: 10m
+          labels:
+            severity: critical
+          annotations:
+            summary: The email outbox has stopped moving
+            description: >-
+              The oldest undelivered email is {{ $value | humanizeDuration }} old. The dispatcher is stuck,
+              SMTP is unreachable or the mail circuit breaker is open. Check
+              notification_emails_dispatched_total{result="failed"} and the mail circuit breaker state.
+
+        - alert: NotificationEmailOutboxBacklogGrowing
+          expr: notification_email_outbox_pending{application="notification"} > 1000
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: The email outbox backlog keeps growing
+            description: '{{ $value }} emails are queued and not being drained fast enough.'
+
+        - alert: NotificationDeadLetters
+          expr: sum by (source) (increase(notification_messages_dead_lettered_total{application="notification"}[15m])) > 0
+          for: 0m
+          labels:
+            severity: critical
+          annotations:
+            summary: Messages are being dead lettered by {{ $labels.source }}
+            description: >-
+              {{ $value }} records went to a dead letter topic in the last 15 minutes. Nothing processed them.
+              Inspect the topic and replay with POST /api/v1/dead-letters/replay once the cause is fixed.
+
+        - alert: NotificationCommandsRejected
+          expr: >-
+            sum(rate(notification_commands_total{application="notification",result="rejected"}[10m]))
+            / sum(rate(notification_commands_total{application="notification"}[10m])) > 0.05
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: More than 5% of notification commands are being rejected
+            description: A producer is most likely emitting commands this service cannot accept.
+
+        - alert: NotificationEmailsFailing
+          expr: >-
+            sum(rate(notification_emails_dispatched_total{application="notification",result="failed"}[15m])) > 0
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: Emails are being given up on
+            description: Delivery exhausted every retry for at least one message in the last 15 minutes.
+
+    - name: sophia-notification-service
+      rules:
+        - alert: NotificationServiceDown
+          expr: up{job=~".*notification.*"} == 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: The notification service is not being scraped
+            description: No instance has answered for 5 minutes.
+
+        - alert: NotificationHighErrorRate
+          expr: >-
+            sum(rate(http_server_requests_seconds_count{application="notification",status=~"5.."}[5m]))
+            / sum(rate(http_server_requests_seconds_count{application="notification"}[5m])) > 0.02
+          for: 10m
+          labels:
+            severity: critical
+          annotations:
+            summary: More than 2% of API requests are failing with 5xx
+
+        - alert: NotificationConsumerLag
+          expr: kafka_consumergroup_lag{consumergroup="notification"} > 5000
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: The notification consumer is falling behind
+            description: >-
+              Lag on {{ $labels.topic }} is {{ $value }}. Consider raising
+              NOTIFICATION_COMMANDS_CONCURRENCY or the partition count.
+
+        - alert: NotificationRateLimitingHeavily
+          expr: sum by (bucket) (rate(notification_rate_limited_total{application="notification"}[10m])) > 5
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: Callers are being rate limited at a sustained rate
+            description: >-
+              Bucket {{ $labels.bucket }} is rejecting traffic. Either a client is misbehaving or the
+              configured limit is too low for real usage.

@@ -1,0 +1,11 @@
+.pmf__loading {
+  display: grid;
+  place-items: center;
+  padding: var(--space-section);
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}

@@ -1,0 +1,41 @@
+# ── Secrets ──
+.env
+*token*.txt
+
+# ── Build output ──
+HELP.md
+target/
+build/
+!**/src/main/**/target/
+!**/src/test/**/target/
+!**/src/main/**/build/
+!**/src/test/**/build/
+.mvn/wrapper/maven-wrapper.jar
+
+# ── Runtime ──
+uploads/
+
+# ── Eclipse / STS ──
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+# ── IntelliJ IDEA ──
+.idea
+*.iws
+*.iml
+*.ipr
+
+# ── NetBeans ──
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+# ── VS Code ──
+.vscode/

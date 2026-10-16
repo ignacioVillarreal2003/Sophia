@@ -1,0 +1,102 @@
+<app-page-header [title]="'admin.permissions.title' | t">
+  @if (canManage()) {
+    <app-button variant="secondary" routerLink="new" icon="plus">{{ 'admin.permissions.new' | t }}</app-button>
+  }
+</app-page-header>
+
+<div class="prm__search">
+  <app-icon name="search" [size]="16" class="prm__search-icon"/>
+  <input
+    #searchInput
+    class="prm__search-input"
+    type="search"
+    [placeholder]="'admin.permissions.searchPlaceholder' | t"
+    (input)="onSearchInput($any($event.target).value)"
+  />
+  @if (rawSearch()) {
+    <button
+      type="button"
+      class="prm__search-clear"
+      (click)="clearSearch()"
+      [attr.aria-label]="'admin.permissions.clearSearch' | t"
+    >
+      <app-icon name="x" [size]="14"/>
+    </button>
+  }
+</div>
+
+@if (loading()) {
+  <div class="prm__loading">
+    <app-spinner/>
+  </div>
+} @else if (permissions().length === 0) {
+  <app-empty-state
+    icon="lock"
+    [title]="(search() ? 'admin.permissions.noResults' : 'admin.permissions.empty') | t"
+  />
+} @else {
+  @if (canManage()) {
+    <div class="prm__bulk">
+      <div class="prm__bulk-selectall">
+        <app-checkbox [checked]="allSelected()" [disabled]="bulkBusy()" (checkedChange)="toggleSelectAll()"/>
+        <span (click)="toggleSelectAll()">
+          @if (selectedCount() === 0) {
+            {{ 'admin.permissions.bulk.selectAll' | t }}
+          } @else {
+            {{ 'admin.permissions.bulk.selectedCount' | t: {count: selectedCount()} }}
+          }
+        </span>
+      </div>
+
+      @if (selectedCount() > 0) {
+        <div class="prm__bulk-actions">
+          <app-button variant="danger" size="sm" [disabled]="bulkBusy()" (click)="bulkDelete()">
+            {{ 'admin.permissions.bulk.delete' | t }}
+          </app-button>
+          <button type="button" class="prm__bulk-clear" (click)="clearSelection()">
+            {{ 'admin.permissions.bulk.clear' | t }}
+          </button>
+        </div>
+      }
+    </div>
+  }
+
+  @for (group of groups(); track group.category) {
+    <div class="prm__group">
+      <span class="prm__group-title">{{ group.category }}</span>
+      <app-card flush>
+        @for (permission of group.permissions; track permission.id) {
+          <a
+            [routerLink]="canManage() ? [permission.id] : null"
+            class="prm__row"
+            [class.prm__row--static]="!canManage()"
+          >
+            @if (canManage()) {
+              <app-checkbox
+                [checked]="isSelected(permission.id)"
+                (checkedChange)="toggleSelect(permission.id)"
+                (click)="$event.stopPropagation(); $event.preventDefault()"
+              />
+            }
+            <div class="prm__info">
+              <span class="prm__name">{{ permission.name }}</span>
+              @if (permission.description) {
+                <span class="prm__desc">{{ permission.description }}</span>
+              }
+            </div>
+            @if (canManage()) {
+              <app-icon name="chevron-right" [size]="16" class="prm__chevron"/>
+            }
+          </a>
+        }
+      </app-card>
+    </div>
+  }
+  <app-pagination
+    [page]="page()"
+    [totalPages]="totalPages()"
+    [first]="first()"
+    [last]="last()"
+    (pageChange)="onPageChange($event)"
+  />
+}

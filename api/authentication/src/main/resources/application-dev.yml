@@ -1,0 +1,23 @@
+sophia:
+  security:
+    require-email-verification: ${REQUIRE_EMAIL_VERIFICATION:false}
+    rate-limit:
+      enabled: ${RATE_LIMIT_ENABLED:false}
+  mail:
+    enabled: ${MAIL_ENABLED:false}
+
+spring:
+  jpa:
+    properties:
+      hibernate:
+        format_sql: true
+
+management:
+  health:
+    mail:
+      enabled: false
+
+logging:
+  level:
+    com.sophia: DEBUG
+    org.hibernate.SQL: DEBUG

@@ -1,0 +1,96 @@
+<div class="auth-form">
+  @if (registeredEmail(); as email) {
+    <div class="auth-form__status">
+      <div class="verify__icon verify__icon--ok">
+        <app-icon name="check-circle" [size]="30"/>
+      </div>
+      <h1 class="auth-form__title">{{ 'auth.register.checkEmail' | t }}</h1>
+      <p class="auth-form__subtitle">{{ 'auth.register.checkEmailBody' | t }}</p>
+      <p class="auth-form__subtitle auth-form__status-email">{{ email }}</p>
+      <app-button
+        class="auth-form__status-action"
+        variant="ghost"
+        size="lg"
+        block
+        [loading]="resendingVerification()"
+        (click)="resendVerification()"
+      >
+        {{ 'auth.verify.resend' | t }}
+      </app-button>
+      <p class="auth-form__foot">
+        <a routerLink="/authentication/login" class="auth-form__link">{{ 'auth.login.submit' | t }}</a>
+      </p>
+    </div>
+  } @else {
+    <header class="auth-form__head">
+      <h1 class="auth-form__title">{{ 'auth.register.title' | t }}</h1>
+    </header>
+
+    @if (formError()) {
+      <div class="auth-form__alert" role="alert">{{ formError() }}</div>
+    }
+
+    <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <div class="auth-form__field">
+        <app-text-field
+          formControlName="email"
+          type="email"
+          icon="user"
+          autocomplete="email"
+          [label]="'auth.field.email' | t"
+          [placeholder]="'auth.field.emailPlaceholder' | t"
+          [invalid]="!!errorOf('email')"
+          [error]="errorOf('email') ?? ''"
+          required
+        />
+      </div>
+
+      <div class="auth-form__field">
+        <app-text-field
+          formControlName="password"
+          type="password"
+          icon="lock"
+          autocomplete="new-password"
+          [label]="'auth.field.password' | t"
+          [invalid]="!!errorOf('password')"
+          [error]="errorOf('password') ?? ''"
+          [hint]="'validation.password' | t"
+          required
+        />
+      </div>
+
+      <div class="auth-form__field">
+        <app-text-field
+          formControlName="confirmPassword"
+          type="password"
+          icon="lock"
+          autocomplete="new-password"
+          [label]="'auth.field.confirmPassword' | t"
+          [invalid]="!!confirmError()"
+          [error]="confirmError() ?? ''"
+          required
+        />
+      </div>
+
+      <app-button type="submit" variant="primary" size="lg" block [loading]="loading()">
+        {{ 'auth.register.submit' | t }}
+      </app-button>
+    </form>
+
+    <div class="auth-form__divider"><span>{{ 'auth.divider.or' | t }}</span></div>
+
+    <div class="auth-form__social">
+      @if (googleLoading()) {
+        <div class="auth-form__google-loading">
+          <app-spinner [size]="20"/>
+        </div>
+      } @else {
+        <app-google-signin-button text="signup_with" (credential)="onGoogleCredential($event)"/>
+      }
+    </div>
+
+    <p class="auth-form__foot">
+      <a routerLink="/authentication/login" class="auth-form__link">{{ 'auth.login.submit' | t }}</a>
+    </p>
+  }
+</div>

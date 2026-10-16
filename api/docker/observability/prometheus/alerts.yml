@@ -1,0 +1,202 @@
+groups:
+  - name: authentication-availability
+    rules:
+      - alert: AuthenticationServiceDown
+        expr: up{service="authentication"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Authentication API is down"
+          description: "Prometheus has not been able to scrape the authentication API for 2 minutes."
+
+      - alert: AuthenticationHighErrorRate
+        expr: >
+          sum(rate(http_server_requests_seconds_count{service="authentication", status=~"5.."}[5m]))
+          / sum(rate(http_server_requests_seconds_count{service="authentication"}[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Authentication API 5xx rate above 5%"
+          description: "More than 5% of requests are failing with 5xx over the last 5 minutes."
+
+      - alert: AuthenticationHighLatency
+        expr: >
+          histogram_quantile(0.95,
+            sum(rate(http_server_requests_seconds_bucket{service="authentication"}[5m])) by (le)) > 1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Authentication API p95 latency above 1s"
+          description: "The p95 request latency has been above 1 second for 10 minutes."
+
+  - name: authentication-security
+    rules:
+      - alert: FailedLoginSpike
+        expr: sum(rate(authentication_logins_total{result="failure"}[5m])) * 60 > 30
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Spike of failed logins"
+          description: "More than 30 failed logins per minute for 5 minutes; possible credential stuffing."
+
+      - alert: AccountLockoutSpike
+        expr: sum(increase(authentication_lockouts_total[15m])) > 10
+        labels:
+          severity: warning
+        annotations:
+          summary: "Unusual number of account lockouts"
+          description: "More than 10 accounts were locked in the last 15 minutes."
+
+      - alert: RateLimitRejectionSpike
+        expr: sum(rate(authentication_rate_limit_rejections_total[5m])) * 60 > 60
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Rate limiter is rejecting heavily"
+          description: "More than 60 requests per minute are being rejected by the rate limiter."
+
+      - alert: NotificationCommandRelayFailures
+        expr: sum(increase(authentication_notification_commands_total{result="failed"}[15m])) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: "Authentication is failing to relay notification commands"
+          description: "At least one notification command could not be relayed to Kafka in the last 15 minutes."
+
+  - name: notification-availability
+    rules:
+      - alert: NotificationServiceDown
+        expr: up{service="notification"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Notification API is down"
+          description: "Prometheus has not been able to scrape the notification API for 2 minutes."
+
+      - alert: NotificationHighErrorRate
+        expr: >
+          sum(rate(http_server_requests_seconds_count{service="notification", status=~"5.."}[5m]))
+          / sum(rate(http_server_requests_seconds_count{service="notification"}[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Notification API 5xx rate above 5%"
+          description: "More than 5% of requests are failing with 5xx over the last 5 minutes."
+
+  - name: notification-delivery
+    rules:
+      - alert: NotificationEmailOutboxStalled
+        expr: max(notification_email_outbox_oldest_pending_age_seconds{service="notification"}) > 900
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "The email outbox has stopped moving"
+          description: >
+            The oldest undelivered email is over 15 minutes old. The dispatcher is stuck, SMTP is
+            unreachable or the mail circuit breaker is open. This is the signal the delivery counters
+            cannot give you: they only describe emails that were attempted.
+
+      - alert: NotificationEmailOutboxBacklogGrowing
+        expr: max(notification_email_outbox_pending{service="notification"}) > 1000
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "The email outbox backlog keeps growing"
+          description: "More than 1000 emails are queued and not being drained fast enough."
+
+      - alert: OutboundEmailFailures
+        expr: >
+          sum(increase(notification_emails_dispatched_total{service="notification", result="failed"}[15m])) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: "Outbound emails are failing"
+          description: "At least one email exhausted all retries in the last 15 minutes; check the SMTP relay."
+
+      - alert: NotificationDeadLetters
+        expr: >
+          sum by (source) (increase(notification_messages_dead_lettered_total{service="notification"}[15m])) > 0
+        labels:
+          severity: critical
+        annotations:
+          summary: "Messages are being dead lettered by {{ $labels.source }}"
+          description: >
+            Records went to a dead letter topic in the last 15 minutes and nobody processed them.
+            Inspect the topic and replay with POST /api/v1/dead-letters/replay once the cause is fixed.
+
+      - alert: NotificationCommandsRejected
+        expr: >
+          sum(rate(notification_commands_total{service="notification", result="rejected"}[10m]))
+          / sum(rate(notification_commands_total{service="notification"}[10m])) > 0.05
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "More than 5% of notification commands are being rejected"
+          description: "A producer is most likely emitting commands this service cannot accept."
+
+      - alert: NotificationRateLimitingHeavily
+        expr: sum by (bucket) (rate(notification_rate_limited_total{service="notification"}[10m])) > 5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Notification is rate limiting callers at a sustained rate"
+          description: >
+            Bucket {{ $labels.bucket }} is rejecting traffic. Either a client is misbehaving or the
+            configured limit is too low for real usage.
+
+  - name: document-workspace-availability
+    rules:
+      - alert: DocumentWorkspaceServiceDown
+        expr: up{service="document-workspace"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Document workspace API is down"
+          description: "Prometheus has not been able to scrape the document workspace API for 2 minutes."
+
+      - alert: DocumentWorkspaceHighErrorRate
+        expr: >
+          sum(rate(http_server_requests_seconds_count{service="document-workspace", status=~"5.."}[5m]))
+          / sum(rate(http_server_requests_seconds_count{service="document-workspace"}[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Document workspace API 5xx rate above 5%"
+          description: "More than 5% of requests are failing with 5xx over the last 5 minutes."
+
+  - name: platform-resources
+    rules:
+      - alert: HikariPoolNearExhaustion
+        expr: >
+          max by (service) (hikaricp_connections_active)
+          / max by (service) (hikaricp_connections_max) > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Database connection pool of {{ $labels.service }} nearly exhausted"
+          description: "More than 90% of the Hikari pool has been in use for 5 minutes."
+
+      - alert: JvmHeapPressure
+        expr: >
+          sum by (service) (jvm_memory_used_bytes{area="heap"})
+          / sum by (service) (jvm_memory_max_bytes{area="heap"}) > 0.9
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "JVM heap usage of {{ $labels.service }} above 90%"
+          description: "Heap usage has been above 90% for 10 minutes; the service may start thrashing the GC."

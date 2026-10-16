@@ -1,0 +1,70 @@
+import { Routes } from '@angular/router';
+
+/**
+ * Routes nested under /workspaces/:documentWorkspaceId. The document-workspace tree
+ * layout hosts the artifact sidebar; children swap between the folder
+ * explorer and the document editor.
+ */
+export const DOCUMENT_ROUTES: Routes = [
+  {
+    path: '',
+    loadComponent: () =>
+      import('./document-workspace-tree-layout/document-workspace-tree-layout.component').then(
+        (m) => m.DocumentWorkspaceTreeLayoutComponent,
+      ),
+    children: [
+      {
+        path: '',
+        pathMatch: 'full',
+        loadComponent: () =>
+          import('./explorer/explorer.component').then((m) => m.ExplorerComponent),
+      },
+      {
+        path: 'folder/:folderId',
+        loadComponent: () =>
+          import('./explorer/explorer.component').then((m) => m.ExplorerComponent),
+      },
+      {
+        path: 'a/:artifactId',
+        loadComponent: () =>
+          import('./document/document-view.component').then((m) => m.DocumentViewComponent),
+      },
+      {
+        path: 'new',
+        loadComponent: () =>
+          import('./new-artifact/new-artifact.component').then((m) => m.NewArtifactComponent),
+      },
+      {
+        path: 'details/:artifactId',
+        loadComponent: () =>
+          import('./details/artifact-details.component').then((m) => m.ArtifactDetailsComponent),
+      },
+      {
+        path: 'starred',
+        loadComponent: () => import('./starred/starred.component').then((m) => m.StarredComponent),
+      },
+      {
+        path: 'activity',
+        loadComponent: () =>
+          import('./activity/workspace-activity.component').then((m) => m.WorkspaceActivityComponent),
+      },
+      {
+        path: 'trash',
+        loadComponent: () =>
+          import('./workspace-trash/workspace-trash.component').then((m) => m.WorkspaceTrashComponent),
+      },
+      {
+        path: 'settings',
+        loadComponent: () =>
+          import('./document-workspace-settings/document-workspace-settings.component').then(
+            (m) => m.DocumentWorkspaceSettingsComponent,
+          ),
+      },
+      {
+        path: 'members',
+        loadComponent: () =>
+          import('./members/members.component').then((m) => m.MembersComponent),
+      },
+    ],
+  },
+];

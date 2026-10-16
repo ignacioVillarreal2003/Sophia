@@ -1,0 +1,81 @@
+<div class="auth-form">
+  <header class="auth-form__head">
+    <h1 class="auth-form__title">{{ 'auth.login.title' | t }}</h1>
+  </header>
+
+  @if (formError()) {
+    <div class="auth-form__alert" role="alert">{{ formError() }}</div>
+  }
+
+  @if (unverifiedEmail()) {
+    <div class="auth-form__alert" role="alert">
+      {{ 'auth.error.unverified' | t }}
+      <app-button
+        class="auth-form__alert-action"
+        variant="text"
+        size="sm"
+        [disabled]="resendingVerification()"
+        (click)="resendVerification()"
+      >
+        {{ 'auth.verify.resend' | t }}
+      </app-button>
+    </div>
+  }
+
+  <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <div class="auth-form__field">
+      <app-text-field
+        formControlName="email"
+        type="email"
+        icon="user"
+        autocomplete="email"
+        [label]="'auth.field.email' | t"
+        [placeholder]="'auth.field.emailPlaceholder' | t"
+        [invalid]="!!errorOf('email')"
+        [error]="errorOf('email') ?? ''"
+        required
+      />
+    </div>
+
+    <div class="auth-form__field">
+      <app-text-field
+        formControlName="password"
+        type="password"
+        icon="lock"
+        autocomplete="current-password"
+        [label]="'auth.field.password' | t"
+        placeholder="••••••••"
+        [invalid]="!!errorOf('password')"
+        [error]="errorOf('password') ?? ''"
+        required
+      />
+    </div>
+
+    <div class="auth-form__row">
+      <app-checkbox formControlName="rememberMe" [label]="'auth.login.rememberMe' | t"/>
+      <a routerLink="/authentication/forgot-password" class="auth-form__link">
+        {{ 'auth.link.forgot' | t }}
+      </a>
+    </div>
+
+    <app-button type="submit" variant="primary" size="lg" block [loading]="loading()">
+      {{ 'auth.login.submit' | t }}
+    </app-button>
+  </form>
+
+  <div class="auth-form__divider"><span>{{ 'auth.divider.or' | t }}</span></div>
+
+  <div class="auth-form__social">
+    @if (googleLoading()) {
+      <div class="auth-form__google-loading">
+        <app-spinner [size]="20"/>
+      </div>
+    } @else {
+      <app-google-signin-button text="signin_with" (credential)="onGoogleCredential($event)"/>
+    }
+  </div>
+
+  <p class="auth-form__foot">
+    <a routerLink="/authentication/register" class="auth-form__link">{{ 'auth.register.submit' | t }}</a>
+  </p>
+</div>

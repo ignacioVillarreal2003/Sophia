@@ -1,0 +1,21 @@
+name: sophia-app
+
+services:
+  app:
+    image: ${APP_IMAGE:-sophia-app:local}
+    build: ../../app
+    container_name: sophia-app
+    restart: unless-stopped
+    ports:
+      - "4300:80"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 128M
+    networks:
+      - sophia
+
+networks:
+  sophia:
+    external: true

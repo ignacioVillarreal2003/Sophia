@@ -1,0 +1,93 @@
+@use 'design-tokens';
+@use 'tokens';
+@use 'themes';
+@use 'reset';
+@use 'overlays';
+@use 'mixins' as *;
+
+@import '@angular/cdk/overlay-prebuilt.css';
+
+.app-container {
+  width: 100%;
+  max-width: var(--content-max);
+  margin-inline: auto;
+  padding-inline: var(--space-lg);
+}
+
+.reading-container {
+  width: 100%;
+  max-width: var(--reading-max);
+  margin-inline: auto;
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.t-hero {
+  @include type-hero;
+}
+
+.t-display-lg {
+  @include type-display-lg;
+}
+
+.t-display-md {
+  @include type-display-md;
+}
+
+.t-lead {
+  @include type-lead;
+}
+
+.t-tagline {
+  @include type-tagline;
+}
+
+.t-body {
+  @include type-body;
+}
+
+.t-body-strong {
+  @include type-body-strong;
+}
+
+.t-caption {
+  @include type-caption;
+}
+
+.t-caption-strong {
+  @include type-caption-strong;
+}
+
+.t-fine {
+  @include type-fine;
+}
+
+.text-muted {
+  color: var(--text-muted);
+}
+
+.text-subtle {
+  color: var(--text-subtle);
+}
+
+.cdk-overlay-container {
+  z-index: var(--z-overlay);
+}
+
+.cdk-overlay-dark-backdrop {
+  background: var(--overlay-scrim);
+}
+
+body:has(.cdk-overlay-container .cdk-overlay-backdrop-showing) {
+  overflow: hidden;
+}

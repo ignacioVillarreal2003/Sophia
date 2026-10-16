@@ -1,0 +1,36 @@
+<app-page-header [title]="'settings.activity.title' | t" [subtitle]="'settings.activity.subtitle' | t"/>
+
+@if (loading()) {
+  <div class="act__loading">
+    <app-spinner/>
+  </div>
+} @else if (entries().length === 0) {
+  <app-empty-state icon="clock" [title]="'settings.activity.empty' | t"/>
+} @else {
+  <app-card flush>
+    @for (e of entries(); track e.id) {
+      <div class="act__row">
+        <span class="act__icon"><app-icon [name]="iconOf(e)" [size]="15"/></span>
+        <div class="act__info">
+          <span class="act__action">{{ labelOf(e) }}</span>
+          <span class="act__meta">
+            @if (e.ipAddress) {
+              {{ e.ipAddress }} ·
+            }
+            {{ e.createdAt | relativeTime }}
+          </span>
+        </div>
+        @if (e.result !== 'SUCCESS') {
+          <app-badge tone="danger">{{ 'settings.activity.failed' | t }}</app-badge>
+        }
+      </div>
+    }
+  </app-card>
+  <app-pagination
+    [page]="page()"
+    [totalPages]="totalPages()"
+    [first]="first()"
+    [last]="last()"
+    (pageChange)="onPageChange($event)"
+  />
+}

@@ -1,0 +1,285 @@
+<div class="ss" [class.ss--readonly]="readonly()">
+  <!-- Toolbar -->
+  <div class="ss__toolbar" role="toolbar">
+    @if (!readonly()) {
+      <button type="button" class="ss__tool" [disabled]="!canUndo()" [title]="'sheet.undo' | t" (click)="undo()">↶</button>
+      <button type="button" class="ss__tool" [disabled]="!canRedo()" [title]="'sheet.redo' | t" (click)="redo()">↷</button>
+      <span class="ss__sep"></span>
+
+      <div class="ss__dropdown">
+        <button type="button" class="ss__tool ss__tool--menu ss__tool--wide" (click)="popover.set(popover() === 'format' ? null : 'format'); $event.stopPropagation()">
+          {{ formatLabel() }} <span class="ss__caret">▾</span>
+        </button>
+        @if (popover() === 'format') {
+          <div class="ss__popover ss__popover--list">
+            @for (f of numberFormats; track f.id) {
+              <button type="button" class="ss__popover-item" [class.is-active]="(activeStyle().nf ?? 'General') === f.format" (click)="setFormat(f.format)">
+                <span>{{ f.label }}</span><span class="ss__popover-sample">{{ f.sample }}</span>
+              </button>
+            }
+          </div>
+        }
+      </div>
+      <button type="button" class="ss__tool" [title]="'sheet.decimals.less' | t" (click)="adjustDecimals(-1)">.0←</button>
+      <button type="button" class="ss__tool" [title]="'sheet.decimals.more' | t" (click)="adjustDecimals(1)">.00→</button>
+      <span class="ss__sep"></span>
+
+      <select class="ss__select" [title]="'sheet.fontSize' | t" [value]="activeStyle().fs ?? 13" (change)="setFontSize($any($event.target).value)">
+        @for (size of [9, 10, 11, 12, 13, 14, 16, 18, 20, 24, 32]; track size) {
+          <option [value]="size">{{ size }}</option>
+        }
+      </select>
+      <button type="button" class="ss__tool ss__tool--b" [class.is-active]="activeStyle().b" [title]="('sheet.bold' | t) + ' (Ctrl+B)'" (click)="toggleStyle('b')">B</button>
+      <button type="button" class="ss__tool ss__tool--i" [class.is-active]="activeStyle().i" [title]="('sheet.italic' | t) + ' (Ctrl+I)'" (click)="toggleStyle('i')">I</button>
+      <button type="button" class="ss__tool ss__tool--u" [class.is-active]="activeStyle().u" [title]="('sheet.underline' | t) + ' (Ctrl+U)'" (click)="toggleStyle('u')">U</button>
+      <button type="button" class="ss__tool ss__tool--s" [class.is-active]="activeStyle().st" [title]="'sheet.strike' | t" (click)="toggleStyle('st')">S</button>
+
+      <div class="ss__dropdown">
+        <button type="button" class="ss__tool ss__tool--menu" [title]="'sheet.textColor' | t" (click)="popover.set(popover() === 'color' ? null : 'color'); $event.stopPropagation()">
+          <span class="ss__color-a" [style.border-color]="activeStyle().c || 'currentColor'">A</span>
+        </button>
+        @if (popover() === 'color') {
+          <div class="ss__popover ss__popover--palette">
+            @for (color of palette; track color) {
+              <button type="button" class="ss__swatch" [style.background]="color" [attr.aria-label]="color" (click)="setColor('c', color)"></button>
+            }
+            <button type="button" class="ss__popover-reset" (click)="setColor('c', undefined)">{{ 'sheet.reset' | t }}</button>
+          </div>
+        }
+      </div>
+      <div class="ss__dropdown">
+        <button type="button" class="ss__tool ss__tool--menu" [title]="'sheet.fillColor' | t" (click)="popover.set(popover() === 'fill' ? null : 'fill'); $event.stopPropagation()">
+          <span class="ss__fill-icon" [style.background]="activeStyle().bg || 'transparent'">▦</span>
+        </button>
+        @if (popover() === 'fill') {
+          <div class="ss__popover ss__popover--palette">
+            @for (color of palette; track color) {
+              <button type="button" class="ss__swatch" [style.background]="color" [attr.aria-label]="color" (click)="setColor('bg', color)"></button>
+            }
+            <button type="button" class="ss__popover-reset" (click)="setColor('bg', undefined)">{{ 'sheet.reset' | t }}</button>
+          </div>
+        }
+      </div>
+      <span class="ss__sep"></span>
+
+      <button type="button" class="ss__tool" [class.is-active]="activeStyle().al === 'left'" [title]="'sheet.alignLeft' | t" (click)="setStyle({ al: 'left' })">⇤</button>
+      <button type="button" class="ss__tool" [class.is-active]="activeStyle().al === 'center'" [title]="'sheet.alignCenter' | t" (click)="setStyle({ al: 'center' })">↔</button>
+      <button type="button" class="ss__tool" [class.is-active]="activeStyle().al === 'right'" [title]="'sheet.alignRight' | t" (click)="setStyle({ al: 'right' })">⇥</button>
+      <button type="button" class="ss__tool" [class.is-active]="activeStyle().wrap" [title]="'sheet.wrap' | t" (click)="toggleStyle('wrap')">↵</button>
+      <button type="button" class="ss__tool" [class.is-active]="activeStyle().bd" [title]="'sheet.borders' | t" (click)="toggleStyle('bd')">▢</button>
+      <button type="button" class="ss__tool" [class.is-active]="merged()" [title]="'sheet.merge' | t" (click)="toggleMerge()">⊞</button>
+      <button type="button" class="ss__tool" [title]="'sheet.clearFormat' | t" (click)="clearFormatting()">✕</button>
+      <span class="ss__sep"></span>
+
+      <div class="ss__dropdown">
+        <button type="button" class="ss__tool ss__tool--menu" [title]="'sheet.sort' | t" (click)="popover.set(popover() === 'sort' ? null : 'sort'); $event.stopPropagation()">⇅</button>
+        @if (popover() === 'sort') {
+          <div class="ss__popover ss__popover--list">
+            <button type="button" class="ss__popover-item" (click)="sortBy(true)">{{ 'sheet.sortAsc' | t }}</button>
+            <button type="button" class="ss__popover-item" (click)="sortBy(false)">{{ 'sheet.sortDesc' | t }}</button>
+          </div>
+        }
+      </div>
+    }
+    <button type="button" class="ss__tool" [class.is-active]="findOpen()" [title]="('sheet.find' | t) + ' (Ctrl+F)'" (click)="findOpen() ? closeFind() : openFind()">⌕</button>
+  </div>
+
+  <!-- Formula bar -->
+  <div class="ss__formula">
+    <input class="ss__name" [value]="activeLabel()" (keydown.enter)="goToLabel($any($event.target).value)" (focus)="$any($event.target).select()" aria-label="Cell" />
+    <span class="ss__fx">fx</span>
+    <input
+      #barEditor
+      class="ss__bar"
+      [value]="editText()"
+      [readOnly]="readonly()"
+      (focus)="onBarFocus()"
+      (input)="onEditInput($event)"
+      (keydown)="onEditKeydown($event)"
+      (blur)="editing()?.fromBar && commitEdit()"
+      spellcheck="false"
+      autocomplete="off"
+    />
+  </div>
+
+  @if (findOpen()) {
+    <div class="ss__find">
+      <input class="ss__find-input" [placeholder]="'sheet.find' | t" [value]="findText()" (input)="findText.set($any($event.target).value); findIndex.set(0)" (keydown.enter)="findStep(1)" (keydown.escape)="closeFind()" />
+      <span class="ss__find-count">{{ matches().length }}</span>
+      <button type="button" class="ss__tool" (click)="findStep(-1)">↑</button>
+      <button type="button" class="ss__tool" (click)="findStep(1)">↓</button>
+      @if (!readonly()) {
+        <input class="ss__find-input" [placeholder]="'sheet.replaceWith' | t" [value]="replaceText()" (input)="replaceText.set($any($event.target).value)" />
+        <button type="button" class="ss__tool ss__tool--wide" (click)="replaceAll()">{{ 'sheet.replaceAll' | t }}</button>
+      }
+      <button type="button" class="ss__tool" (click)="closeFind()">✕</button>
+    </div>
+  }
+
+  <!-- Grid -->
+  <div
+    #viewport
+    class="ss__viewport"
+    tabindex="0"
+    (scroll)="onScroll($event)"
+    (mousedown)="onMouseDown($event)"
+    (dblclick)="onDoubleClick($event)"
+    (contextmenu)="onContextMenu($event)"
+    (keydown)="onKeydown($event)"
+    (copy)="onCopy($event)"
+    (cut)="onCopy($event, true)"
+    (paste)="onPaste($event)"
+  >
+    <div class="ss__canvas" [style.width.px]="rowHeaderWidth + totalWidth()" [style.height.px]="colHeaderHeight + totalHeight()">
+      <!-- Sticky column headers -->
+      <div class="ss__colheads" [style.height.px]="colHeaderHeight" [style.width.px]="rowHeaderWidth + totalWidth()">
+        @for (h of colHeaders(); track h.index) {
+          <div
+            class="ss__colhead"
+            [class.is-active]="h.active"
+            [style.left.px]="rowHeaderWidth + h.x"
+            [style.width.px]="h.w"
+            (mousedown)="selectHeader('col', h.index, $event.shiftKey); $event.stopPropagation()"
+            (contextmenu)="headerMenu($event, 'col', h.index)"
+          >
+            {{ h.label }}
+            <span class="ss__resize ss__resize--col" (mousedown)="startResize($event, 'col', h.index)"></span>
+          </div>
+        }
+      </div>
+      <div class="ss__corner" [style.width.px]="rowHeaderWidth" [style.height.px]="colHeaderHeight" (mousedown)="selectAll(); $event.stopPropagation()"></div>
+      <!-- Sticky row headers -->
+      <div class="ss__rowheads" [style.width.px]="rowHeaderWidth" [style.height.px]="colHeaderHeight + totalHeight()">
+        @for (h of rowHeaders(); track h.index) {
+          <div
+            class="ss__rowhead"
+            [class.is-active]="h.active"
+            [style.top.px]="colHeaderHeight + h.y"
+            [style.height.px]="h.h"
+            (mousedown)="selectHeader('row', h.index, $event.shiftKey); $event.stopPropagation()"
+            (contextmenu)="headerMenu($event, 'row', h.index)"
+          >
+            {{ h.label }}
+            <span class="ss__resize ss__resize--row" (mousedown)="startResize($event, 'row', h.index)"></span>
+          </div>
+        }
+      </div>
+
+      <!-- Cells -->
+      <div class="ss__cells" [style.left.px]="rowHeaderWidth" [style.top.px]="colHeaderHeight" [style.width.px]="totalWidth()" [style.height.px]="totalHeight()">
+        @for (cell of cells(); track cell.key) {
+          <div
+            class="ss__cell"
+            [class.is-error]="cell.error"
+            [class.is-match]="cell.match"
+            [style.left.px]="cell.x"
+            [style.top.px]="cell.y"
+            [style.width.px]="cell.w"
+            [style.height.px]="cell.h"
+            [style.text-align]="cell.align"
+            [style]="cell.style"
+          >{{ cell.text }}</div>
+        }
+
+        <div class="ss__selection" [style.left.px]="selectionRect().x" [style.top.px]="selectionRect().y" [style.width.px]="selectionRect().w" [style.height.px]="selectionRect().h"></div>
+        <div class="ss__active" [style.left.px]="activeRect().x" [style.top.px]="activeRect().y" [style.width.px]="activeRect().w" [style.height.px]="activeRect().h"></div>
+        @if (!readonly() && !editing()) {
+          <div class="ss__handle" [style.left.px]="selectionRect().x + selectionRect().w - 5" [style.top.px]="selectionRect().y + selectionRect().h - 5" (mousedown)="startFill($event)"></div>
+        }
+        @if (fillRect(); as fr) {
+          <div class="ss__fill" [style.left.px]="fr.x" [style.top.px]="fr.y" [style.width.px]="fr.w" [style.height.px]="fr.h"></div>
+        }
+
+        @if (editing(); as edit) {
+          @if (!edit.fromBar) {
+            <input
+              #cellEditor
+              class="ss__editor"
+              [style.left.px]="activeRect().x"
+              [style.top.px]="activeRect().y"
+              [style.min-width.px]="activeRect().w"
+              [style.height.px]="activeRect().h"
+              [value]="edit.text"
+              (input)="onEditInput($event)"
+              (keydown)="onEditKeydown($event)"
+              (blur)="commitEdit()"
+              spellcheck="false"
+              autocomplete="off"
+            />
+          }
+          @if (suggestions().length > 0) {
+            <div class="ss__suggest" [style.left.px]="activeRect().x" [style.top.px]="activeRect().y + activeRect().h + 2">
+              @for (name of suggestions(); track name; let i = $index) {
+                <button type="button" class="ss__suggest-item" [class.is-first]="i === 0" (mousedown)="$event.preventDefault(); acceptSuggestion(name)">{{ name }}</button>
+              }
+            </div>
+          }
+        }
+      </div>
+    </div>
+  </div>
+
+  <!-- Sheet tabs and status -->
+  <div class="ss__footer">
+    @if (!readonly()) {
+      <button type="button" class="ss__tool" [title]="'sheet.addSheet' | t" (click)="addSheet()">＋</button>
+    }
+    <div class="ss__tabs" role="tablist">
+      @for (s of sheets(); track s.id) {
+        @if (renaming() === s.id) {
+          <input class="ss__tab-input" [value]="renameText()" (input)="renameText.set($any($event.target).value)" (keydown.enter)="finishRename()" (keydown.escape)="renaming.set(null)" (blur)="finishRename()" />
+        } @else {
+          <button
+            type="button"
+            role="tab"
+            class="ss__tab"
+            [class.is-active]="s.id === sheet().id"
+            [attr.aria-selected]="s.id === sheet().id"
+            (click)="switchSheet(s.id)"
+            (dblclick)="startRename(s.id, s.name)"
+          >{{ s.name }}</button>
+          @if (s.id === sheet().id && !readonly()) {
+            <button type="button" class="ss__tab-act" [title]="'sheet.duplicate' | t" (click)="duplicateSheet(s.id)">⧉</button>
+            @if (sheets().length > 1) {
+              <button type="button" class="ss__tab-act" [title]="'sheet.deleteSheet' | t" (click)="deleteSheet(s.id)">✕</button>
+            }
+          }
+        }
+      }
+    </div>
+    <span class="ss__spacer"></span>
+    @if (summary(); as sum) {
+      <span class="ss__stat">{{ 'sheet.stat.count' | t }}: {{ sum.count }}</span>
+      @if (sum.numbers > 0) {
+        <span class="ss__stat">{{ 'sheet.stat.sum' | t }}: {{ sum.sum }}</span>
+        <span class="ss__stat">{{ 'sheet.stat.avg' | t }}: {{ sum.average }}</span>
+      }
+    }
+  </div>
+
+  @if (menu(); as m) {
+    <div class="ss__menu" [style.left.px]="m.x" [style.top.px]="m.y" role="menu">
+      @if (!readonly()) {
+        @if (m.kind === 'cell') {
+          <button type="button" class="ss__menu-item" (click)="clearSelection(); menu.set(null)">{{ 'sheet.clearContents' | t }}</button>
+          <button type="button" class="ss__menu-item" (click)="sortBy(true)">{{ 'sheet.sortAsc' | t }}</button>
+          <button type="button" class="ss__menu-item" (click)="sortBy(false)">{{ 'sheet.sortDesc' | t }}</button>
+          <hr class="ss__menu-sep" />
+        }
+        @if (m.kind !== 'col') {
+          <button type="button" class="ss__menu-item" (click)="insertRows('above')">{{ 'sheet.insertRowAbove' | t }}</button>
+          <button type="button" class="ss__menu-item" (click)="insertRows('below')">{{ 'sheet.insertRowBelow' | t }}</button>
+          <button type="button" class="ss__menu-item ss__menu-item--danger" (click)="deleteRows()">{{ 'sheet.deleteRows' | t }}</button>
+        }
+        @if (m.kind !== 'row') {
+          @if (m.kind === 'cell') {
+            <hr class="ss__menu-sep" />
+          }
+          <button type="button" class="ss__menu-item" (click)="insertCols('left')">{{ 'sheet.insertColLeft' | t }}</button>
+          <button type="button" class="ss__menu-item" (click)="insertCols('right')">{{ 'sheet.insertColRight' | t }}</button>
+          <button type="button" class="ss__menu-item ss__menu-item--danger" (click)="deleteCols()">{{ 'sheet.deleteCols' | t }}</button>
+        }
+      }
+    </div>
+  }
+</div>

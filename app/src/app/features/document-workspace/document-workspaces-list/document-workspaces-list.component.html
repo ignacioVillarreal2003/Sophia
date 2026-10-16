@@ -1,0 +1,56 @@
+<div class="wsl app-container">
+  <app-page-header [title]="'nav.documentWorkspaces' | t">
+    <app-button variant="secondary" routerLink="new" icon="plus">{{ 'documentWorkspace.create' | t }}</app-button>
+  </app-page-header>
+
+  <div class="wsl__filters">
+    <div class="wsl__search">
+      <app-icon name="search" [size]="16" class="wsl__search-icon" />
+      <input
+        #searchInput
+        class="wsl__search-input"
+        type="search"
+        [placeholder]="'documentWorkspaces.searchPlaceholder' | t"
+        (input)="onSearchInput($any($event.target).value)"
+      />
+    </div>
+
+    <app-filter-toggle
+      [open]="filtersOpen()"
+      [label]="'documentWorkspaces.filters' | t"
+      [count]="filterCount()"
+      (toggle)="openFilters()"
+    />
+  </div>
+
+  @if (loading()) {
+    <div class="wsl__loading"><app-spinner /></div>
+  } @else if (documentWorkspaces().length === 0) {
+    <app-empty-state
+      icon="grid"
+      [title]="(search() || filterCount() > 0 ? 'documentWorkspaces.noResults' : 'documentWorkspace.empty') | t"
+    />
+  } @else {
+    <app-card flush>
+      @for (ws of documentWorkspaces(); track ws.id) {
+        <button type="button" class="wsl__row" (click)="open(ws)" [style.--ws-color]="ws.color || 'var(--accent)'">
+          <app-workspace-logo class="wsl__dot" [logoUrl]="ws.logoUrl" [color]="ws.color" [size]="40" />
+          <span class="wsl__text">
+            <span class="wsl__name">{{ ws.name }}</span>
+            @if (ws.description) {
+              <span class="wsl__desc">{{ ws.description }}</span>
+            }
+          </span>
+          <app-icon name="chevron-right" [size]="16" class="wsl__chevron" />
+        </button>
+      }
+    </app-card>
+    <app-pagination
+      [page]="page()"
+      [totalPages]="totalPages()"
+      [first]="first()"
+      [last]="last()"
+      (pageChange)="onPageChange($event)"
+    />
+  }
+</div>

@@ -1,0 +1,73 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sophia-notification-config
+  labels:
+    app.kubernetes.io/name: sophia-notification
+data:
+  SERVER_PORT: "8082"
+  DB_URL: jdbc:postgresql://sophia-postgres:5432/sophia_notification?sslmode=require
+  DB_POOL_SIZE: "20"
+  REDIS_HOST: sophia-redis
+  REDIS_PORT: "6379"
+  REDIS_SSL: "true"
+  KAFKA_BOOTSTRAP_SERVERS: sophia-kafka:9093
+  KAFKA_SECURITY_PROTOCOL: SASL_SSL
+  KAFKA_TOPIC_REPLICAS: "3"
+  NOTIFICATION_COMMANDS_TOPIC: sophia.notifications.commands
+  NOTIFICATION_COMMANDS_PARTITIONS: "6"
+  NOTIFICATION_COMMANDS_CONCURRENCY: "3"
+  USER_EVENTS_TOPIC: sophia.authentication.user-events
+  USER_EVENTS_CONCURRENCY: "2"
+  MAIL_HOST: smtp.example.com
+  MAIL_PORT: "587"
+  MAIL_SMTP_AUTH: "true"
+  MAIL_SMTP_STARTTLS: "true"
+  EMAIL_FROM: no-reply@sophia.app
+  FRONTEND_BASE_URL: https://app.sophia.example
+  CORS_ALLOWED_ORIGINS: https://app.sophia.example
+  JWT_JSON_WEB_KEY_SET_URI: http://sophia-authentication:8080/.well-known/json-web-key-set.json
+  JWT_ISSUER: sophia-authentication
+  OTLP_TRACING_ENDPOINT: http://otel-collector:4318/v1/traces
+  TRACING_SAMPLING_PROBABILITY: "0.1"
+  STREAM_HEARTBEAT_INTERVAL: 20s
+  RATE_LIMIT_REQUESTS: "300"
+  EMAIL_PER_RECIPIENT_LIMIT: "20"
+  SCHEDULING_POOL_SIZE: "4"
+  SHUTDOWN_TIMEOUT: 30s
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sophia-notification-secrets
+  labels:
+    app.kubernetes.io/name: sophia-notification
+type: Opaque
+stringData:
+  DB_USERNAME: replace-me
+  DB_PASSWORD: replace-me
+  REDIS_PASSWORD: replace-me
+  MAIL_USERNAME: replace-me
+  MAIL_PASSWORD: replace-me
+  SPRING_KAFKA_PROPERTIES_SASL_MECHANISM: SCRAM-SHA-512
+  SPRING_KAFKA_PROPERTIES_SASL_JAAS_CONFIG: replace-me
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: sophia-notification
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: sophia-notification
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: sophia-gateway
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - port: 8082

@@ -1,0 +1,50 @@
+<app-page-header [title]="'admin.users.new' | t" backLink="/admin/users">
+  <app-button [loading]="saving()" (click)="submit()">{{ 'admin.users.form.create' | t }}</app-button>
+</app-page-header>
+
+<app-card>
+  <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <div class="usrc__row2">
+      <app-text-field
+        [label]="'auth.field.firstName' | t"
+        formControlName="firstName"
+        required
+        [invalid]="!!errorOf('firstName')"
+        [error]="errorOf('firstName') ?? ''"
+      />
+      <app-text-field
+        [label]="'auth.field.lastName' | t"
+        formControlName="lastName"
+        required
+        [invalid]="!!errorOf('lastName')"
+        [error]="errorOf('lastName') ?? ''"
+      />
+    </div>
+    <div class="usrc__row2">
+      <app-text-field
+        [label]="'auth.field.email' | t"
+        type="email"
+        formControlName="email"
+        required
+        [invalid]="!!errorOf('email')"
+        [error]="errorOf('email') ?? ''"
+      />
+      <app-text-field
+        [label]="'settings.security.password' | t"
+        type="password"
+        formControlName="password"
+        required
+        [hint]="'validation.password' | t"
+        [invalid]="!!errorOf('password')"
+        [error]="errorOf('password') ?? ''"
+      />
+    </div>
+
+    <span class="usrc__section-label">{{ 'admin.users.roles' | t }}</span>
+    <app-chip-select [formControl]="rolesControl" [options]="roleChipOptions()"/>
+
+    <div class="usrc__checks">
+      <app-checkbox formControlName="active" [label]="'admin.users.form.active' | t"/>
+    </div>
+  </form>
+</app-card>

@@ -1,0 +1,123 @@
+<app-page-header [title]="'admin.users.title' | t">
+  @if (canCreate()) {
+    <app-button variant="secondary" routerLink="new" icon="plus">{{ 'admin.users.new' | t }}</app-button>
+  }
+</app-page-header>
+
+<div class="usr__filters">
+  <div class="usr__search">
+    <app-icon name="search" [size]="16" class="usr__search-icon"/>
+    <input
+      #searchInput
+      class="usr__search-input"
+      type="search"
+      [placeholder]="'admin.users.searchPlaceholder' | t"
+      (input)="onSearchInput($any($event.target).value)"
+    />
+    @if (rawSearch()) {
+      <button
+        type="button"
+        class="usr__search-clear"
+        (click)="clearSearch()"
+        [attr.aria-label]="'admin.users.clearSearch' | t"
+      >
+        <app-icon name="x" [size]="14"/>
+      </button>
+    }
+  </div>
+
+  <app-filter-toggle [open]="filtersOpen()" [ariaLabel]="'admin.users.filters' | t" (toggle)="toggleFilters()"/>
+
+  <div class="usr__select-row" [class.usr__select-row--open]="filtersOpen()">
+    <app-select-field [formControl]="activeFilter" [options]="activeOptions()"/>
+    <app-select-field [formControl]="emailVerifiedFilter" [options]="emailVerifiedOptions()"/>
+    <app-select-field [formControl]="roleFilter" [options]="roleOptions()"/>
+  </div>
+</div>
+
+@if (loading()) {
+  <div class="usr__loading">
+    <app-spinner/>
+  </div>
+} @else if (users().length === 0) {
+  <app-empty-state icon="users" [title]="'admin.users.empty' | t" [description]="'admin.users.emptyDescription' | t"/>
+} @else {
+  <div class="usr__bulk">
+    <div class="usr__bulk-selectall">
+      <app-checkbox [checked]="allSelected()" [disabled]="bulkBusy()" (checkedChange)="toggleSelectAll()"/>
+      <span (click)="toggleSelectAll()">
+        @if (selectedCount() === 0) {
+          {{ 'admin.users.bulk.selectAll' | t }}
+        } @else {
+          {{ 'admin.users.bulk.selectedCount' | t: {count: selectedCount()} }}
+        }
+      </span>
+    </div>
+
+    @if (selectedCount() > 0) {
+      <div class="usr__bulk-actions">
+        @if (canUpdateStatus()) {
+          <app-button size="sm" [disabled]="bulkBusy()" (click)="bulkActivate()">
+            {{ 'admin.users.bulk.activate' | t }}
+          </app-button>
+          <app-button size="sm" [disabled]="bulkBusy()" (click)="bulkDeactivate()">
+            {{ 'admin.users.bulk.deactivate' | t }}
+          </app-button>
+        }
+        @if (canManageRoles()) {
+          <app-button size="sm" [disabled]="bulkBusy()" (click)="openRolesDialog()">
+            {{ 'admin.users.bulk.setRoles' | t }}
+          </app-button>
+          <app-button size="sm" [disabled]="bulkBusy()" (click)="openPermissionsDialog()">
+            {{ 'admin.users.bulk.addPermissions' | t }}
+          </app-button>
+        }
+        @if (canDelete()) {
+          <app-button variant="danger" size="sm" [disabled]="bulkBusy()" (click)="bulkDelete()">
+            {{ 'admin.users.bulk.delete' | t }}
+          </app-button>
+        }
+        <button type="button" class="usr__bulk-clear" (click)="clearSelection()">
+          {{ 'admin.users.bulk.clear' | t }}
+        </button>
+      </div>
+    }
+  </div>
+
+  <app-card flush>
+    @for (u of users(); track u.id) {
+      <a class="usr__row" [routerLink]="[u.id]">
+        <app-checkbox
+          [checked]="isSelected(u.id)"
+          [disabled]="isSelf(u.id)"
+          (checkedChange)="toggleSelect(u.id)"
+          (click)="$event.stopPropagation(); $event.preventDefault()"
+        />
+        <app-avatar [name]="u.fullName" [photoUrl]="u.photoUrl" [size]="36"/>
+        <div class="usr__info">
+          <span class="usr__name">{{ u.fullName }}</span>
+          <span class="usr__email">{{ u.email }}</span>
+        </div>
+        <div class="usr__roles">
+          @for (r of u.roles; track r) {
+            <app-badge tone="accent">{{ r }}</app-badge>
+          }
+        </div>
+        <app-badge [tone]="u.active ? 'success' : 'neutral'">
+          {{ (u.active ? 'admin.users.active' : 'admin.users.inactive') | t }}
+        </app-badge>
+        <app-badge class="usr__verified-badge" [tone]="u.emailVerified ? 'success' : 'warning'">
+          {{ (u.emailVerified ? 'admin.users.emailVerified' : 'admin.users.emailUnverified') | t }}
+        </app-badge>
+        <app-icon name="chevron-right" [size]="16" class="usr__chevron"/>
+      </a>
+    }
+  </app-card>
+  <app-pagination
+    [page]="page()"
+    [totalPages]="totalPages()"
+    [first]="first()"
+    [last]="last()"
+    (pageChange)="onPageChange($event)"
+  />
+}

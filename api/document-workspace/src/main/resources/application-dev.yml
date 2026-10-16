@@ -1,0 +1,29 @@
+# Development profile: sensible localhost defaults so the service starts against
+# the docker-compose infrastructure with zero manual configuration.
+# The JWT secret below is a DEV-ONLY placeholder and must never reach production.
+
+sophia:
+  security:
+    jwt:
+      # Dev default: validate tokens against the local authentication service.
+      json-web-key-set-uri: ${JWT_JSON_WEB_KEY_SET_URI:http://localhost:8080/.well-known/json-web-key-set.json}
+    rate-limit:
+      enabled: ${RATE_LIMIT_ENABLED:false}
+  storage:
+    endpoint: ${S3_ENDPOINT:http://localhost:9000}
+    access-key: ${S3_ACCESS_KEY:minioadmin}
+    secret-key: ${S3_SECRET_KEY:minioadmin}
+
+logging:
+  level:
+    com.sophia: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.springframework.security: INFO
+
+management:
+  endpoint:
+    health:
+      show-details: always
+  tracing:
+    sampling:
+      probability: 1.0

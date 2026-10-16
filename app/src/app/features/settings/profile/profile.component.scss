@@ -1,0 +1,116 @@
+@use 'mixins' as *;
+
+.pf__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+  padding-bottom: var(--space-lg);
+  border-bottom: 1px solid var(--divider);
+}
+
+.pf__avatar-btn {
+  position: relative;
+  flex-shrink: 0;
+  border-radius: var(--radius-pill);
+  @include focus-ring;
+
+  &:disabled {
+    cursor: not-allowed;
+  }
+
+  &:not(:disabled):hover app-avatar {
+    opacity: 0.85;
+  }
+}
+
+.pf__avatar-overlay {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-pill);
+  background: var(--surface-inverse);
+  color: var(--on-inverse);
+  box-shadow: 0 0 0 2px var(--surface);
+}
+
+.pf__name {
+  font-size: var(--type-tagline-size);
+  font-weight: 600;
+}
+
+.pf__email {
+  color: var(--text-muted);
+  font-size: var(--type-caption-size);
+  margin-top: 2px;
+}
+
+.pf__badges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.pf__hint {
+  margin-top: var(--space-lg);
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  color: var(--accent);
+  font-size: var(--type-caption-size);
+  line-height: 1.4;
+}
+
+.pf__remove-photo {
+  display: block;
+  margin-top: 10px;
+}
+
+.pf__hint-action {
+  margin-left: 4px;
+}
+
+.pf__form {
+  margin-top: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.pf__grid-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md);
+
+  @include below($bp-phone) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pf__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.pf__meta {
+  margin-top: var(--space-lg);
+  padding-top: var(--space-lg);
+  border-top: 1px solid var(--divider);
+
+  dt {
+    font-size: var(--type-fine-size);
+    color: var(--text-subtle);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+
+  dd {
+    margin-top: 3px;
+    font-size: var(--type-body-size);
+    color: var(--text);
+  }
+}

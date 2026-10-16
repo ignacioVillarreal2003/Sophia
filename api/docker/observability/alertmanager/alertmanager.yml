@@ -1,0 +1,38 @@
+global:
+  resolve_timeout: 5m
+  smtp_smarthost: sophia-mailhog:1025
+  smtp_from: alertmanager@sophia.local
+  smtp_require_tls: false
+
+route:
+  receiver: default
+  group_by: ['alertname', 'service']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  routes:
+    - matchers: [severity="critical"]
+      receiver: critical
+      repeat_interval: 1h
+
+receivers:
+  - name: default
+    email_configs:
+      - to: oncall@sophia.local
+        send_resolved: true
+
+  - name: critical
+    email_configs:
+      - to: oncall@sophia.local
+        send_resolved: true
+        headers:
+          Subject: '[CRITICAL] {{ .GroupLabels.alertname }} ({{ .GroupLabels.service }})'
+
+inhibit_rules:
+  - source_matchers: [alertname="NotificationServiceDown"]
+    target_matchers: [service="notification"]
+    equal: ['service']
+
+  - source_matchers: [alertname="AuthenticationServiceDown"]
+    target_matchers: [service="authentication"]
+    equal: ['service']

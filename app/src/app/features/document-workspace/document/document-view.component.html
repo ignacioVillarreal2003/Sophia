@@ -1,0 +1,131 @@
+@if (loading()) {
+  <div class="dv__loading"><app-spinner /></div>
+} @else if (artifact(); as art) {
+  <div class="dv" [class.dv--paneled]="panel() !== 'none'">
+    <div class="dv__main">
+      <!-- Toolbar -->
+      <div class="dv__toolbar">
+        <div class="dv__toolbar-left">
+          <input
+            class="dv__title"
+            [value]="title()"
+            [readOnly]="!canEdit()"
+            [attr.aria-label]="'documentView.title' | t"
+            (input)="title.set($any($event.target).value)"
+            (blur)="rename()"
+            (keydown.enter)="$any($event.target).blur()"
+          />
+          @if (isText()) {
+            @switch (saveState()) {
+              @case ('saving') { <span class="dv__state">{{ 'documentView.saving' | t }}</span> }
+              @case ('dirty') { <span class="dv__state">{{ 'documentView.unsaved' | t }}</span> }
+              @case ('error') {
+                <span class="dv__state dv__state--error">{{ 'documentView.saveError' | t }}
+                  <button type="button" class="dv__link" (click)="retrySave()">{{ 'documentView.retry' | t }}</button>
+                </span>
+              }
+              @case ('conflict') { <span class="dv__state dv__state--error">{{ 'documentView.conflict' | t }}</span> }
+              @default { <span class="dv__state dv__state--ok">{{ 'documentView.saved' | t: { time: (art.updatedAt | relativeTime) } }}</span> }
+            }
+          }
+          @if (!canEdit() && isText()) {
+            <span class="dv__state">{{ 'markdown.readonly' | t }}</span>
+          }
+        </div>
+
+        <div class="dv__toolbar-right">
+          <app-presence-bar [users]="presence()" />
+          <app-button variant="text" size="sm" [icon]="isFavorite() ? 'star-filled' : 'star'" iconOnly (click)="toggleFavorite()" />
+          <app-button variant="text" size="sm" icon="share" iconOnly (click)="openShare()" />
+          @if (isText()) {
+            <app-button variant="text" size="sm" icon="download" iconOnly [cdkMenuTriggerFor]="exportMenu" />
+            <app-button variant="text" size="sm" icon="message-circle" iconOnly [class.is-active]="panel() === 'comments'" (click)="togglePanel('comments')" />
+            <app-button variant="text" size="sm" icon="history" iconOnly [class.is-active]="panel() === 'history'" (click)="togglePanel('history')" />
+          }
+        </div>
+      </div>
+
+      @if (saveState() === 'conflict') {
+        <div class="dv__banner" role="alert">
+          <span>{{ 'documentView.conflict.message' | t }}</span>
+          <span class="dv__banner-actions">
+            <app-button variant="secondary" size="sm" (click)="useRemote()">{{ 'documentView.conflict.useTheirs' | t }}</app-button>
+            <app-button variant="primary" size="sm" (click)="overwriteRemote()">{{ 'documentView.conflict.keepMine' | t }}</app-button>
+          </span>
+        </div>
+      }
+
+      @if (isChecklist() && progress(); as p) {
+        <div class="dv__checklist">
+          <div class="dv__progress" role="progressbar" [attr.aria-valuenow]="p.tasksDone" [attr.aria-valuemax]="p.tasksTotal">
+            <span class="dv__progress-bar" [style.width.%]="p.tasksTotal ? (p.tasksDone / p.tasksTotal) * 100 : 0"></span>
+          </div>
+          <span class="dv__progress-text">{{ 'checklist.progress' | t: { done: p.tasksDone, total: p.tasksTotal } }}</span>
+          @if (canEdit()) {
+            <input
+              class="dv__quick"
+              [placeholder]="'checklist.add' | t"
+              [value]="quickItem()"
+              (input)="quickItem.set($any($event.target).value)"
+              (keydown.enter)="addChecklistItem()"
+            />
+          }
+        </div>
+      }
+
+      <!-- Content -->
+      <div class="dv__content">
+        @if (isMarkdown()) {
+          <app-markdown-editor
+            [value]="text()"
+            (valueChange)="onText($event)"
+            [mode]="mode()"
+            (modeChange)="onModeChange($event)"
+            [readonly]="!canEdit()"
+            [linkTargets]="linkTargets()"
+            (wikilink)="openWikilink($event)"
+            (imageFile)="uploadImage($event)"
+            (saveRequested)="saveNow()"
+          />
+        } @else if (isSpreadsheet()) {
+          <app-spreadsheet [content]="text()" [readonly]="!canEdit()" (contentChange)="onSheet($event)" (saveRequested)="saveNow()" />
+        } @else if (isFile()) {
+          <app-file-viewer [documentWorkspaceId]="documentWorkspaceId()" [artifact]="art" />
+        }
+      </div>
+    </div>
+
+    <!-- Side panel -->
+    @if (panel() === 'comments') {
+      <aside class="dv__panel">
+        <app-comment-thread [documentWorkspaceId]="documentWorkspaceId()" [artifactId]="artifactId()" (close)="panel.set('none')" />
+      </aside>
+    } @else if (panel() === 'history') {
+      <aside class="dv__panel">
+        <app-revision-history
+          [documentWorkspaceId]="documentWorkspaceId()"
+          [documentId]="artifactId()"
+          [currentContent]="isSpreadsheet() ? '' : text()"
+          (close)="panel.set('none')"
+          (restored)="onRevisionRestored()"
+        />
+      </aside>
+    }
+  </div>
+
+  <ng-template #exportMenu>
+    <div class="menu" cdkMenu>
+      <div class="menu__label">{{ 'documentView.exportAs' | t }}</div>
+      @for (format of exportFormats(); track format) {
+        <button class="menu__item" cdkMenuItem (click)="export(format)">
+          <app-icon name="download" [size]="15" /> {{ formatLabel(format) }}
+        </button>
+      }
+      @if (isMarkdown()) {
+        <button class="menu__item" cdkMenuItem (click)="print()">
+          <app-icon name="file-text" [size]="15" /> {{ 'markdown.print' | t }}
+        </button>
+      }
+    </div>
+  </ng-template>
+}

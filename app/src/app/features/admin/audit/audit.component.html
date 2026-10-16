@@ -1,0 +1,314 @@
+<app-page-header [title]="'admin.audit.title' | t"/>
+
+<div class="aud__tabs" role="tablist">
+  @for (tab of tabs(); track tab.value) {
+    <button
+      type="button"
+      class="aud__tab"
+      role="tab"
+      [class.aud__tab--active]="viewMode() === 'browse' && source() === tab.value"
+      [attr.aria-selected]="viewMode() === 'browse' && source() === tab.value"
+      (click)="selectSource(tab.value)"
+    >
+      <app-icon [name]="tab.icon" [size]="15"/>
+      {{ tab.label }}
+    </button>
+  }
+  <button
+    type="button"
+    class="aud__tab"
+    role="tab"
+    [class.aud__tab--active]="viewMode() === 'trace'"
+    [attr.aria-selected]="viewMode() === 'trace'"
+    (click)="enterTraceMode()"
+  >
+    <app-icon name="link" [size]="15"/>
+    {{ 'admin.audit.tab.trace' | t }}
+  </button>
+</div>
+
+@if (viewMode() === 'trace') {
+  <div class="aud__trace">
+    <app-icon name="link" [size]="14"/>
+    <div class="aud__trace-input-wrap">
+      <input
+        class="aud__trace-input"
+        type="text"
+        [placeholder]="'admin.audit.trace.placeholder' | t"
+        [formControl]="traceInput"
+        (keydown.enter)="traceRequest(traceInput.value)"
+      />
+      @if (traceInput.value) {
+        <button
+          type="button"
+          class="aud__trace-clear"
+          (click)="clearTrace()"
+          [attr.aria-label]="'common.clear' | t"
+        >
+          <app-icon name="x" [size]="14"/>
+        </button>
+      }
+    </div>
+    <app-button variant="secondary" size="sm" (click)="traceRequest(traceInput.value)">
+      {{ 'admin.audit.trace.action' | t }}
+    </app-button>
+  </div>
+
+  @if (traceLoading()) {
+    <div class="aud__loading">
+      <app-spinner/>
+    </div>
+  } @else if (!traceRequestId()) {
+    <app-empty-state
+      icon="link"
+      [title]="'admin.audit.trace.prompt' | t"
+      [description]="'admin.audit.trace.promptDescription' | t"
+    />
+  } @else if (traceRows().length === 0) {
+    <app-empty-state
+      icon="link"
+      [title]="'admin.audit.trace.empty' | t"
+      [description]="'admin.audit.trace.emptyDescription' | t"
+    />
+  } @else {
+    <app-card flush>
+      @for (item of traceRows(); track item.row.id) {
+        <div class="aud__item" [class.aud__item--open]="isOpen(item.row.id)">
+          <button
+            type="button"
+            class="aud__row"
+            [attr.data-tone]="item.row.tone"
+            [attr.aria-expanded]="isOpen(item.row.id)"
+            [attr.aria-label]="(isOpen(item.row.id) ? 'admin.audit.collapse' : 'admin.audit.expand') | t"
+            (click)="toggleRow(item.row.id)"
+          >
+            <span class="aud__icon">
+              <app-icon [name]="item.row.icon" [size]="16"/>
+            </span>
+
+            <span class="aud__info">
+              <span class="aud__headline">
+                <app-badge tone="neutral" class="aud__trace-source">{{ ('admin.audit.tab.' + item.source) | t }}</app-badge>
+                <span class="aud__action">{{ item.row.label }}</span>
+                <span class="aud__actor">
+                  <app-icon name="user" [size]="12"/>
+                  <span class="aud__actor-text">{{ item.row.actor }}</span>
+                </span>
+              </span>
+            </span>
+
+            @if (item.row.status) {
+              <app-badge class="aud__status" [tone]="item.row.status.tone">{{ item.row.status.label }}</app-badge>
+            }
+
+            <span class="aud__time" [title]="item.row.timestamp">{{ item.row.createdAt | relativeTime }}</span>
+
+            <app-icon class="aud__chevron" name="chevron-down" [size]="16"/>
+          </button>
+
+          @if (isOpen(item.row.id)) {
+            <div class="aud__details">
+              <dl class="aud__fields">
+                @for (field of item.row.fields; track field.label) {
+                  <div class="aud__field">
+                    <dt class="aud__field-label">{{ field.label }}</dt>
+                    <dd class="aud__field-value" [class.aud__field-value--mono]="field.mono">{{ field.value }}</dd>
+                  </div>
+                }
+              </dl>
+
+              @if (item.row.payload.length > 0) {
+                <div class="aud__payload">
+                  <span class="aud__payload-title">{{ 'admin.audit.details' | t }}</span>
+                  <dl class="aud__fields">
+                    @for (field of item.row.payload; track field.label) {
+                      <div class="aud__field">
+                        <dt class="aud__field-label">{{ field.label }}</dt>
+                        <dd class="aud__field-value" [class.aud__field-value--mono]="field.mono">{{ field.value }}</dd>
+                      </div>
+                    }
+                  </dl>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+    </app-card>
+  }
+} @else {
+  @if (activeFilters().length > 0) {
+    <div class="aud__active-filters">
+      @for (chip of activeFilters(); track chip.key) {
+        <app-badge tone="accent" class="aud__chip">
+          {{ chip.label }}
+          <button
+            type="button"
+            class="aud__chip-remove"
+            (click)="removeFilter(chip.key)"
+            [attr.aria-label]="'admin.audit.removeFilter' | t"
+          >
+            <app-icon name="x" [size]="12"/>
+          </button>
+        </app-badge>
+      }
+      <app-button variant="ghost" size="sm" (click)="clearAllFilters()">{{ 'admin.audit.clearAllFilters' | t }}
+      </app-button>
+    </div>
+  }
+
+  <div class="aud__filters">
+    <div class="aud__search-row">
+      @if (canReadUsers()) {
+        <div class="aud__search-wrap">
+          <input
+            #searchInput
+            class="aud__search"
+            type="search"
+            [placeholder]="'admin.audit.searchUserPlaceholder' | t"
+            [value]="userSearchTerm()"
+            (input)="onUserSearchInput($any($event.target).value)"
+            (keydown.enter)="submitUserSearch(userSearchTerm())"
+          />
+          @if (userSearchTerm()) {
+            <button
+              type="button"
+              class="aud__search-clear"
+              (click)="clearUserSearchInput()"
+              [attr.aria-label]="'common.clear' | t"
+            >
+              <app-icon name="x" [size]="14"/>
+            </button>
+          }
+          @if (userSearchOpen() && (userSearchLoading() || userSearchResults().length > 0)) {
+            <div class="aud__search-results">
+              @if (userSearchLoading()) {
+                <div class="aud__search-status">{{ 'admin.audit.searching' | t }}</div>
+              } @else if (userSearchResults().length === 0) {
+                <div class="aud__search-status">{{ 'admin.audit.noUsersFound' | t }}</div>
+              } @else {
+                @for (user of userSearchResults(); track user.id) {
+                  <button type="button" class="aud__search-result" (click)="selectSearchedUser(user)">
+                    <app-avatar [name]="user.fullName" [photoUrl]="user.photoUrl" [size]="26"/>
+                    <span class="aud__search-result-text">
+                      <span class="aud__search-result-name">{{ user.fullName }}</span>
+                      <span class="aud__search-result-email">{{ user.email }}</span>
+                    </span>
+                  </button>
+                }
+              }
+            </div>
+          }
+        </div>
+        <app-button
+          variant="secondary"
+          icon="search"
+          [iconOnly]="true"
+          [attr.aria-label]="'admin.audit.search' | t"
+          (click)="submitUserSearch(userSearchTerm())"
+        />
+      }
+      <app-filter-toggle [open]="filtersOpen()" [ariaLabel]="'admin.audit.filters' | t" (toggle)="openFilters()"/>
+    </div>
+  </div>
+
+  @if (loading() || (source() === 'workspaces' && !workspacesLoaded())) {
+    <div class="aud__loading">
+      <app-spinner/>
+    </div>
+  } @else if (source() === 'workspaces' && workspaceOptions().length === 0) {
+    <app-empty-state
+      icon="folder"
+      [title]="'admin.audit.noWorkspaces' | t"
+      [description]="'admin.audit.noWorkspacesDescription' | t"
+    />
+  } @else if (rows().length === 0) {
+    <app-empty-state icon="shield" [title]="'admin.audit.empty' | t" [description]="'admin.audit.emptyDescription' | t"/>
+  } @else {
+    <app-card flush>
+      @for (row of rows(); track row.id) {
+        <div class="aud__item" [class.aud__item--open]="isOpen(row.id)">
+          <button
+            type="button"
+            class="aud__row"
+            [attr.data-tone]="row.tone"
+            [attr.aria-expanded]="isOpen(row.id)"
+            [attr.aria-label]="(isOpen(row.id) ? 'admin.audit.collapse' : 'admin.audit.expand') | t"
+            (click)="toggleRow(row.id)"
+          >
+            <span class="aud__icon">
+              <app-icon [name]="row.icon" [size]="16"/>
+            </span>
+
+            <span class="aud__info">
+              <span class="aud__headline">
+                <span class="aud__action">{{ row.label }}</span>
+                <span class="aud__actor">
+                  <app-icon name="user" [size]="12"/>
+                  <span class="aud__actor-text">{{ row.actor }}</span>
+                </span>
+              </span>
+            </span>
+
+            @if (row.status) {
+              <app-badge class="aud__status" [tone]="row.status.tone">{{ row.status.label }}</app-badge>
+            }
+
+            <span class="aud__time" [title]="row.timestamp">{{ row.createdAt | relativeTime }}</span>
+
+            <app-icon class="aud__chevron" name="chevron-down" [size]="16"/>
+          </button>
+
+          @if (isOpen(row.id)) {
+            <div class="aud__details">
+              <dl class="aud__fields">
+                @for (field of row.fields; track field.label) {
+                  <div class="aud__field">
+                    <dt class="aud__field-label">{{ field.label }}</dt>
+                    <dd class="aud__field-value" [class.aud__field-value--mono]="field.mono">{{ field.value }}</dd>
+                  </div>
+                }
+              </dl>
+
+              @if (row.payload.length > 0) {
+                <div class="aud__payload">
+                  <span class="aud__payload-title">{{ 'admin.audit.details' | t }}</span>
+                  <dl class="aud__fields">
+                    @for (field of row.payload; track field.label) {
+                      <div class="aud__field">
+                        <dt class="aud__field-label">{{ field.label }}</dt>
+                        <dd class="aud__field-value" [class.aud__field-value--mono]="field.mono">{{ field.value }}</dd>
+                      </div>
+                    }
+                  </dl>
+                </div>
+              }
+
+              @if ((row.actorId && row.actorId !== userIdFilter()) || row.requestId) {
+                <div class="aud__actions">
+                  @if (row.actorId && row.actorId !== userIdFilter()) {
+                    <app-button variant="secondary" size="sm" icon="search" (click)="filterByActor(row)">
+                      {{ 'admin.audit.viewUserEvents' | t }}
+                    </app-button>
+                  }
+                  @if (row.requestId) {
+                    <app-button variant="secondary" size="sm" icon="link" (click)="filterByRequestId(row)">
+                      {{ 'admin.audit.traceRequest' | t }}
+                    </app-button>
+                  }
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+    </app-card>
+    <app-pagination
+      [page]="page()"
+      [totalPages]="totalPages()"
+      [first]="first()"
+      [last]="last()"
+      (pageChange)="onPageChange($event)"
+    />
+  }
+}

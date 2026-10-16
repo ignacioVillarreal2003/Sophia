@@ -1,0 +1,82 @@
+<div class="aw">
+  <app-page-header [title]="'admin.workspaces.title' | t" [subtitle]="'admin.workspaces.subtitle' | t" />
+
+  <div class="aw__bar">
+    <div class="aw__search">
+      <app-icon name="search" [size]="16" class="aw__search-icon" />
+      <input
+        class="aw__search-input"
+        type="search"
+        [placeholder]="'documentWorkspaces.searchPlaceholder' | t"
+        (input)="onSearch($any($event.target).value)"
+      />
+    </div>
+    <span class="aw__select">
+      <select [value]="statusFilter()" [attr.aria-label]="'admin.workspaces.status' | t" (change)="setStatusFilter($any($event.target).value)">
+        <option value="">{{ 'admin.workspaces.allStatuses' | t }}</option>
+        @for (s of statuses; track s) {
+          <option [value]="s">{{ 'admin.workspaces.status.' + s | t }}</option>
+        }
+      </select>
+      <app-icon name="chevron-down" [size]="14" />
+    </span>
+  </div>
+
+  @if (loading()) {
+    <div class="aw__loading"><app-spinner /></div>
+  } @else if (items().length === 0) {
+    <app-empty-state icon="grid" [title]="'documentWorkspaces.noResults' | t" />
+  } @else {
+    <div class="aw__list">
+      <div class="aw__head" aria-hidden="true">
+        <span>{{ 'admin.workspaces.col.workspace' | t }}</span>
+        <span>{{ 'admin.workspaces.col.owner' | t }}</span>
+        <span>{{ 'admin.workspaces.col.usage' | t }}</span>
+        <span>{{ 'admin.workspaces.col.limit' | t }}</span>
+        <span>{{ 'admin.workspaces.col.status' | t }}</span>
+      </div>
+
+      @for (ws of items(); track ws.id) {
+        <div class="aw__row">
+          <a class="aw__name" [routerLink]="['/admin/workspaces', ws.id]">
+            <app-workspace-logo [logoUrl]="ws.logoUrl" [color]="ws.color" [size]="36" [iconSize]="16" />
+            <span class="aw__name-text">
+              <span class="aw__name-main">{{ ws.name }}</span>
+              <span class="aw__name-sub">{{ 'admin.workspaces.members' | t: { count: ws.memberCount } }}</span>
+            </span>
+          </a>
+
+          <span class="aw__owner">{{ ws.ownerEmail || '—' }}</span>
+
+          <span class="aw__usage">{{ formatBytes(ws.usedBytes) }}</span>
+
+          <span class="aw__select aw__select--cell">
+            <select [value]="ws.storageQuotaMb ?? 0" [attr.aria-label]="'admin.workspaces.col.limit' | t" (change)="changeQuota(ws, $any($event.target).value)">
+              @for (mb of quotaOptions(ws.storageQuotaMb); track mb) {
+                <option [value]="mb" [selected]="mb === (ws.storageQuotaMb ?? 0)">{{ quotaLabel(mb) }}</option>
+              }
+            </select>
+            <app-icon name="chevron-down" [size]="14" />
+          </span>
+
+          <span class="aw__select aw__select--cell aw__status aw__status--{{ ws.status }}">
+            <select [value]="ws.status" [attr.aria-label]="'admin.workspaces.col.status' | t" (change)="changeStatus(ws, $any($event.target).value)">
+              @for (s of statuses; track s) {
+                <option [value]="s" [selected]="s === ws.status">{{ 'admin.workspaces.status.' + s | t }}</option>
+              }
+            </select>
+            <app-icon name="chevron-down" [size]="14" />
+          </span>
+        </div>
+      }
+    </div>
+
+    <app-pagination
+      [page]="page()"
+      [totalPages]="totalPages()"
+      [first]="first()"
+      [last]="last()"
+      (pageChange)="onPageChange($event)"
+    />
+  }
+</div>

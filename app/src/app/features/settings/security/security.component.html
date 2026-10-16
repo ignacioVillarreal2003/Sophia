@@ -1,0 +1,147 @@
+<app-page-header [title]="'settings.security.title' | t"/>
+
+@if (hasPassword()) {
+  <app-card>
+    <h3 class="sec__label">{{ 'settings.security.changePassword' | t }}</h3>
+    <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <div class="sec__field">
+        <app-text-field
+          formControlName="currentPassword"
+          type="password"
+          icon="lock"
+          [label]="'settings.security.currentPassword' | t"
+          [invalid]="!!errorOf('currentPassword')"
+          [error]="errorOf('currentPassword') ?? ''"
+        />
+      </div>
+      <div class="sec__field">
+        <app-text-field
+          formControlName="newPassword"
+          type="password"
+          icon="lock"
+          [label]="'auth.field.newPassword' | t"
+          [invalid]="!!errorOf('newPassword')"
+          [error]="errorOf('newPassword') ?? ''"
+        />
+      </div>
+      <div class="sec__field">
+        <app-text-field
+          formControlName="confirmPassword"
+          type="password"
+          icon="lock"
+          [label]="'auth.field.confirmPassword' | t"
+          [invalid]="!!confirmError()"
+          [error]="confirmError() ?? ''"
+        />
+      </div>
+      <div class="sec__actions">
+        <app-button variant="primary" type="submit" [loading]="loading()">
+          {{ 'settings.security.update' | t }}
+        </app-button>
+      </div>
+    </form>
+  </app-card>
+
+  <app-card>
+    <h3 class="sec__label">{{ 'settings.security.changeEmail' | t }}</h3>
+    <p class="sec__hint">{{ 'settings.security.changeEmailHint' | t }}</p>
+    <form [formGroup]="emailForm" (ngSubmit)="submitEmailChange()" novalidate>
+      <div class="sec__field">
+        <app-text-field
+          formControlName="newEmail"
+          type="email"
+          icon="user"
+          [label]="'settings.security.newEmail' | t"
+          [invalid]="!!emailErrorOf('newEmail')"
+          [error]="emailErrorOf('newEmail') ?? ''"
+        />
+      </div>
+      <div class="sec__field">
+        <app-text-field
+          formControlName="password"
+          type="password"
+          icon="lock"
+          [label]="'settings.security.currentPassword' | t"
+          [invalid]="!!emailErrorOf('password')"
+          [error]="emailErrorOf('password') ?? ''"
+        />
+      </div>
+      <div class="sec__actions">
+        <app-button variant="primary" type="submit" [loading]="changingEmail()">
+          {{ 'settings.security.sendConfirmation' | t }}
+        </app-button>
+      </div>
+    </form>
+  </app-card>
+} @else {
+  <app-card>
+    <h3 class="sec__label">{{ 'settings.security.password' | t }}</h3>
+    <p class="sec__hint">{{ 'settings.security.noPasswordHint' | t }}</p>
+    <div class="sec__actions">
+      <app-button
+        [loading]="sendingSetPassword()"
+        [disabled]="setPasswordSent()"
+        (click)="sendSetPasswordEmail()"
+      >
+        {{ setPasswordSent() ? ('settings.security.linkSent' | t) : ('settings.security.sendSetPasswordEmail' | t) }}
+      </app-button>
+    </div>
+    @if (setPasswordSent()) {
+      <p class="sec__hint">{{ 'settings.security.checkEmailForPassword' | t }}</p>
+    }
+  </app-card>
+}
+
+<app-card>
+  <h3 class="sec__label">Google</h3>
+  @if (googleLinked()) {
+    <p class="sec__hint">
+      {{ 'settings.security.googleLinkedWith' | t }}
+      @if (user()?.googleEmail) {
+        · {{ user()?.googleEmail }}
+      }
+    </p>
+    <div class="sec__actions">
+      <app-button
+        variant="danger"
+        [loading]="unlinkingGoogle()"
+        [disabled]="!hasPassword()"
+        (click)="unlinkGoogle()"
+      >
+        {{ 'settings.security.unlinkGoogle' | t }}
+      </app-button>
+    </div>
+    @if (!hasPassword()) {
+      <p class="sec__hint">{{ 'settings.security.needPasswordToUnlink' | t }}</p>
+    }
+  } @else {
+    <p class="sec__hint">{{ 'settings.security.linkGoogleHint' | t }}</p>
+    @if (linkingGoogle()) {
+      <div class="sec__google-loading">
+        <app-spinner [size]="20"/>
+      </div>
+    } @else {
+      <app-google-signin-button text="continue_with" (credential)="onGoogleLinkCredential($event)"/>
+    }
+  }
+</app-card>
+
+<app-card class="sec__danger">
+  <h3 class="sec__label">{{ 'settings.security.deleteAccount' | t }}</h3>
+  <p class="sec__hint">{{ 'settings.security.deleteAccountHint' | t }}</p>
+  @if (hasPassword()) {
+    <div class="sec__field">
+      <app-text-field
+        [formControl]="deletePassword"
+        type="password"
+        icon="lock"
+        [label]="'settings.security.password' | t"
+      />
+    </div>
+  }
+  <div class="sec__actions">
+    <app-button variant="danger" [loading]="deleting()" (click)="deleteAccount()">
+      {{ 'settings.security.deleteMyAccount' | t }}
+    </app-button>
+  </div>
+</app-card>

@@ -1,0 +1,133 @@
+@use 'mixins' as *;
+
+.ct {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.ct__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--divider);
+}
+
+.ct__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--type-body-strong-size);
+  font-weight: 600;
+  app-icon { color: var(--text-subtle); }
+}
+
+.ct__list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  @include scrollbar-thin;
+}
+
+.ct__loading {
+  display: grid;
+  place-items: center;
+  padding: var(--space-lg);
+}
+
+.ct__comment {
+  display: flex;
+  gap: 10px;
+
+  &--resolved {
+    opacity: 0.55;
+  }
+}
+
+.ct__comment-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.ct__comment-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.ct__author {
+  font-size: var(--type-caption-size);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.ct__time {
+  font-size: 11px;
+  color: var(--text-subtle);
+}
+
+.ct__text {
+  margin-top: 2px;
+  font-size: var(--type-caption-size);
+  line-height: 1.5;
+  color: var(--text);
+  white-space: pre-wrap;
+}
+
+.ct__actions {
+  display: flex;
+  gap: var(--space-sm);
+  margin-top: 6px;
+}
+
+.ct__action {
+  font-size: 12px;
+  color: var(--text-subtle);
+  &:hover { color: var(--accent); }
+  &--danger:hover { color: var(--danger); }
+}
+
+.ct__reply {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  padding-left: 4px;
+}
+
+.ct__reply-box {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.ct__compose {
+  display: flex;
+  gap: 8px;
+  padding: var(--space-sm) var(--space-md);
+  border-top: 1px solid var(--divider);
+}
+
+.ct__input {
+  flex: 1;
+  min-width: 0;
+  height: 38px;
+  padding-inline: 14px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--border);
+  font-size: var(--type-caption-size);
+  color: var(--text);
+  outline: none;
+
+  &:focus {
+    box-shadow: inset 0 0 0 1.5px var(--accent);
+  }
+  &::placeholder { color: var(--text-subtle); }
+}

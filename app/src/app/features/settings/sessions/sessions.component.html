@@ -1,0 +1,51 @@
+<app-page-header [title]="'settings.sessions.title' | t">
+  @if (hasOtherSessions()) {
+    <app-button variant="danger" size="sm" [loading]="revokingOthers()" (click)="revokeOthers()">
+      {{ 'settings.sessions.closeOthers' | t }}
+    </app-button>
+  }
+  <app-button variant="danger" size="sm" [loading]="loggingOutAll()" (click)="logoutAll()">
+    {{ 'settings.sessions.closeAllDevices' | t }}
+  </app-button>
+</app-page-header>
+
+<app-card flush>
+  @if (loading()) {
+    <div class="ses__loading">
+      <app-spinner/>
+    </div>
+  } @else if (sessions().length === 0) {
+    <app-empty-state icon="monitor" [title]="'settings.sessions.empty' | t"/>
+  } @else {
+    @for (s of sessions(); track s.id) {
+      <div class="ses__row">
+        <span class="ses__icon"><app-icon [name]="deviceIcon(s)" [size]="18"/></span>
+        <div class="ses__info">
+          <span class="ses__name">
+            {{ deviceLabelOf(s) }}
+            @if (s.current) {
+              <app-badge tone="accent">{{ 'settings.sessions.thisSession' | t }}</app-badge>
+            }
+          </span>
+          <span class="ses__meta">
+            @if (s.ipAddress) {
+              {{ s.ipAddress }} ·
+            }
+            {{ 'settings.sessions.active' | t: {time: (s.lastActiveAt | relativeTime)} }}
+          </span>
+        </div>
+        @if (!s.current) {
+          <app-button
+            variant="ghost"
+            size="sm"
+            icon="x"
+            iconOnly
+            [disabled]="revokingId() === s.id"
+            (click)="revoke(s)"
+            [attr.aria-label]="'settings.sessions.closeSessionAria' | t"
+          />
+        }
+      </div>
+    }
+  }
+</app-card>

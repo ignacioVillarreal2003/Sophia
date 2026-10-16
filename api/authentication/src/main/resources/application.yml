@@ -1,0 +1,238 @@
+spring:
+  application:
+    name: authentication
+
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/sophia_auth}
+    username: ${DB_USERNAME:sophia}
+    password: ${DB_PASSWORD:sophia}
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:10}
+      minimum-idle: 2
+      connection-timeout: 30000
+      max-lifetime: 1800000
+      pool-name: auth-hikari
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc.time_zone: UTC
+        jdbc.batch_size: 25
+        order_inserts: true
+        order_updates: true
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration,classpath:db/seed
+    validate-on-migrate: true
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 3s
+
+  session:
+    redis:
+      namespace: sophia:authentication:session
+    timeout: 15m
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:29092}
+    security:
+      protocol: ${KAFKA_SECURITY_PROTOCOL:PLAINTEXT}
+    producer:
+      acks: all
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      properties:
+        enable.idempotence: true
+
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
+
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID:changeme}
+            client-secret: ${GOOGLE_CLIENT_SECRET:changeme}
+            scope:
+              - openid
+              - profile
+              - email
+
+  jackson:
+    default-property-inclusion: non_null
+    time-zone: UTC
+
+  threads:
+    virtual:
+      enabled: true
+
+  task:
+    scheduling:
+      pool:
+        size: 2
+
+server:
+  port: ${SERVER_PORT:8080}
+  shutdown: graceful
+  forward-headers-strategy: framework
+  compression:
+    enabled: true
+    mime-types: application/json
+    min-response-size: 1024
+  servlet:
+    session:
+      cookie:
+        http-only: true
+        secure: ${SESSION_COOKIE_SECURE:false}
+        same-site: lax
+  error:
+    include-stacktrace: never
+    include-message: never
+
+sophia:
+  security:
+    jwt:
+      private-key: ${JWT_PRIVATE_KEY:}
+      issuer: ${JWT_ISSUER:sophia-authentication}
+      access-token-ttl: ${JWT_ACCESS_TTL:15m}
+      refresh-token-ttl: ${JWT_REFRESH_TTL:7d}
+      refresh-token-remember-me-ttl: ${JWT_REFRESH_REMEMBER_ME_TTL:30d}
+      service-token-ttl: ${JWT_SERVICE_TTL:30m}
+    cors:
+      allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200,http://localhost:3000}
+      allowed-methods: GET,POST,PUT,PATCH,DELETE,OPTIONS
+      allowed-headers: "*"
+      exposed-headers: X-Request-Id
+      allow-credentials: true
+      max-age: 3600
+    password:
+      bcrypt-strength: ${BCRYPT_STRENGTH:12}
+      history-count: ${PASSWORD_HISTORY_COUNT:5}
+    lockout:
+      max-attempts: ${LOCKOUT_MAX_ATTEMPTS:5}
+      lock-duration: ${LOCKOUT_DURATION:15m}
+      attempt-window: ${LOCKOUT_WINDOW:15m}
+    require-email-verification: ${REQUIRE_EMAIL_VERIFICATION:true}
+    password-reset-token-ttl: 30m
+    email-verification-token-ttl: 24h
+    rate-limit:
+      enabled: ${RATE_LIMIT_ENABLED:true}
+      authentication-requests: ${RATE_LIMIT_AUTHENTICATION_REQUESTS:10}
+      authentication-window: ${RATE_LIMIT_AUTHENTICATION_WINDOW:1m}
+      general-requests: ${RATE_LIMIT_GENERAL_REQUESTS:100}
+      general-window: ${RATE_LIMIT_GENERAL_WINDOW:1m}
+  oauth2:
+    authorized-redirect-uris: ${OAUTH2_AUTHORIZED_REDIRECT_URIS:http://localhost:4200/oauth2/callback}
+    one-time-code-ttl: 60s
+  notifications:
+    enabled: ${NOTIFICATIONS_ENABLED:true}
+    commands-topic: ${NOTIFICATION_COMMANDS_TOPIC:sophia.notifications.commands}
+    relay-interval: ${NOTIFICATION_COMMANDS_RELAY_INTERVAL:5s}
+    relay-batch-size: ${NOTIFICATION_COMMANDS_RELAY_BATCH_SIZE:100}
+    relay-max-attempts: ${NOTIFICATION_COMMANDS_RELAY_MAX_ATTEMPTS:10}
+  storage:
+    bucket: ${S3_BUCKET:sophia-avatars}
+    endpoint: ${S3_ENDPOINT:http://localhost:9000}
+    region: ${S3_REGION:us-east-1}
+    access-key: ${S3_ACCESS_KEY:minioadmin}
+    secret-key: ${S3_SECRET_KEY:minioadmin}
+    path-style-access: ${S3_PATH_STYLE_ACCESS:true}
+    allowed-image-types: image/jpeg,image/png,image/webp
+  monitoring:
+    username: ${MONITORING_USERNAME:prometheus}
+    password: ${MONITORING_PASSWORD:prometheus}
+  admin:
+    seed-enabled: ${ADMIN_SEED_ENABLED:true}
+    email: ${ADMIN_EMAIL:admin@sophia.local}
+    password: ${ADMIN_PASSWORD:Admin123!}
+    first-name: ${ADMIN_FIRST_NAME:Sophia}
+    last-name: ${ADMIN_LAST_NAME:Admin}
+  events:
+    enabled: ${USER_EVENTS_ENABLED:true}
+    user-topic: ${USER_EVENTS_TOPIC:sophia.authentication.user-events}
+    relay-interval: ${USER_EVENTS_RELAY_INTERVAL:5s}
+    relay-batch-size: ${USER_EVENTS_RELAY_BATCH_SIZE:100}
+    relay-max-attempts: ${USER_EVENTS_RELAY_MAX_ATTEMPTS:10}
+    partitions: ${USER_EVENTS_PARTITIONS:3}
+    replicas: ${KAFKA_TOPIC_REPLICAS:1}
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+    enabled: ${SWAGGER_ENABLED:true}
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: ${SWAGGER_ENABLED:true}
+    operations-sorter: alpha
+    tags-sorter: alpha
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: when-authorized
+      group:
+        liveness:
+          include: livenessState
+        readiness:
+          include: readinessState,db,redis
+  info:
+    git:
+      mode: full
+  metrics:
+    tags:
+      application: ${spring.application.name}
+  tracing:
+    sampling:
+      probability: ${TRACING_SAMPLING_PROBABILITY:0.1}
+  otlp:
+    tracing:
+      endpoint: ${OTLP_ENDPOINT:http://localhost:4318/v1/traces}
+      export:
+        enabled: ${TRACING_ENABLED:false}
+
+resilience4j:
+  retry:
+    instances:
+      google:
+        max-attempts: 3
+        wait-duration: 300ms
+        retry-exceptions:
+          - com.sophia.authentication.domain.exception.ServiceUnavailableException
+  circuitbreaker:
+    instances:
+      google:
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        slow-call-duration-threshold: 3s
+        slow-call-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+        record-exceptions:
+          - com.sophia.authentication.domain.exception.ServiceUnavailableException
+        ignore-exceptions:
+          - com.sophia.authentication.domain.exception.InvalidTokenException
+
+logging:
+  level:
+    root: INFO
+    com.sophia: INFO

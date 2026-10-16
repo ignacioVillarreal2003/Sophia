@@ -1,0 +1,106 @@
+@use 'mixins' as *;
+
+.trash {
+  padding-block: var(--space-xl);
+}
+
+.trash__loading {
+  display: grid;
+  place-items: center;
+  padding: var(--space-section);
+}
+
+.trash__row {
+  display: flex;
+  align-items: center;
+  padding: 18px 20px;
+  gap: var(--space-md);
+  &:not(:last-child) { border-bottom: 1px solid var(--divider); }
+}
+
+.trash__icon {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--ws-color) 16%, var(--surface));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ws-color) 28%, transparent);
+  color: color-mix(in srgb, var(--ws-color) 70%, var(--text));
+}
+
+.trash__info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.trash__name {
+  font-size: var(--type-body-strong-size);
+  font-weight: 600;
+  @include truncate;
+}
+
+.trash__meta {
+  font-size: 12px;
+  color: var(--text-subtle);
+}
+
+.trash__actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.trash__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
+
+  &:hover:not(:disabled) {
+    background: var(--surface-muted);
+    border-color: var(--border-strong, var(--border));
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent-focus);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+
+  // Destructive action: quiet until hovered so the row stays calm.
+  &--danger {
+    color: var(--danger, #c0392b);
+    border-color: color-mix(in srgb, var(--danger, #c0392b) 30%, var(--border));
+
+    &:hover:not(:disabled) {
+      background: color-mix(in srgb, var(--danger, #c0392b) 10%, var(--surface));
+      border-color: color-mix(in srgb, var(--danger, #c0392b) 55%, var(--border));
+    }
+  }
+
+  @include below($bp-tablet-landscape) {
+    span { display: none; }
+    padding: 0 10px;
+  }
+}
