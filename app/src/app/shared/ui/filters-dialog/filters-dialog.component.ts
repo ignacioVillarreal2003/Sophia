@@ -33,6 +33,8 @@ export interface FilterGroup {
   /** Already translated by the caller. */
   label: string;
   fields: FilterField[];
+  /** Date ranges shown only while this tab is open. */
+  dateRanges?: FilterDateRange[];
 }
 
 export interface FiltersDialogData {
@@ -100,15 +102,25 @@ export type FiltersDialogResult = Record<string, string>;
           <ng-container [ngTemplateOutlet]="fieldTpl" [ngTemplateOutletContext]="{ $implicit: field }" />
         }
 
-        @if (data.dateRange; as range) {
+        @for (range of visibleRanges(); track range.fromKey; let index = $index) {
           <div class="fd__dates">
             <div class="fd__date-field">
-              <label class="fd__date-label" [attr.for]="fromId">{{ range.fromLabel }}</label>
-              <input [id]="fromId" class="fd__date-input" type="date" [formControl]="stringControl(range.fromKey)" />
+              <label class="fd__date-label" [attr.for]="'fd-from-' + index">{{ range.fromLabel }}</label>
+              <input
+                [id]="'fd-from-' + index"
+                class="fd__date-input"
+                type="date"
+                [formControl]="stringControl(range.fromKey)"
+              />
             </div>
             <div class="fd__date-field">
-              <label class="fd__date-label" [attr.for]="toId">{{ range.toLabel }}</label>
-              <input [id]="toId" class="fd__date-input" type="date" [formControl]="stringControl(range.toKey)" />
+              <label class="fd__date-label" [attr.for]="'fd-to-' + index">{{ range.toLabel }}</label>
+              <input
+                [id]="'fd-to-' + index"
+                class="fd__date-input"
+                type="date"
+                [formControl]="stringControl(range.toKey)"
+              />
             </div>
           </div>
         }
@@ -457,9 +469,6 @@ export class FiltersDialogComponent {
   readonly ref = inject<DialogRef<FiltersDialogResult | undefined>>(DialogRef);
   readonly data = inject<FiltersDialogData>(DIALOG_DATA);
 
-  readonly fromId = 'fd-from';
-  readonly toId = 'fd-to';
-
   readonly activeGroup = signal(0);
 
   private static readonly MULTISELECT_PAGE_SIZE = 24;
@@ -476,6 +485,22 @@ export class FiltersDialogComponent {
         this.stringControl(field.key);
       }
     }
+    // Every range gets its control up front so Clear/Apply cover tabs the user never opened.
+    for (const range of this.allRanges()) {
+      this.stringControl(range.fromKey);
+      this.stringControl(range.toKey);
+    }
+  }
+
+  private allRanges(): FilterDateRange[] {
+    const global = this.data.dateRange ? [this.data.dateRange] : [];
+    return [...global, ...(this.data.groups ?? []).flatMap((group) => group.dateRanges ?? [])];
+  }
+
+  visibleRanges(): FilterDateRange[] {
+    const global = this.data.dateRange ? [this.data.dateRange] : [];
+    const group = this.data.groups?.[this.activeGroup()];
+    return [...global, ...(group?.dateRanges ?? [])];
   }
 
   private allFields(): FilterField[] {
@@ -573,10 +598,6 @@ export class FiltersDialogComponent {
     }
     for (const key of this.boolControls.keys()) {
       result[key] = '';
-    }
-    if (this.data.dateRange) {
-      result[this.data.dateRange.fromKey] = '';
-      result[this.data.dateRange.toKey] = '';
     }
     this.ref.close(result);
   }

@@ -13,6 +13,17 @@
           <div class="trash__info">
             <span class="trash__name">{{ item.name }}</span>
             <span class="trash__meta">{{ 'trash.deleted' | t: { time: (item.deletedAt | relativeTime) } }}</span>
+            @if (daysLeft(item); as days) {
+              <span class="trash__expiry" [class.trash__expiry--urgent]="isUrgent(item)">
+                <app-icon [name]="isUrgent(item) ? 'alert-circle' : 'clock'" [size]="13" />
+                {{ 'trash.expiresIn' | t: { days: days } }}
+              </span>
+            } @else if (item.purgeAt) {
+              <span class="trash__expiry trash__expiry--urgent">
+                <app-icon name="alert-circle" [size]="13" />
+                {{ 'trash.expiresToday' | t }}
+              </span>
+            }
           </div>
           <div class="trash__actions">
             <button type="button" class="trash__btn" [disabled]="busyId() === item.id" (click)="restore(item)">

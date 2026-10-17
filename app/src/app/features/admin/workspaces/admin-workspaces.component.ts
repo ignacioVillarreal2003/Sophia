@@ -12,6 +12,7 @@ import { PaginationComponent } from '@shared/ui/pagination/pagination.component'
 import { SpinnerComponent } from '@shared/ui/spinner/spinner.component';
 import { DialogService } from '@shared/ui/dialog/dialog.service';
 import { WorkspaceLogoComponent } from '@features/document-workspace/ui/workspace-logo.component';
+import { WorkspaceRequestsService } from '@features/document-workspace/data/workspace-extras.service';
 import { AdminWorkspace, AdminWorkspaceService, WorkspaceStatusValue } from './admin-workspace.service';
 
 const MB = 1024 * 1024;
@@ -38,11 +39,14 @@ const QUOTAS_MB = [0, 1024, 5 * 1024, 10 * 1024, 50 * 1024, 100 * 1024, 500 * 10
 })
 export class AdminWorkspacesComponent implements OnInit {
   private readonly service = inject(AdminWorkspaceService);
+  private readonly requests = inject(WorkspaceRequestsService);
   private readonly toast = inject(ToastService);
   private readonly dialog = inject(DialogService);
   private readonly i18n = inject(TranslationService);
 
   readonly statuses = STATUSES;
+  /** Storage requests waiting for an answer, shown next to the link to their page. */
+  readonly pendingRequests = signal(0);
   readonly items = signal<AdminWorkspace[]>([]);
   readonly loading = signal(true);
   readonly search = signal('');
@@ -55,6 +59,7 @@ export class AdminWorkspacesComponent implements OnInit {
   private readonly search$ = new Subject<string>();
 
   ngOnInit(): void {
+    this.requests.pendingStorageCount().subscribe({ next: (r) => this.pendingRequests.set(r.count), error: () => undefined });
     this.search$.pipe(debounceTime(300), distinctUntilChanged()).subscribe((value) => {
       this.search.set(value);
       this.page.set(0);

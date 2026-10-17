@@ -21,6 +21,7 @@ import com.sophia.documentworkspace.domain.exception.BadRequestException;
 import com.sophia.documentworkspace.domain.exception.ErrorCode;
 import com.sophia.documentworkspace.domain.exception.ResourceNotFoundException;
 import com.sophia.documentworkspace.domain.util.MarkdownUtil;
+import com.sophia.documentworkspace.domain.util.PresentationCodec;
 import com.sophia.documentworkspace.domain.util.SpreadsheetCodec;
 import com.sophia.documentworkspace.domain.util.FileTypeResolver;
 import com.sophia.documentworkspace.infrastructure.messaging.DomainEventPublisher;
@@ -34,7 +35,12 @@ import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
+import org.apache.poi.xwpf.usermodel.IBodyElement;
 import org.apache.poi.xwpf.usermodel.XWPFParagraph;
+import org.apache.poi.xwpf.usermodel.XWPFRun;
+import org.apache.poi.xwpf.usermodel.XWPFTable;
+import org.apache.poi.xwpf.usermodel.XWPFTableCell;
+import org.apache.poi.xwpf.usermodel.XWPFTableRow;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -107,10 +113,43 @@ public class ImportService {
             case "csv", "tsv" -> List.of(importSpreadsheet(user, workspaceId, parent, baseName(filename), SpreadsheetCodec.fromCsv(
                             new String(content, StandardCharsets.UTF_8), "Sheet1")));
             case "docx" -> List.of(importDocx(user, workspaceId, parent, baseName(filename), content));
+            case "pptx" -> List.of(importPresentation(user, workspaceId, parent, baseName(filename), content));
             case "pdf" -> List.of(importPdf(user, workspaceId, parent, baseName(filename), content));
             case "zip" -> importZip(user, workspaceId, parent, content);
             case "txt" -> List.of(importMarkdown(user, workspaceId, parent, baseName(filename), new String(content, StandardCharsets.UTF_8)));
             default -> List.of(importAsFileArtifact(user, workspaceId, parent, filename, content).getId());
+        };
+    }
+
+    /**
+     * Turns an uploaded Word/PowerPoint/Excel/PDF/text file into an editable document next to it, leaving the
+     * original untouched. Returns the new artifact id.
+     */
+    @Transactional
+    public UUID convertToEditable(AuthenticatedUser user, UUID workspaceId, UUID artifactId) {
+        WorkspaceAccessSnapshot access = workspaceAuthorization.requirePermission(
+                workspaceId, user, WorkspacePermission.IMPORT_CONTENT);
+        var source = artifactAccess.require(user, workspaceId, artifactId, AccessMode.READ).artifact();
+        if (!(source instanceof FileArtifact file) || file.getStorageKey() == null) {
+            throw new BadRequestException(ErrorCode.IMPORT_FAILED, "Only uploaded files can be converted");
+        }
+        Folder parent = resolveParent(user, workspaceId, file.getParentId(), access);
+        byte[] content;
+        try (var in = storageService.getObject(file.getStorageKey())) {
+            content = in.readAllBytes();
+        } catch (IOException e) {
+            throw importFailure("Failed to read the file", e);
+        }
+        String filename = file.getOriginalFilename() != null ? file.getOriginalFilename() : file.getName();
+        String name = baseName(filename);
+        return switch (file.getType()) {
+            case DOCX -> importDocx(user, workspaceId, parent, name, content);
+            case PPTX -> importPresentation(user, workspaceId, parent, name, content);
+            case XLSX -> importSpreadsheet(user, workspaceId, parent, name, spreadsheetFromXlsx(content));
+            case PDF -> importPdf(user, workspaceId, parent, name, content);
+            case TXT -> importMarkdown(user, workspaceId, parent, name, new String(content, StandardCharsets.UTF_8));
+            default -> throw new BadRequestException(ErrorCode.IMPORT_FAILED,
+                    "This kind of file cannot be converted to an editable document");
         };
     }
 
@@ -149,25 +188,98 @@ public class ImportService {
 
     private UUID importDocx(AuthenticatedUser user, UUID workspaceId, Folder parent,
                             String name, byte[] content) {
+        return importMarkdown(user, workspaceId, parent, name, docxToMarkdown(content));
+    }
+
+    private UUID importPresentation(AuthenticatedUser user, UUID workspaceId, Folder parent,
+                                    String name, byte[] content) {
+        try {
+            return createDocument(user, workspaceId, parent, name, ArtifactType.PRESENTATION,
+                    PresentationCodec.fromPptx(content));
+        } catch (IOException | RuntimeException e) {
+            if (e instanceof ApiException api) {
+                throw api;
+            }
+            throw importFailure("Failed to parse the PPTX file", e);
+        }
+    }
+
+    /** Headings, lists, bold/italic and tables survive; layout and styling do not. */
+    String docxToMarkdown(byte[] content) {
         StringBuilder markdown = new StringBuilder();
         try (XWPFDocument docx = new XWPFDocument(new ByteArrayInputStream(content))) {
-            for (XWPFParagraph paragraph : docx.getParagraphs()) {
-                String text = paragraph.getText();
-                if (text == null || text.isBlank()) {
-                    continue;
-                }
-                String style = paragraph.getStyle();
-                if (style != null && style.toLowerCase(Locale.ROOT).startsWith("heading")) {
-                    int level = parseHeadingLevel(style);
-                    markdown.append("#".repeat(level)).append(' ').append(text).append("\n\n");
-                } else {
-                    markdown.append(text).append("\n\n");
+            for (IBodyElement element : docx.getBodyElements()) {
+                if (element instanceof XWPFParagraph paragraph) {
+                    appendParagraph(markdown, paragraph);
+                } else if (element instanceof XWPFTable table) {
+                    appendTable(markdown, table);
                 }
             }
         } catch (IOException e) {
             throw importFailure("Failed to parse the DOCX file", e);
         }
-        return importMarkdown(user, workspaceId, parent, name, markdown.toString());
+        return markdown.toString().replaceAll("\n{3,}", "\n\n").strip() + "\n";
+    }
+
+    private void appendParagraph(StringBuilder markdown, XWPFParagraph paragraph) {
+        String text = inlineMarkdown(paragraph);
+        if (text.isBlank()) {
+            return;
+        }
+        String style = paragraph.getStyle();
+        String lower = style == null ? "" : style.toLowerCase(Locale.ROOT);
+        if (lower.equals("title")) {
+            markdown.append("# ").append(text).append("\n\n");
+        } else if (lower.startsWith("heading")) {
+            markdown.append("#".repeat(Math.min(6, Math.max(1, parseHeadingLevel(style))))).append(' ').append(text).append("\n\n");
+        } else if (paragraph.getNumID() != null || lower.startsWith("listparagraph")) {
+            int level = paragraph.getNumIlvl() == null ? 0 : paragraph.getNumIlvl().intValue();
+            boolean ordered = "decimal".equalsIgnoreCase(paragraph.getNumFmt());
+            markdown.append("  ".repeat(Math.max(0, level))).append(ordered ? "1. " : "- ").append(text).append('\n');
+        } else {
+            markdown.append('\n').append(text).append("\n\n");
+        }
+    }
+
+    private String inlineMarkdown(XWPFParagraph paragraph) {
+        StringBuilder out = new StringBuilder();
+        for (XWPFRun run : paragraph.getRuns()) {
+            String text = run.text();
+            if (text == null || text.isEmpty()) {
+                continue;
+            }
+            String core = text.strip();
+            if (core.isEmpty()) {
+                out.append(text);
+                continue;
+            }
+            String lead = text.substring(0, text.indexOf(core));
+            String trail = text.substring(lead.length() + core.length());
+            String mark = (run.isBold() ? "**" : "") + (run.isItalic() ? "*" : "");
+            String closing = new StringBuilder(mark).reverse().toString();
+            out.append(lead).append(mark).append(core).append(closing).append(trail);
+        }
+        return out.toString().strip();
+    }
+
+    private void appendTable(StringBuilder markdown, XWPFTable table) {
+        List<XWPFTableRow> rows = table.getRows();
+        if (rows.isEmpty()) {
+            return;
+        }
+        markdown.append('\n');
+        for (int r = 0; r < rows.size(); r++) {
+            List<XWPFTableCell> cells = rows.get(r).getTableCells();
+            markdown.append('|');
+            for (XWPFTableCell cell : cells) {
+                markdown.append(' ').append(cell.getText().replace('\n', ' ').replace("|", "\\|").strip()).append(" |");
+            }
+            markdown.append('\n');
+            if (r == 0) {
+                markdown.append('|').append(" --- |".repeat(Math.max(1, cells.size()))).append('\n');
+            }
+        }
+        markdown.append('\n');
     }
 
     private UUID importPdf(AuthenticatedUser user, UUID workspaceId, Folder parent,
@@ -237,6 +349,9 @@ public class ImportService {
                     case "html", "htm" -> created.add(importMarkdown(user, workspaceId, parent,
                             baseName(filename), MarkdownUtil.htmlToMarkdown(
                                     new String(content, StandardCharsets.UTF_8))));
+                    case "xlsx" -> created.add(importSpreadsheet(user, workspaceId, parent,
+                            baseName(filename), spreadsheetFromXlsx(content)));
+                    case "pptx" -> created.add(importPresentation(user, workspaceId, parent, baseName(filename), content));
                     case "csv" -> created.add(importSpreadsheet(user, workspaceId, parent, baseName(filename), SpreadsheetCodec.fromCsv(
                                     new String(content, StandardCharsets.UTF_8), "Sheet1")));
                     default -> created.add(importAsFileArtifact(user, workspaceId, parent, filename, content).getId());

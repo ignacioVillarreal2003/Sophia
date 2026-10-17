@@ -53,6 +53,45 @@
   </app-card>
   }
 
+  @if (isAdmin() && requests().length > 0) {
+    <section class="mem__section">
+      <h2 class="mem__section-title">
+        {{ 'workspaces.access.requests' | t }}
+        <span class="mem__count">{{ requests().length }}</span>
+      </h2>
+      <app-card flush>
+        @for (r of requests(); track r.id) {
+          <div class="mem__row mem__row--request">
+            <app-avatar [name]="r.email" [size]="40" />
+            <div class="mem__info">
+              <span class="mem__name">{{ r.email }}</span>
+              <span class="mem__meta">
+                {{ r.createdAt | relativeTime }}
+                @if (r.message) {
+                  · “{{ r.message }}”
+                }
+              </span>
+            </div>
+            <span class="mem__select">
+              <select [attr.aria-label]="'workspaces.access.roleFor' | t" (change)="setRequestRole(r, $any($event.target).value)">
+                @for (role of roles; track role) {
+                  <option [value]="role" [selected]="role === requestRole(r)">{{ roleLabel(role) }}</option>
+                }
+              </select>
+              <app-icon name="chevron-down" [size]="14" />
+            </span>
+            <app-button size="sm" variant="primary" [disabled]="busyRequest() === r.id" (click)="approveRequest(r)">
+              {{ 'workspaces.access.approve' | t }}
+            </app-button>
+            <app-button size="sm" variant="ghost" [disabled]="busyRequest() === r.id" (click)="denyRequest(r)">
+              {{ 'workspaces.access.deny' | t }}
+            </app-button>
+          </div>
+        }
+      </app-card>
+    </section>
+  }
+
   @if (loading()) {
     <div class="mem__loading"><app-spinner /></div>
   } @else {

@@ -37,6 +37,8 @@ import { CommentThreadComponent } from '../comments/comment-thread.component';
 import { RevisionHistoryComponent } from '../revisions/revision-history.component';
 import { LinkTarget, MarkdownEditorComponent, MarkdownMode } from '../markdown/markdown-editor.component';
 import { SpreadsheetComponent } from '../spreadsheet/spreadsheet.component';
+import { PresentationComponent } from '../presentation/presentation.component';
+import { WhiteboardComponent } from '../whiteboard/whiteboard.component';
 import { markdownStats } from '../markdown/markdown-render';
 
 const PRESENCE_COLORS = ['#0066cc', '#5856d6', '#af52de', '#ff9500', '#34c759', '#00c7be'];
@@ -47,6 +49,8 @@ type SaveState = 'saved' | 'dirty' | 'saving' | 'error' | 'conflict';
 
 const TEXT_EXPORTS: ExportFormat[] = ['MARKDOWN', 'HTML', 'PDF', 'DOCX', 'TXT'];
 const SHEET_EXPORTS: ExportFormat[] = ['XLSX', 'CSV', 'PDF', 'JSON'];
+const DECK_EXPORTS: ExportFormat[] = ['PPTX', 'MARKDOWN', 'PDF', 'HTML', 'JSON'];
+const BOARD_EXPORTS: ExportFormat[] = ['JSON', 'MARKDOWN', 'PDF'];
 
 /**
  * Document surface. Markdown notes and checklists open in the Markdown editor (edit / split / preview),
@@ -62,6 +66,8 @@ const SHEET_EXPORTS: ExportFormat[] = ['XLSX', 'CSV', 'PDF', 'JSON'];
     CdkMenuTrigger,
     MarkdownEditorComponent,
     SpreadsheetComponent,
+    PresentationComponent,
+    WhiteboardComponent,
     FileViewerComponent,
     CommentThreadComponent,
     RevisionHistoryComponent,
@@ -93,6 +99,8 @@ export class DocumentViewComponent implements OnDestroy {
 
   private readonly editor = viewChild(MarkdownEditorComponent);
   private readonly sheet = viewChild(SpreadsheetComponent);
+  private readonly deck = viewChild(PresentationComponent);
+  private readonly board = viewChild(WhiteboardComponent);
 
   readonly artifact = signal<Artifact | null>(null);
   readonly text = signal('');
@@ -119,7 +127,11 @@ export class DocumentViewComponent implements OnDestroy {
   });
   readonly isChecklist = computed(() => this.artifact()?.type === 'CHECKLIST');
   readonly isSpreadsheet = computed(() => this.artifact()?.type === 'SPREADSHEET');
-  readonly isText = computed(() => this.isMarkdown() || this.isSpreadsheet());
+  readonly isPresentation = computed(() => this.artifact()?.type === 'PRESENTATION');
+  readonly isWhiteboard = computed(() => this.artifact()?.type === 'WHITEBOARD');
+  /** Documents whose content is JSON edited by its own component (not the Markdown editor). */
+  readonly isStructured = computed(() => this.isSpreadsheet() || this.isPresentation() || this.isWhiteboard());
+  readonly isText = computed(() => this.isMarkdown() || this.isStructured());
   readonly isFile = computed(() => !!this.artifact()?.mimeType);
 
   /** Viewers, suspended members and read-only workspaces only read. */
@@ -127,7 +139,9 @@ export class DocumentViewComponent implements OnDestroy {
     const ws = this.workspaces.active();
     return !!ws && ws.status === 'ACTIVE' && ws.myRole !== 'VIEWER';
   });
-  readonly exportFormats = computed<ExportFormat[]>(() => (this.isSpreadsheet() ? SHEET_EXPORTS : TEXT_EXPORTS));
+  readonly exportFormats = computed<ExportFormat[]>(() =>
+    this.isSpreadsheet() ? SHEET_EXPORTS : this.isPresentation() ? DECK_EXPORTS : this.isWhiteboard() ? BOARD_EXPORTS : TEXT_EXPORTS,
+  );
   readonly progress = computed(() => (this.isChecklist() ? markdownStats(this.text()) : null));
   readonly quickItem = signal('');
 
@@ -252,7 +266,7 @@ export class DocumentViewComponent implements OnDestroy {
     this.scheduleSave(1200);
   }
 
-  /** The spreadsheet emits already-debounced workbook JSON. */
+  /** Spreadsheets, decks and whiteboards emit already-debounced JSON. */
   onSheet(json: string): void {
     if (!this.canEdit() || json === this.text()) return;
     this.text.set(json);
@@ -267,13 +281,19 @@ export class DocumentViewComponent implements OnDestroy {
 
   /** Saves right away (Ctrl+S, leaving the page). */
   saveNow(): void {
-    this.sheet()?.flush();
+    this.flushEditors();
     if (this.saveTimer) clearTimeout(this.saveTimer);
     this.save();
   }
 
-  private flushPending(): void {
+  private flushEditors(): void {
     this.sheet()?.flush();
+    this.deck()?.flush();
+    this.board()?.flush();
+  }
+
+  private flushPending(): void {
+    this.flushEditors();
     if (this.saveTimer) {
       clearTimeout(this.saveTimer);
       this.save();
@@ -449,7 +469,7 @@ export class DocumentViewComponent implements OnDestroy {
   }
 
   formatLabel(format: ExportFormat): string {
-    return format === 'MARKDOWN' ? 'Markdown' : format === 'XLSX' ? 'Excel (.xlsx)' : format === 'DOCX' ? 'Word (.docx)' : format;
+    return format === 'MARKDOWN' ? 'Markdown' : format === 'XLSX' ? 'Excel (.xlsx)' : format === 'DOCX' ? 'Word (.docx)' : format === 'PPTX' ? 'PowerPoint (.pptx)' : format;
   }
 
   openShare(): void {

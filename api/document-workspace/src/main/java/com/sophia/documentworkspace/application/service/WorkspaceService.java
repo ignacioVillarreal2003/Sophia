@@ -9,7 +9,10 @@ import com.sophia.documentworkspace.domain.dto.request.TransferOwnershipRequest;
 import com.sophia.documentworkspace.domain.dto.request.CreateWorkspaceRequest;
 import com.sophia.documentworkspace.domain.dto.request.UpdateWorkspaceSettingsRequest;
 import com.sophia.documentworkspace.domain.dto.request.UpdateWorkspaceRequest;
+import com.sophia.documentworkspace.domain.config.ApplicationProperties;
+import com.sophia.documentworkspace.domain.dto.request.WorkspaceListFilter;
 import com.sophia.documentworkspace.domain.dto.response.PageResponse;
+import com.sophia.documentworkspace.infrastructure.repository.WorkspaceLabelRepository;
 import com.sophia.documentworkspace.domain.dto.response.WorkspaceResponse;
 import com.sophia.documentworkspace.domain.dto.response.WorkspaceUsageResponse;
 import com.sophia.documentworkspace.infrastructure.repository.ArtifactRepository;
@@ -44,6 +47,9 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
@@ -66,6 +72,10 @@ public class WorkspaceService {
     private final ArtifactRepository artifactRepository;
     private final WorkspaceLimitsRepository limitsRepository;
     private final WorkspaceMapper workspaceMapper;
+    private final WorkspaceListEnricher listEnricher;
+    private final WorkspaceStarterService starterService;
+    private final WorkspaceLabelRepository labelRepository;
+    private final ApplicationProperties properties;
 
     @org.springframework.beans.factory.annotation.Value("${sophia.workspaces.default-storage-quota-mb:5120}")
     private long defaultStorageQuotaMb;
@@ -87,6 +97,8 @@ public class WorkspaceService {
         limits.changeStorageQuota(defaultStorageQuotaMb, null);
         limitsRepository.save(limits);
 
+        starterService.apply(workspace, user.id(), request.template());
+
         eventPublisher.publish(WorkspaceEvents.WorkspaceCreated.of(
                 workspace.getId(), user.id(), workspace.getName()));
         eventPublisher.publish(MembershipEvents.MemberAdded.of(
@@ -95,30 +107,64 @@ public class WorkspaceService {
         return workspaceMapper.toResponse(workspace, WorkspaceRole.ADMIN);
     }
 
-    @Transactional(readOnly = true)
+    private static final Duration ACCESS_THROTTLE = Duration.ofMinutes(5);
+
+    @Transactional
     public WorkspaceResponse getById(AuthenticatedUser user, UUID workspaceId) {
         WorkspaceAccessSnapshot access = authorization.requireActiveMember(workspaceId, user);
         Workspace workspace = loadActive(workspaceId);
-        return workspaceMapper.toResponse(workspace, access.role());
+        WorkspaceMember member = memberRepository.findByWorkspaceIdAndUserId(workspaceId, user.id()).orElse(null);
+        Instant now = Instant.now();
+        if (member != null && (member.getLastAccessedAt() == null
+                || member.getLastAccessedAt().isBefore(now.minus(ACCESS_THROTTLE)))) {
+            member.recordAccess(now);
+        }
+        Map<UUID, WorkspaceMember> memberships = member == null ? Map.of() : Map.of(workspaceId, member);
+        return listEnricher.enrich(user.id(), List.of(workspaceMapper.toResponse(workspace, access.role())),
+                memberships, false).get(0);
+    }
+
+    @Transactional
+    public WorkspaceResponse pin(AuthenticatedUser user, UUID workspaceId, boolean pinned) {
+        WorkspaceAccessSnapshot access = authorization.requireActiveMember(workspaceId, user);
+        Workspace workspace = loadActive(workspaceId);
+        WorkspaceMember member = memberRepository.findByWorkspaceIdAndUserId(workspaceId, user.id())
+                .orElseThrow(() -> new ResourceNotFoundException("Workspace member", user.id()));
+        if (pinned) {
+            member.pin();
+        } else {
+            member.unpin();
+        }
+        return listEnricher.enrich(user.id(), List.of(workspaceMapper.toResponse(workspace, access.role())),
+                Map.of(workspaceId, member), false).get(0);
     }
 
     @Transactional(readOnly = true)
-    public PageResponse<WorkspaceResponse> listMine(AuthenticatedUser user, String search, WorkspaceRole role,
-                                                     WorkspaceStatus status, Pageable pageable) {
-        String normalizedSearch = (search == null || search.isBlank()) ? null : search.trim();
-        Pageable effectivePageable = pageable.getSort().isSorted()
-                ? pageable
-                : PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by("name").ascending());
-        Page<Workspace> page = workspaceRepository.findAll(
-                WorkspaceSpecifications.forMember(user.id(), MemberStatus.ACTIVE, normalizedSearch, role, status),
-                effectivePageable);
-        Map<UUID, WorkspaceRole> roleByWorkspace = memberRepository
-                .findAllByUserIdAndWorkspaceIdIn(user.id(),
-                        page.getContent().stream().map(Workspace::getId).toList())
+    public PageResponse<WorkspaceResponse> listMine(AuthenticatedUser user, WorkspaceListFilter filter,
+                                                     int page, int size, boolean withStats) {
+        WorkspaceListFilter normalized = new WorkspaceListFilter(
+                filter.search() == null || filter.search().isBlank() ? null : filter.search().trim(),
+                filter.role(), filter.status(), filter.ownership(), filter.pinnedOnly(),
+                filter.labelId(), filter.createdFrom(), filter.createdTo(), filter.activeFrom(),
+                filter.activeTo(), filter.sort(), filter.descending());
+        if (normalized.labelId() != null
+                && labelRepository.findByIdAndUserId(normalized.labelId(), user.id()).isEmpty()) {
+            throw new ResourceNotFoundException("Label", normalized.labelId());
+        }
+        // The specification orders the rows itself, so the page request carries no sort.
+        Page<Workspace> result = workspaceRepository.findAll(
+                WorkspaceSpecifications.forMember(user.id(), MemberStatus.ACTIVE, normalized),
+                PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 100)));
+        Map<UUID, WorkspaceMember> memberships = memberRepository
+                .findAllByUserIdAndWorkspaceIdIn(user.id(), result.getContent().stream().map(Workspace::getId).toList())
                 .stream()
-                .collect(Collectors.toMap(m -> m.getWorkspace().getId(), WorkspaceMember::getRole));
-        return PageResponse.from(page.map((Function<Workspace, WorkspaceResponse>) workspace ->
-                workspaceMapper.toResponse(workspace, roleByWorkspace.get(workspace.getId()))));
+                .collect(Collectors.toMap(m -> m.getWorkspace().getId(), Function.identity()));
+        List<WorkspaceResponse> base = result.getContent().stream()
+                .map(workspace -> workspaceMapper.toResponse(workspace, memberships.get(workspace.getId()).getRole()))
+                .toList();
+        List<WorkspaceResponse> enriched = listEnricher.enrich(user.id(), base, memberships, withStats);
+        return new PageResponse<>(enriched, result.getNumber(), result.getSize(), result.getTotalElements(),
+                result.getTotalPages(), result.isFirst(), result.isLast());
     }
 
     @Transactional(readOnly = true)
@@ -129,7 +175,14 @@ public class WorkspaceService {
         return PageResponse.from(workspaceRepository
                 .findAllByOwnerIdAndDeletedAtIsNotNull(user.id(), effectivePageable)
                 .map((Function<Workspace, WorkspaceResponse>) workspace ->
-                        workspaceMapper.toResponse(workspace, WorkspaceRole.ADMIN)));
+                        workspaceMapper.toResponse(workspace, WorkspaceRole.ADMIN)
+                                .withPurgeAt(purgeDate(workspace))));
+    }
+
+    /** When a trashed workspace will be erased for good. */
+    public Instant purgeDate(Workspace workspace) {
+        return workspace.getDeletedAt() == null ? null
+                : workspace.getDeletedAt().plus(Duration.ofDays(properties.retention().workspaceTrashDays()));
     }
 
     // ---- logo ----------------------------------------------------------------------------------

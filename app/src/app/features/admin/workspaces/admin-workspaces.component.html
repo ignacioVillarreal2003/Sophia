@@ -20,6 +20,13 @@
       </select>
       <app-icon name="chevron-down" [size]="14" />
     </span>
+    <a class="aw__requests" routerLink="/admin/workspaces/storage-requests">
+      <app-icon name="database" [size]="15" />
+      {{ 'admin.storageRequests.title' | t }}
+      @if (pendingRequests() > 0) {
+        <span class="aw__requests-count">{{ pendingRequests() }}</span>
+      }
+    </a>
   </div>
 
   @if (loading()) {

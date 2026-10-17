@@ -71,6 +71,13 @@ public class NotificationController {
         return ResponseEntity.ok(ApiResponse.ok(Map.of("unread", inboxService.unreadCount(user.id()))));
     }
 
+    @GetMapping("/notifications/unread-by-workspace")
+    @PreAuthorize("hasAuthority('NOTIFICATION_READ')")
+    @Operation(summary = "Unread notifications per workspace, keyed by workspace id")
+    public ResponseEntity<ApiResponse<Map<String, Long>>> unreadByWorkspace(@CurrentUser AuthenticatedUser user) {
+        return ResponseEntity.ok(ApiResponse.ok(inboxService.unreadByWorkspace(user.id())));
+    }
+
     @PostMapping("/notifications/{notificationId}/read")
     @PreAuthorize("hasAuthority('NOTIFICATION_UPDATE')")
     @Operation(summary = "Mark one notification as read")

@@ -104,6 +104,8 @@ sophia:
     default-storage-quota-mb: ${WORKSPACE_DEFAULT_STORAGE_QUOTA_MB:5120}
   retention:
     trash-retention-days: ${TRASH_RETENTION_DAYS:30}
+    workspace-trash-days: ${WORKSPACE_TRASH_DAYS:30}
+    workspace-purge-warning-days: ${WORKSPACE_PURGE_WARNING_DAYS:3}
   realtime:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
   uploads:

@@ -25,7 +25,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -73,6 +75,14 @@ public class NotificationInboxService {
     public List<NotificationGroupResponse> groups(UUID recipientId, boolean unreadOnly) {
         return notificationRepository.findGroups(recipientId, Instant.now(), unreadOnly,
                 PageRequest.of(0, MAX_GROUPS));
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, Long> unreadByWorkspace(UUID recipientId) {
+        Map<String, Long> counts = new LinkedHashMap<>();
+        notificationRepository.countUnreadByWorkspace(recipientId, Instant.now())
+                .forEach(row -> counts.put(row.getWorkspaceId(), row.getUnread()));
+        return counts;
     }
 
     @Transactional(readOnly = true)

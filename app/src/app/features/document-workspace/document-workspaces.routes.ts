@@ -10,6 +10,20 @@ export const DOCUMENT_WORKSPACE_ROUTES: Routes = [
       ),
   },
   {
+    // Same list, restricted to the workspaces the user pinned.
+    path: 'favorites',
+    data: { pinnedOnly: true },
+    loadComponent: () =>
+      import('./document-workspaces-list/document-workspaces-list.component').then(
+        (m) => m.DocumentWorkspacesListComponent,
+      ),
+  },
+  {
+    path: 'activity',
+    loadComponent: () =>
+      import('./activity-feed/activity-feed.component').then((m) => m.ActivityFeedComponent),
+  },
+  {
     path: 'new',
     loadComponent: () =>
       import('./create-document-workspace/create-document-workspace.component').then(

@@ -1,5 +1,6 @@
 package com.sophia.documentworkspace.domain.dto.request;
 
+import com.sophia.documentworkspace.domain.entity.enums.WorkspaceTemplate;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -19,6 +20,9 @@ public record CreateWorkspaceRequest(
 
 
         @Size(min = 2, max = 10)
-        String language
+        String language,
+
+        @Schema(description = "Starting structure; a blank workspace when omitted")
+        WorkspaceTemplate template
 ) {
 }

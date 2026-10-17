@@ -93,10 +93,10 @@ public class FileArtifact extends Artifact {
     }
 
     @Override
-    public Artifact copyWith(String name, Folder targetParent, UUID newOwnerId) {
+    public Artifact copyTo(UUID targetWorkspaceId, String name, Folder targetParent, UUID newOwnerId) {
         // The copy references the same immutable storage object; uploads never
         // mutate a key in place, so sharing it between artifacts is safe.
-        return create(getType(), getWorkspaceId(), targetParent, name, newOwnerId,
+        return create(getType(), targetWorkspaceId, targetParent, name, newOwnerId,
                 mimeType, sizeBytes, storageKey, checksumSha256, originalFilename);
     }
 }

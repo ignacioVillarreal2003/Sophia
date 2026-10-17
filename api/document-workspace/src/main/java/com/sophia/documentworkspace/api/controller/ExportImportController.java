@@ -54,6 +54,16 @@ public class ExportImportController {
                 .body(result.content());
     }
 
+    @PostMapping("/artifacts/{artifactId}/convert")
+    @Operation(summary = "Make an editable copy of an uploaded DOCX, PPTX, XLSX, PDF or TXT file (the original stays)")
+    public ResponseEntity<ApiResponse<Map<String, UUID>>> convert(
+            @CurrentUser AuthenticatedUser user,
+            @PathVariable UUID workspaceId,
+            @PathVariable UUID artifactId) {
+        UUID created = importService.convertToEditable(user, workspaceId, artifactId);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(Map.of("artifactId", created)));
+    }
+
     @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = """
             Import content: .md/.html/.txt/.docx/.pdf become block documents; \

@@ -163,9 +163,13 @@ public class SearchIndexer {
     /** Searchable body text: the text of documents, preview text for files. */
     private String extractContent(Artifact artifact) {
         if (artifact instanceof DocumentArtifact document) {
-            String text = document.getType() == com.sophia.documentworkspace.domain.entity.enums.ArtifactType.SPREADSHEET
-                    ? com.sophia.documentworkspace.domain.util.SpreadsheetCodec.searchText(document.contentOrEmpty())
-                    : com.sophia.documentworkspace.domain.util.MarkdownUtil.plainText(document.contentOrEmpty());
+            String content = document.contentOrEmpty();
+            String text = switch (document.getType()) {
+                case SPREADSHEET -> com.sophia.documentworkspace.domain.util.SpreadsheetCodec.searchText(content);
+                case PRESENTATION -> com.sophia.documentworkspace.domain.util.PresentationCodec.searchText(content);
+                case WHITEBOARD -> com.sophia.documentworkspace.domain.util.WhiteboardCodec.searchText(content);
+                default -> com.sophia.documentworkspace.domain.util.MarkdownUtil.plainText(content);
+            };
             return text.length() > 100_000 ? text.substring(0, 100_000) : text;
         }
         if (artifact instanceof FileArtifact file && file.getPreviewText() != null) {

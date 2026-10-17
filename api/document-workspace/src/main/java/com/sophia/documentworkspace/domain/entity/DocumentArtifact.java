@@ -62,7 +62,7 @@ public class DocumentArtifact extends Artifact {
     }
 
     @Override
-    public Artifact copyWith(String name, Folder targetParent, UUID newOwnerId) {
-        return create(getType(), getWorkspaceId(), targetParent, name, newOwnerId, getDescription(), content);
+    public Artifact copyTo(UUID targetWorkspaceId, String name, Folder targetParent, UUID newOwnerId) {
+        return create(getType(), targetWorkspaceId, targetParent, name, newOwnerId, getDescription(), content);
     }
 }

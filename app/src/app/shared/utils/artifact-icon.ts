@@ -16,6 +16,8 @@ const ICON_BY_TYPE: Partial<Record<ArtifactType, IconName>> = {
   ZIP: 'file',
   BINARY_FILE: 'file',
   SPREADSHEET: 'table',
+  PRESENTATION: 'layout-cards',
+  WHITEBOARD: 'pencil',
 };
 
 export function artifactIcon(type: ArtifactType): IconName {

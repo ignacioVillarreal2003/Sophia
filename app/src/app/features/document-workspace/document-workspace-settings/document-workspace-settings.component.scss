@@ -481,3 +481,23 @@
 
   &:hover:not(:disabled) { background: color-mix(in srgb, #d92d20 10%, var(--surface)); }
 }
+
+.wss__storage-alert {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: var(--space-sm) 0;
+  font-size: var(--type-caption-size);
+  font-weight: 600;
+  color: var(--warning);
+
+  &--full { color: #d92d20; }
+}
+
+.wss__storage-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+}

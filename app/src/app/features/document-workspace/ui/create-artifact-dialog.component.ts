@@ -76,6 +76,8 @@ export class CreateArtifactDialogComponent {
     { type: 'FOLDER', label: 'createArtifact.type.FOLDER', icon: 'folder' },
     { type: 'CHECKLIST', label: 'createArtifact.type.CHECKLIST', icon: 'check-circle' },
     { type: 'SPREADSHEET', label: 'createArtifact.type.SPREADSHEET', icon: 'table' },
+    { type: 'PRESENTATION', label: 'createArtifact.type.PRESENTATION', icon: 'layout-cards' },
+    { type: 'WHITEBOARD', label: 'createArtifact.type.WHITEBOARD', icon: 'pencil' },
   ];
 
   readonly type = signal<ArtifactType>(this.data.type ?? 'MARKDOWN_DOCUMENT');

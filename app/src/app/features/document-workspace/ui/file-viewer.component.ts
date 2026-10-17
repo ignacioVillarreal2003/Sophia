@@ -34,7 +34,7 @@ import { ExportImportService } from '../data/export-import.service';
         <div class="fv__actions">
           @if (convertible()) {
             <app-button variant="secondary" size="sm" [loading]="converting()" (click)="convert()">
-              {{ (artifact().type === 'XLSX' ? 'file.convert.sheet' : 'file.convert.note') | t }}
+              {{ convertLabel() | t }}
             </app-button>
           }
           @if (url()) {
@@ -135,7 +135,11 @@ export class FileViewerComponent implements OnInit {
         return 'other';
     }
   });
-  readonly convertible = computed(() => this.artifact().type === 'DOCX' || this.artifact().type === 'XLSX');
+  readonly convertible = computed(() => ['DOCX', 'XLSX', 'PPTX', 'PDF'].includes(this.artifact().type));
+  readonly convertLabel = computed(() => {
+    const type = this.artifact().type;
+    return type === 'XLSX' ? 'file.convert.sheet' : type === 'PPTX' ? 'file.convert.deck' : 'file.convert.note';
+  });
   readonly icon = computed(() => (this.artifact().type === 'XLSX' ? 'table' : this.artifact().type === 'IMAGE' ? 'image' : 'file-text') as 'table' | 'image' | 'file-text');
   readonly safeUrl = computed<SafeResourceUrl | null>(() => {
     const url = this.url();

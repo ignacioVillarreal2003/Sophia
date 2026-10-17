@@ -48,6 +48,18 @@ export class TrashComponent implements OnInit {
     this.load();
   }
 
+  /** Whole days before the workspace is erased for good; null when the server did not say. */
+  daysLeft(item: DocumentWorkspace): number | null {
+    if (!item.purgeAt) return null;
+    return Math.max(0, Math.ceil((new Date(item.purgeAt).getTime() - Date.now()) / 86_400_000));
+  }
+
+  /** Close enough to the end that the owner should act now. */
+  isUrgent(item: DocumentWorkspace): boolean {
+    const days = this.daysLeft(item);
+    return days !== null && days <= 3;
+  }
+
   onPageChange(page: number): void {
     this.page.set(page);
     this.load();

@@ -1,0 +1,481 @@
+<div #host class="wb" tabindex="0" (keydown)="onKey($event)" (keyup)="onKeyUp($event)" (paste)="onPaste($event)">
+  <!-- Top bar: menu, tools, history -->
+  <div class="wb__top">
+    <button type="button" class="wb__btn" [cdkMenuTriggerFor]="mainMenu" [attr.aria-label]="'board.menu' | t" [attr.title]="'board.menu' | t">
+      <app-icon name="menu" [size]="18" />
+    </button>
+
+    <div class="wb__tools" role="toolbar" [attr.aria-label]="'board.tools' | t">
+      @if (!readonly()) {
+        <button
+          type="button"
+          class="wb__btn"
+          [class.wb__btn--on]="toolLock()"
+          [attr.aria-pressed]="toolLock()"
+          [attr.title]="'board.toolLock' | t"
+          (click)="toolLock.set(!toolLock())"
+        >
+          <app-icon [name]="toolLock() ? 'lock' : 'unlock'" [size]="16" />
+        </button>
+        <span class="wb__sep"></span>
+        @for (t of tools; track t.id) {
+          <button
+            type="button"
+            class="wb__btn"
+            [class.wb__btn--on]="tool() === t.id"
+            [attr.aria-pressed]="tool() === t.id"
+            [attr.title]="('board.tool.' + t.id | t) + (t.key ? ' (' + t.key + ')' : '')"
+            [attr.aria-label]="'board.tool.' + t.id | t"
+            (click)="setTool(t.id)"
+          >
+            <app-icon [name]="t.icon" [size]="17" />
+          </button>
+        }
+      } @else {
+        <button type="button" class="wb__btn wb__btn--on" [attr.title]="'board.tool.hand' | t"><app-icon name="hand" [size]="17" /></button>
+      }
+    </div>
+
+    <div class="wb__top-right">
+      @if (!readonly()) {
+        <button type="button" class="wb__btn" [disabled]="!canUndo()" [attr.title]="'board.undo' | t" (click)="undo()"><app-icon name="undo" [size]="17" /></button>
+        <button type="button" class="wb__btn" [disabled]="!canRedo()" [attr.title]="'board.redo' | t" (click)="redo()"><app-icon name="redo" [size]="17" /></button>
+      }
+      @if (panelVisible()) {
+        <button type="button" class="wb__btn wb__btn--panel" [class.wb__btn--on]="panelOpen()" [attr.title]="'board.style' | t" (click)="panelOpen.set(!panelOpen())">
+          <app-icon name="palette" [size]="17" />
+        </button>
+      }
+      <button type="button" class="wb__btn" [attr.title]="'board.fullscreen' | t" (click)="toggleFullscreen()"><app-icon name="maximize" [size]="17" /></button>
+      <button type="button" class="wb__btn" [attr.title]="'board.help.title' | t" (click)="helpOpen.set(true)"><app-icon name="keyboard" [size]="17" /></button>
+    </div>
+  </div>
+
+  <div class="wb__body">
+    <!-- Style panel -->
+    @if (panelVisible()) {
+      <aside class="wb__panel" [class.wb__panel--open]="panelOpen()" [attr.aria-label]="'board.style' | t">
+        @if (caps().stroke) {
+          <section class="wb__sect">
+            <h4 class="wb__label">{{ 'board.panel.stroke' | t }}</h4>
+            <div class="wb__row">
+              @for (c of strokeSwatches; track c) {
+                <button type="button" class="wb__swatch" [class.wb__swatch--on]="val('stroke') === c" [style.background]="c" [attr.aria-label]="c" (click)="setStyle({ stroke: c })"></button>
+              }
+            </div>
+          </section>
+        }
+        @if (caps().fill) {
+          <section class="wb__sect">
+            <h4 class="wb__label">{{ 'board.panel.fill' | t }}</h4>
+            <div class="wb__row">
+              @for (c of fillSwatches; track c) {
+                <button
+                  type="button"
+                  class="wb__swatch"
+                  [class.wb__swatch--none]="c === 'none'"
+                  [class.wb__swatch--on]="val('fill') === c"
+                  [style.background]="c === 'none' ? null : c"
+                  [attr.aria-label]="c"
+                  (click)="setStyle({ fill: c })"
+                ></button>
+              }
+            </div>
+          </section>
+        }
+        @if (caps().fillStyle && val('fill') !== 'none') {
+          <section class="wb__sect">
+            <h4 class="wb__label">{{ 'board.panel.fillStyle' | t }}</h4>
+            <div class="wb__row">
+              @for (f of fillStyles; track f) {
+                <button type="button" class="wb__chip" [class.wb__chip--on]="val('fillStyle') === f" (click)="setStyle({ fillStyle: f })">{{ 'board.fillStyle.' + f | t }}</button>
+              }
+            </div>
+          </section>
+        }
+        @if (caps().width) {
+          <section class="wb__sect">
+            <h4 class="wb__label">{{ 'board.panel.width' | t }}</h4>
+            <div class="wb__row">
+              @for (w of widths; track w) {
+                <button type="button" class="wb__chip wb__chip--line" [class.wb__chip--on]="val('strokeWidth') === w" (click)="setStyle({ strokeWidth: w })">
+                  <span class="wb__line" [style.height.px]="w + 1"></span>
+                </button>
+              }
+            </div>
+          </section>
+        }
+        @if (caps().strokeStyle) {
+          <section class="wb__sect">
+            <h4 class="wb__label">{{ 'board.panel.strokeStyle' | t }}</h4>
+            <div class="wb__row">
+              @for (s of strokeStyles; track s) {
+                <button type="button" class="wb__chip wb__chip--line" [class.wb__chip--on]="val('strokeStyle') === s" (click)="setStyle({ strokeStyle: s })">
+                  <span class="wb__line wb__line--{{ s }}"></span>
+                </button>
+              }
+            </div>
+          </section>
+        }
+        @if (caps().rough) {
+          <section class="wb__sect">
+            <h4 class="wb__label">{{ 'board.panel.rough' | t }}</h4>
+            <div class="wb__row">
+              @for (r of roughLevels; track r) {
+                <button type="button" class="wb__chip" [class.wb__chip--on]="val('rough') === r" (click)="setStyle({ rough: r })">{{ 'board.rough.' + r | t }}</button>
+              }
+            </div>
+          </section>
+        }
+        @if (caps().round) {
+          <section class="wb__sect">
+            <h4 class="wb__label">{{ 'board.panel.edges' | t }}</h4>
+            <div class="wb__row">
+              <button type="button" class="wb__chip" [class.wb__chip--on]="!val('round')" (click)="setStyle({ round: false })">{{ 'board.edges.sharp' | t }}</button>
+              <button type="button" class="wb__chip" [class.wb__chip--on]="val('round')" (click)="setStyle({ round: true })">{{ 'board.edges.round' | t }}</button>
+            </div>
+          </section>
+        }
+        @if (caps().text) {
+          <section class="wb__sect">
+            <h4 class="wb__label">{{ 'board.panel.font' | t }}</h4>
+            <div class="wb__row">
+              @for (f of fonts; track f) {
+                <button type="button" class="wb__chip" [class.wb__chip--on]="val('font') === f" (click)="setStyle({ font: f })">{{ 'board.font.' + f | t }}</button>
+              }
+            </div>
+            <div class="wb__row">
+              @for (s of fontSizes; track s) {
+                <button type="button" class="wb__chip" [class.wb__chip--on]="val('fontSize') === s" (click)="setStyle({ fontSize: s })">{{ s }}</button>
+              }
+            </div>
+          </section>
+        }
+        @if (caps().align) {
+          <section class="wb__sect">
+            <h4 class="wb__label">{{ 'board.panel.align' | t }}</h4>
+            <div class="wb__row">
+              @for (a of aligns; track a) {
+                <button type="button" class="wb__chip" [class.wb__chip--on]="val('align') === a" (click)="setStyle({ align: a })">
+                  <app-icon [name]="a === 'left' ? 'align-left' : a === 'center' ? 'align-center' : 'align-right'" [size]="15" />
+                </button>
+              }
+            </div>
+          </section>
+        }
+        @if (caps().arrow) {
+          <section class="wb__sect">
+            <h4 class="wb__label">{{ 'board.panel.route' | t }}</h4>
+            <div class="wb__row">
+              @for (r of routes; track r) {
+                <button type="button" class="wb__chip" [class.wb__chip--on]="val('route') === r" (click)="setStyle({ route: r })">{{ 'board.route.' + r | t }}</button>
+              }
+            </div>
+          </section>
+          <section class="wb__sect">
+            <h4 class="wb__label">{{ 'board.panel.startHead' | t }}</h4>
+            <div class="wb__row">
+              @for (h of heads; track h) {
+                <button type="button" class="wb__chip" [class.wb__chip--on]="val('startHead') === h" (click)="setStyle({ startHead: h })">{{ 'board.head.' + h | t }}</button>
+              }
+            </div>
+            <h4 class="wb__label">{{ 'board.panel.endHead' | t }}</h4>
+            <div class="wb__row">
+              @for (h of heads; track h) {
+                <button type="button" class="wb__chip" [class.wb__chip--on]="val('endHead') === h" (click)="setStyle({ endHead: h })">{{ 'board.head.' + h | t }}</button>
+              }
+            </div>
+          </section>
+        }
+        <section class="wb__sect">
+          <h4 class="wb__label">{{ 'board.panel.opacity' | t }} · {{ val('opacity') }}%</h4>
+          <input class="wb__range" type="range" min="10" max="100" step="5" [value]="val('opacity')" (input)="setStyle({ opacity: +$any($event.target).value })" />
+        </section>
+
+        @if (selection().length > 0) {
+          <section class="wb__sect">
+            <h4 class="wb__label">{{ 'board.panel.layers' | t }}</h4>
+            <div class="wb__row">
+              <button type="button" class="wb__chip" [attr.title]="'board.order.back' | t" (click)="order('back')"><app-icon name="layers" [size]="15" />↓↓</button>
+              <button type="button" class="wb__chip" [attr.title]="'board.order.backward' | t" (click)="order('backward')"><app-icon name="arrow-down" [size]="15" /></button>
+              <button type="button" class="wb__chip" [attr.title]="'board.order.forward' | t" (click)="order('forward')"><app-icon name="arrow-up" [size]="15" /></button>
+              <button type="button" class="wb__chip" [attr.title]="'board.order.front' | t" (click)="order('front')"><app-icon name="layers" [size]="15" />↑↑</button>
+            </div>
+          </section>
+          @if (selection().length > 1) {
+            <section class="wb__sect">
+              <h4 class="wb__label">{{ 'board.panel.arrange' | t }}</h4>
+              <div class="wb__row">
+                <button type="button" class="wb__chip" (click)="align('left')"><app-icon name="align-left" [size]="15" /></button>
+                <button type="button" class="wb__chip" (click)="align('center')"><app-icon name="align-center" [size]="15" /></button>
+                <button type="button" class="wb__chip" (click)="align('right')"><app-icon name="align-right" [size]="15" /></button>
+                <button type="button" class="wb__chip" (click)="align('top')"><app-icon name="align-top" [size]="15" /></button>
+                <button type="button" class="wb__chip" (click)="align('middle')"><app-icon name="align-middle" [size]="15" /></button>
+                <button type="button" class="wb__chip" (click)="align('bottom')"><app-icon name="align-bottom" [size]="15" /></button>
+                <button type="button" class="wb__chip" [attr.title]="'board.distributeH' | t" (click)="distribute('h')"><app-icon name="distribute-h" [size]="15" /></button>
+                <button type="button" class="wb__chip" [attr.title]="'board.distributeV' | t" (click)="distribute('v')"><app-icon name="distribute-v" [size]="15" /></button>
+              </div>
+            </section>
+          }
+          <section class="wb__sect">
+            <h4 class="wb__label">{{ 'board.panel.actions' | t }}</h4>
+            <div class="wb__row">
+              <button type="button" class="wb__chip" [attr.title]="'board.duplicate' | t" (click)="duplicate()"><app-icon name="copy" [size]="15" /></button>
+              @if (canGroup()) {
+                <button type="button" class="wb__chip" [attr.title]="'board.group' | t" (click)="group()"><app-icon name="group" [size]="15" /></button>
+              }
+              @if (canUngroup()) {
+                <button type="button" class="wb__chip" (click)="ungroup()">{{ 'board.ungroup' | t }}</button>
+              }
+              <button type="button" class="wb__chip" [class.wb__chip--on]="anyLocked()" [attr.title]="'board.lock' | t" (click)="toggleLock()"><app-icon [name]="anyLocked() ? 'lock' : 'unlock'" [size]="15" /></button>
+              <button type="button" class="wb__chip" [attr.title]="'common.delete' | t" (click)="removeSelected()"><app-icon name="trash" [size]="15" /></button>
+            </div>
+            @if (caps().link) {
+              <input
+                class="wb__input"
+                type="url"
+                [placeholder]="'board.linkPlaceholder' | t"
+                [value]="single()?.link ?? ''"
+                (change)="setLink($any($event.target).value)"
+              />
+            }
+          </section>
+        }
+      </aside>
+    }
+
+    <!-- Canvas -->
+    <div
+      #stage
+      class="wb__stage"
+      [class.wb__stage--pan]="tool() === 'hand' || readonly() || spaceDown()"
+      [class.wb__stage--draw]="!readonly() && tool() !== 'select' && tool() !== 'hand' && !spaceDown()"
+      [style.background-color]="background() === 'transparent' ? null : background()"
+      [class.wb__stage--grid]="showGrid()"
+      [style.background-size.px]="GRID_SIZE * zoom()"
+      [style.background-position]="view().x + 'px ' + view().y + 'px'"
+      [cdkContextMenuTriggerFor]="ctxMenu"
+      (dragover)="$event.preventDefault()"
+      (drop)="onDrop($event)"
+    >
+      <svg
+        #svg
+        class="wb__svg"
+        (pointerdown)="onDown($event)"
+        (pointermove)="onMove($event)"
+        (pointerup)="onUp($event)"
+        (pointercancel)="onUp($event)"
+        (dblclick)="onDouble($event)"
+        (wheel)="onWheel($event)"
+      >
+        <g [attr.transform]="transform()">
+          @for (item of rendered(); track item.id) {
+            <g [innerHTML]="item.html"></g>
+          }
+        </g>
+
+        <g [attr.transform]="transform()" class="wb__overlay">
+          @if (marquee(); as m) {
+            <rect class="wb__marquee" [attr.x]="m.x" [attr.y]="m.y" [attr.width]="m.w" [attr.height]="m.h" />
+          }
+          @if (bindOutline(); as b) {
+            <rect class="wb__bind" [attr.x]="b.x" [attr.y]="b.y" [attr.width]="b.w" [attr.height]="b.h" rx="6" />
+          }
+          @for (o of outlines(); track $index) {
+            <rect class="wb__outline" [attr.x]="o.x - 2" [attr.y]="o.y - 2" [attr.width]="o.w + 4" [attr.height]="o.h + 4" />
+          }
+          @if (selectionBox(); as box) {
+            @if (linearEnds(); as ends) {
+              @if (!readonly() && !anyLocked()) {
+                <circle class="wb__handle" [attr.cx]="ends.a.x" [attr.cy]="ends.a.y" [attr.r]="handleSize() * 0.7" data-handle="arrow-a" />
+                <circle class="wb__handle" [attr.cx]="ends.b.x" [attr.cy]="ends.b.y" [attr.r]="handleSize() * 0.7" data-handle="arrow-b" />
+              }
+            } @else {
+              <rect class="wb__frame" [attr.x]="box.x - 4 / zoom()" [attr.y]="box.y - 4 / zoom()" [attr.width]="box.w + 8 / zoom()" [attr.height]="box.h + 8 / zoom()" />
+              @for (h of handles(); track h.id) {
+                <rect
+                  class="wb__handle"
+                  [attr.x]="h.x - handleSize() / 2"
+                  [attr.y]="h.y - handleSize() / 2"
+                  [attr.width]="handleSize()"
+                  [attr.height]="handleSize()"
+                  [attr.rx]="handleSize() / 4"
+                  [style.cursor]="h.cursor"
+                  [attr.data-handle]="'size-' + h.id"
+                />
+              }
+            }
+          }
+          @for (c of connectors(); track c.dir) {
+            <g [attr.data-handle]="'add-' + c.dir" class="wb__connector" [attr.transform]="'translate(' + c.x + ' ' + c.y + ')'">
+              <circle [attr.r]="9 / zoom()" [attr.data-handle]="'add-' + c.dir" />
+              <path [attr.d]="'M ' + -4 / zoom() + ' 0 H ' + 4 / zoom() + ' M 0 ' + -4 / zoom() + ' V ' + 4 / zoom()" [attr.data-handle]="'add-' + c.dir" />
+            </g>
+          }
+        </g>
+      </svg>
+
+      @if (linkBadge(); as badge) {
+        <button
+          type="button"
+          class="wb__link"
+          [style.left.px]="badge.x * zoom() + view().x"
+          [style.top.px]="badge.y * zoom() + view().y"
+          [attr.title]="badge.link"
+          (click)="openLink(badge.link)"
+        >
+          <app-icon name="link" [size]="13" />
+        </button>
+      }
+
+      @if (editing(); as ed) {
+        <textarea
+          #editor
+          class="wb__editor"
+          [style.left.px]="ed.left"
+          [style.top.px]="ed.top"
+          [style.width.px]="ed.width"
+          [style.min-height.px]="ed.height"
+          [style.font-size.px]="ed.fontSize"
+          [style.font-family]="'var(--wb-font-' + ed.font + ')'"
+          [style.text-align]="ed.align"
+          [value]="ed.text"
+          (blur)="commitEdit($any($event.target).value)"
+          (keydown.escape)="cancelEdit()"
+          (keydown.control.enter)="$any($event.target).blur()"
+          (keydown.meta.enter)="$any($event.target).blur()"
+        ></textarea>
+      }
+
+      @if (elements().length === 0 && !readonly()) {
+        <p class="wb__hint">{{ 'board.empty' | t }}</p>
+      }
+      @if (tooBig()) {
+        <p class="wb__warn" role="alert">{{ 'board.tooBig' | t }}</p>
+      }
+
+      <!-- Zoom controls -->
+      <div class="wb__zoombar">
+        <button type="button" class="wb__btn" [attr.title]="'board.zoomOut' | t" (click)="zoomBy(0.8)"><app-icon name="zoom-out" [size]="16" /></button>
+        <button type="button" class="wb__zoom" [attr.title]="'board.zoomReset' | t" (click)="resetZoom()">{{ zoomPercent() }}%</button>
+        <button type="button" class="wb__btn" [attr.title]="'board.zoomIn' | t" (click)="zoomBy(1.25)"><app-icon name="zoom-in" [size]="16" /></button>
+        <button type="button" class="wb__btn" [attr.title]="'board.fit' | t" (click)="fit()"><app-icon name="maximize" [size]="16" /></button>
+        <button type="button" class="wb__btn" [class.wb__btn--on]="minimap()" [attr.title]="'board.minimap' | t" (click)="minimap.set(!minimap())"><app-icon name="map" [size]="16" /></button>
+      </div>
+
+      @if (minimap() && elements().length > 0) {
+        @let mm = minimapData();
+        <svg
+          class="wb__minimap"
+          [attr.viewBox]="mm.world.x + ' ' + mm.world.y + ' ' + mm.world.w + ' ' + mm.world.h"
+          preserveAspectRatio="xMidYMid meet"
+          (pointerdown)="onMinimap($event)"
+          (pointermove)="onMinimap($event)"
+        >
+          @for (e of mm.els; track e.id) {
+            <rect class="wb__mm-el" [attr.x]="e.x" [attr.y]="e.y" [attr.width]="e.w" [attr.height]="e.h" />
+          }
+          <rect class="wb__mm-view" [attr.x]="mm.viewport.x" [attr.y]="mm.viewport.y" [attr.width]="mm.viewport.w" [attr.height]="mm.viewport.h" />
+        </svg>
+      }
+    </div>
+  </div>
+
+  <!-- Keyboard help -->
+  @if (helpOpen()) {
+    <div class="wb__help" role="dialog" [attr.aria-label]="'board.help.title' | t" (click)="helpOpen.set(false)">
+      <div class="wb__help-card" (click)="$event.stopPropagation()">
+        <header class="wb__help-head">
+          <h3>{{ 'board.help.title' | t }}</h3>
+          <button type="button" class="wb__btn" [attr.aria-label]="'common.close' | t" (click)="helpOpen.set(false)"><app-icon name="x" [size]="16" /></button>
+        </header>
+        <dl class="wb__help-list">
+          @for (row of helpRows; track row[0]) {
+            <dt><kbd>{{ row[0] }}</kbd></dt>
+            <dd>{{ row[1] | t }}</dd>
+          }
+        </dl>
+      </div>
+    </div>
+  }
+
+  <input #imageInput type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple hidden (change)="onImagePicked($event)" />
+  <input #jsonInput type="file" accept="application/json,.json" hidden (change)="onJsonPicked($event)" />
+</div>
+
+<!-- Main menu: export, import, templates, canvas options -->
+<ng-template #mainMenu>
+  <div class="menu wb__menu" cdkMenu>
+    <div class="menu__label">{{ 'board.menu.export' | t }}</div>
+    <button class="menu__item" cdkMenuItem (click)="exportPng(false, 2, true)"><app-icon name="image" [size]="15" /> {{ 'board.menu.png' | t }}</button>
+    <button class="menu__item" cdkMenuItem (click)="exportPng(false, 2, false)"><app-icon name="image" [size]="15" /> {{ 'board.menu.pngTransparent' | t }}</button>
+    @if (selection().length > 0) {
+      <button class="menu__item" cdkMenuItem (click)="exportPng(true, 2, true)"><app-icon name="image" [size]="15" /> {{ 'board.menu.pngSelection' | t }}</button>
+    }
+    <button class="menu__item" cdkMenuItem (click)="exportSvg(selection().length > 0)"><app-icon name="download" [size]="15" /> {{ 'board.menu.svg' | t }}</button>
+    <button class="menu__item" cdkMenuItem (click)="copyPng()"><app-icon name="copy" [size]="15" /> {{ 'board.menu.copyPng' | t }}</button>
+    <button class="menu__item" cdkMenuItem (click)="exportJson()"><app-icon name="download" [size]="15" /> {{ 'board.menu.json' | t }}</button>
+    @if (!readonly()) {
+      <button class="menu__item" cdkMenuItem (click)="pickJson()"><app-icon name="upload" [size]="15" /> {{ 'board.menu.import' | t }}</button>
+      <div class="menu__divider"></div>
+      <div class="menu__label">{{ 'board.menu.templates' | t }}</div>
+      @for (id of templateIds; track id) {
+        <button class="menu__item" cdkMenuItem (click)="insertTemplate(id)"><app-icon name="layout-cards" [size]="15" /> {{ 'board.tpl.' + id | t }}</button>
+      }
+    }
+    <div class="menu__divider"></div>
+    <div class="menu__label">{{ 'board.menu.canvas' | t }}</div>
+    <div class="wb__bgs">
+      @for (c of backgrounds; track c) {
+        <button
+          type="button"
+          class="wb__swatch"
+          [class.wb__swatch--none]="c === 'transparent'"
+          [class.wb__swatch--on]="background() === c"
+          [style.background]="c === 'transparent' ? null : c"
+          [attr.aria-label]="c"
+          (click)="setBackground(c)"
+        ></button>
+      }
+    </div>
+    <button class="menu__item" cdkMenuItem (click)="toggleGrid()"><app-icon name="grid" [size]="15" /> {{ (showGrid() ? 'board.menu.gridOff' : 'board.menu.gridOn') | t }}</button>
+    <button class="menu__item" cdkMenuItem (click)="snapOn.set(!snapOn())"><app-icon name="magnet" [size]="15" /> {{ (snapOn() ? 'board.menu.snapOff' : 'board.menu.snapOn') | t }}</button>
+    <button class="menu__item" cdkMenuItem (click)="fit()"><app-icon name="maximize" [size]="15" /> {{ 'board.fit' | t }}</button>
+    @if (!readonly()) {
+      <div class="menu__divider"></div>
+      <button class="menu__item menu__item--danger" cdkMenuItem (click)="clearBoard()"><app-icon name="trash" [size]="15" /> {{ 'board.menu.clear' | t }}</button>
+    }
+  </div>
+</ng-template>
+
+<!-- Right-click menu -->
+<ng-template #ctxMenu>
+  <div class="menu" cdkMenu>
+    @if (!readonly()) {
+      @if (selection().length > 0) {
+        <button class="menu__item" cdkMenuItem (click)="cut()"><app-icon name="copy" [size]="15" /> {{ 'board.ctx.cut' | t }}</button>
+        <button class="menu__item" cdkMenuItem (click)="copy()"><app-icon name="copy" [size]="15" /> {{ 'board.ctx.copy' | t }}</button>
+      }
+      <button class="menu__item" cdkMenuItem (click)="pasteFromMenu()"><app-icon name="download" [size]="15" /> {{ 'board.ctx.paste' | t }}</button>
+      @if (selection().length > 0) {
+        <button class="menu__item" cdkMenuItem (click)="duplicate()"><app-icon name="copy" [size]="15" /> {{ 'board.duplicate' | t }}</button>
+        <div class="menu__divider"></div>
+        <button class="menu__item" cdkMenuItem (click)="order('front')"><app-icon name="arrow-up" [size]="15" /> {{ 'board.order.front' | t }}</button>
+        <button class="menu__item" cdkMenuItem (click)="order('back')"><app-icon name="arrow-down" [size]="15" /> {{ 'board.order.back' | t }}</button>
+        @if (canGroup()) {
+          <button class="menu__item" cdkMenuItem (click)="group()"><app-icon name="group" [size]="15" /> {{ 'board.group' | t }}</button>
+        }
+        @if (canUngroup()) {
+          <button class="menu__item" cdkMenuItem (click)="ungroup()"><app-icon name="group" [size]="15" /> {{ 'board.ungroup' | t }}</button>
+        }
+        <button class="menu__item" cdkMenuItem (click)="toggleLock()"><app-icon [name]="anyLocked() ? 'unlock' : 'lock'" [size]="15" /> {{ (anyLocked() ? 'board.unlock' : 'board.lock') | t }}</button>
+        <div class="menu__divider"></div>
+        <button class="menu__item menu__item--danger" cdkMenuItem (click)="removeSelected()"><app-icon name="trash" [size]="15" /> {{ 'common.delete' | t }}</button>
+      } @else {
+        <button class="menu__item" cdkMenuItem (click)="selectAll()"><app-icon name="cursor" [size]="15" /> {{ 'board.ctx.selectAll' | t }}</button>
+      }
+      <div class="menu__divider"></div>
+    }
+    <button class="menu__item" cdkMenuItem (click)="fit()"><app-icon name="maximize" [size]="15" /> {{ 'board.fit' | t }}</button>
+  </div>
+</ng-template>

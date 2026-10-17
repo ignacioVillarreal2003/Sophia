@@ -43,6 +43,7 @@ public class AdminWorkspaceService {
     private final WorkspaceAccessCache accessCache;
     private final DomainEventPublisher eventPublisher;
     private final PublicLinkRepository publicLinkRepository;
+    private final StorageQuotaService quotaService;
 
     @Transactional(readOnly = true)
     public PageResponse<AdminWorkspaceResponse> list(AuthenticatedUser user, String search, WorkspaceStatus status,
@@ -95,6 +96,7 @@ public class AdminWorkspaceService {
         WorkspaceLimits limits = limitsRepository.findById(workspaceId).orElseGet(() -> WorkspaceLimits.forWorkspace(workspaceId));
         limits.changeStorageQuota(request.storageQuotaMb(), user.id());
         limitsRepository.save(limits);
+        quotaService.evaluate(workspaceId, 0);
         workspace.markUpdatedBy(user.id());
         eventPublisher.publish(WorkspaceEvents.WorkspaceLimitsUpdated.of(workspaceId, user.id(), limits.getStorageQuotaMb()));
         return toResponse(workspace);

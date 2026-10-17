@@ -53,6 +53,26 @@ public interface NotificationRepository
             """)
     long countUnread(@Param("recipientId") UUID recipientId, @Param("now") Instant now);
 
+    /** Unread notifications grouped by the workspace they refer to (data.workspaceId); others are skipped. */
+    @Query(value = """
+            SELECT n.data ->> 'workspaceId' AS workspaceId, COUNT(*) AS unread
+            FROM notifications n
+            WHERE n.recipient_id = :recipientId
+              AND n.read_at IS NULL
+              AND n.deleted_at IS NULL
+              AND (n.scheduled_at IS NULL OR n.scheduled_at <= :now)
+              AND (n.expires_at IS NULL OR n.expires_at > :now)
+              AND n.data ->> 'workspaceId' IS NOT NULL
+            GROUP BY n.data ->> 'workspaceId'
+            """, nativeQuery = true)
+    List<WorkspaceUnread> countUnreadByWorkspace(@Param("recipientId") UUID recipientId, @Param("now") Instant now);
+
+    interface WorkspaceUnread {
+        String getWorkspaceId();
+
+        long getUnread();
+    }
+
     Optional<Notification> findByIdAndRecipientIdAndDeletedAtIsNull(UUID id, UUID recipientId);
 
     @Modifying

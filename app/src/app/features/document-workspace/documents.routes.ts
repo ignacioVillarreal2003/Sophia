@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { workspaceAccessGuard } from './data/workspace-access.guard';
 
 /**
  * Routes nested under /workspaces/:documentWorkspaceId. The document-workspace tree
@@ -7,7 +8,15 @@ import { Routes } from '@angular/router';
  */
 export const DOCUMENT_ROUTES: Routes = [
   {
+    // Where non-members land (see workspaceAccessGuard): they can ask the admins to let them in.
+    path: 'request-access',
+    data: { hideSidebar: true },
+    loadComponent: () =>
+      import('./request-access/request-access.component').then((m) => m.RequestAccessComponent),
+  },
+  {
     path: '',
+    canActivate: [workspaceAccessGuard],
     loadComponent: () =>
       import('./document-workspace-tree-layout/document-workspace-tree-layout.component').then(
         (m) => m.DocumentWorkspaceTreeLayoutComponent,

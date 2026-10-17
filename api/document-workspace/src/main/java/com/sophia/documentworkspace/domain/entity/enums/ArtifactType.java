@@ -11,6 +11,8 @@ package com.sophia.documentworkspace.domain.entity.enums;
  *   <li>MARKDOWN_DOCUMENT: a Markdown note (Notion/Obsidian style)</li>
  *   <li>CHECKLIST: a Markdown document made of task-list items</li>
  *   <li>SPREADSHEET: a workbook (sheets, cells, formulas, formats) stored as JSON</li>
+ *   <li>PRESENTATION: a horizontal board of study cards (slides in JSON, Markdown bodies)</li>
+ *   <li>WHITEBOARD: a free canvas of notes, shapes and arrows stored as JSON</li>
  * </ul>
  */
 public enum ArtifactType {
@@ -20,6 +22,8 @@ public enum ArtifactType {
     MARKDOWN_DOCUMENT(Kind.DOCUMENT),
     CHECKLIST(Kind.DOCUMENT),
     SPREADSHEET(Kind.DOCUMENT),
+    PRESENTATION(Kind.DOCUMENT),
+    WHITEBOARD(Kind.DOCUMENT),
 
     PDF(Kind.FILE),
     DOCX(Kind.FILE),

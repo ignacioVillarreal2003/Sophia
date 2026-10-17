@@ -104,3 +104,14 @@
     padding: 0 10px;
   }
 }
+
+.trash__expiry {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 2px;
+  font-size: var(--type-fine-size);
+  color: var(--text-subtle);
+
+  &--urgent { color: #d92d20; font-weight: 600; }
+}

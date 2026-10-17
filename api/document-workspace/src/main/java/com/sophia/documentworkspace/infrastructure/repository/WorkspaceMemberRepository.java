@@ -25,4 +25,11 @@ public interface WorkspaceMemberRepository extends JpaRepository<WorkspaceMember
     boolean existsByWorkspaceIdAndUserId(UUID workspaceId, UUID userId);
 
     boolean existsByWorkspaceIdAndEmailIgnoreCase(UUID workspaceId, String email);
+
+    /** Admin role holders (the owner included) who should hear about requests for the workspace. */
+    List<WorkspaceMember> findAllByWorkspaceIdAndRoleAndStatus(UUID workspaceId,
+            com.sophia.documentworkspace.domain.entity.enums.WorkspaceRole role,
+            com.sophia.documentworkspace.domain.entity.enums.MemberStatus status);
+
+    void deleteAllByWorkspaceIdAndUserId(UUID workspaceId, UUID userId);
 }

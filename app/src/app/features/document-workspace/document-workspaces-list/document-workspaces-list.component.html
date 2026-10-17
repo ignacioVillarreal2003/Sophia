@@ -1,6 +1,12 @@
 <div class="wsl app-container">
-  <app-page-header [title]="'nav.documentWorkspaces' | t">
-    <app-button variant="secondary" routerLink="new" icon="plus">{{ 'documentWorkspace.create' | t }}</app-button>
+  <app-page-header [title]="title()">
+    <input #restoreInput type="file" accept=".zip,application/zip" hidden (change)="onBackupPicked($event)" />
+    <app-button variant="ghost" icon="upload" [loading]="restoring()" (click)="pickBackup()">
+      {{ 'workspaces.restore.button' | t }}
+    </app-button>
+    <app-button variant="secondary" routerLink="/document-workspaces/new" icon="plus">
+      {{ 'documentWorkspace.create' | t }}
+    </app-button>
   </app-page-header>
 
   <div class="wsl__filters">
@@ -15,42 +21,318 @@
       />
     </div>
 
+    <button type="button" class="wsl__tool" [cdkMenuTriggerFor]="sortMenu" [attr.aria-label]="'workspaces.sort.label' | t">
+      <app-icon name="arrow-right" [size]="14" class="wsl__sort-icon" [class.wsl__sort-icon--desc]="desc()" />
+      <span>{{ 'workspaces.sort.' + sortKey() | t }}</span>
+    </button>
+
     <app-filter-toggle
       [open]="filtersOpen()"
       [label]="'documentWorkspaces.filters' | t"
       [count]="filterCount()"
       (toggle)="openFilters()"
     />
+
+    <button type="button" class="wsl__tool wsl__tool--icon" [attr.aria-label]="'workspaces.labels.manage' | t" [attr.title]="'workspaces.labels.manage' | t" (click)="manageLabels()">
+      <app-icon name="tag" [size]="16" />
+    </button>
   </div>
+
+  @if (!pinnedOnly()) {
+    <div class="wsl__tabs" role="tablist">
+      @for (tab of tabs; track tab.value) {
+        <button
+          type="button"
+          role="tab"
+          class="wsl__tab"
+          [class.wsl__tab--active]="ownership() === tab.value"
+          [attr.aria-selected]="ownership() === tab.value"
+          (click)="setOwnership(tab.value)"
+        >
+          {{ tab.label | t }}
+        </button>
+      }
+    </div>
+  }
+
+  @if (labels().length > 0) {
+    <div class="wsl__labels" role="group" [attr.aria-label]="'workspaces.filter.label' | t">
+      @for (label of labels(); track label.id) {
+        <button
+          type="button"
+          class="wsl__label-chip"
+          [class.wsl__label-chip--active]="labelId() === label.id"
+          [style.--label-color]="label.color"
+          (click)="toggleLabel(label.id)"
+        >
+          <span class="wsl__label-dot"></span>{{ label.name }}
+        </button>
+      }
+    </div>
+  }
 
   @if (loading()) {
     <div class="wsl__loading"><app-spinner /></div>
-  } @else if (documentWorkspaces().length === 0) {
-    <app-empty-state
-      icon="grid"
-      [title]="(search() || filterCount() > 0 ? 'documentWorkspaces.noResults' : 'documentWorkspace.empty') | t"
-    />
+  } @else if (items().length === 0) {
+    @if (hasCriteria()) {
+      <app-empty-state icon="search" [title]="'documentWorkspaces.noResults' | t">
+        <app-button variant="ghost" (click)="clearAll()">{{ 'common.filters.clear' | t }}</app-button>
+      </app-empty-state>
+    } @else if (pinnedOnly()) {
+      <app-empty-state icon="star" [title]="'workspaces.favorites.empty' | t" [description]="'workspaces.favorites.emptyHint' | t" />
+    } @else {
+      <app-empty-state icon="grid" [title]="'documentWorkspace.empty' | t" />
+    }
+  } @else if (view() === 'cards') {
+    <div class="wsl__cards">
+      @for (ws of items(); track ws.id) {
+        <article
+          class="wsc"
+          tabindex="0"
+          role="link"
+          [style.--ws-color]="ws.color || 'var(--accent)'"
+          [cdkContextMenuTriggerFor]="wsMenu"
+          [cdkContextMenuTriggerData]="{ $implicit: ws }"
+          (click)="open(ws)"
+          (keydown.enter)="open(ws)"
+        >
+          <header class="wsc__head">
+            <app-workspace-logo [logoUrl]="ws.logoUrl" [color]="ws.color" [size]="44" />
+            <div class="wsc__title">
+              <h3 class="wsc__name">{{ ws.name }}</h3>
+              <span class="wsc__sub">
+                <app-badge [tone]="ws.myRole === 'ADMIN' ? 'accent' : 'neutral'">{{ roleLabel(ws.myRole) }}</app-badge>
+                @if (!isOwner(ws)) {
+                  <span class="wsc__shared"><app-icon name="users" [size]="12" />{{ 'workspaces.shared' | t }}</span>
+                }
+              </span>
+            </div>
+            <button
+              type="button"
+              class="wsl__icon-btn"
+              [class.wsl__icon-btn--on]="ws.pinned"
+              [attr.aria-label]="(ws.pinned ? 'workspaces.menu.unpin' : 'workspaces.menu.pin') | t"
+              [attr.aria-pressed]="!!ws.pinned"
+              (click)="$event.stopPropagation(); togglePin(ws)"
+            >
+              <app-icon [name]="ws.pinned ? 'star-filled' : 'star'" [size]="16" />
+            </button>
+            <button
+              type="button"
+              class="wsl__icon-btn"
+              [attr.aria-label]="'explorer.menu.more' | t"
+              [cdkMenuTriggerFor]="wsMenu"
+              [cdkMenuTriggerData]="{ $implicit: ws }"
+              (click)="$event.stopPropagation()"
+            >
+              <app-icon name="more-vertical" [size]="16" />
+            </button>
+          </header>
+
+          @if (ws.description) {
+            <p class="wsc__desc">{{ ws.description }}</p>
+          }
+
+          @if (ws.labels?.length) {
+            <div class="wsc__labels">
+              @for (label of ws.labels; track label.id) {
+                <span class="wsl__tag" [style.--label-color]="label.color"><span class="wsl__label-dot"></span>{{ label.name }}</span>
+              }
+            </div>
+          }
+
+          @if (ws.stats; as stats) {
+            <div class="wsc__people">
+              <span class="wsc__avatars">
+                @for (member of stats.members; track member.userId) {
+                  <app-avatar [name]="memberName(member)" [size]="26" class="wsc__avatar" [attr.title]="memberName(member)" />
+                }
+                @if (stats.memberCount > stats.members.length) {
+                  <span class="wsc__more">+{{ stats.memberCount - stats.members.length }}</span>
+                }
+              </span>
+              <span class="wsc__meta">
+                {{ 'workspaces.card.members' | t: { count: stats.memberCount } }} ·
+                {{ 'workspaces.card.items' | t: { count: stats.itemCount } }}
+              </span>
+            </div>
+
+            <div class="wsc__storage" [attr.data-state]="quotaState(ws)">
+              <div class="wsc__storage-row">
+                <span>{{ 'workspaces.card.storage' | t }}</span>
+                <span>{{ stats.usedBytes | fileSize }} / {{ quotaText(ws) }}</span>
+              </div>
+              @if (quotaRatio(ws) !== null) {
+                <div
+                  class="wsc__bar"
+                  role="progressbar"
+                  [attr.aria-valuenow]="quotaWidth(ws)"
+                  aria-valuemin="0"
+                  aria-valuemax="100"
+                >
+                  <span class="wsc__bar-fill" [style.width.%]="quotaWidth(ws)"></span>
+                </div>
+              }
+              @if (quotaState(ws) !== 'ok') {
+                <div class="wsc__alert">
+                  <app-icon name="alert-circle" [size]="14" />
+                  <span>{{ (quotaState(ws) === 'full' ? 'workspaces.card.storageFull' : 'workspaces.card.storageWarn') | t }}</span>
+                  @if (isOwner(ws)) {
+                    <button type="button" class="wsc__link" (click)="$event.stopPropagation(); requestStorage(ws)">
+                      {{ 'workspaces.card.requestMore' | t }}
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+          }
+
+          <footer class="wsc__foot">
+            <span class="wsc__activity">
+              <app-icon name="clock" [size]="13" />
+              @if (ws.lastActivityAt) {
+                {{ 'workspaces.card.lastActivity' | t: { time: (ws.lastActivityAt | relativeTime) } }}
+              } @else {
+                {{ 'workspaces.card.noActivity' | t }}
+              }
+            </span>
+            @if (unreadOf(ws) > 0) {
+              <span class="wsl__unread" [attr.title]="'workspaces.unread' | t: { count: unreadOf(ws) }">{{ unreadOf(ws) }}</span>
+            }
+          </footer>
+        </article>
+      }
+    </div>
+    <app-pagination [page]="page()" [totalPages]="totalPages()" [first]="first()" [last]="last()" (pageChange)="onPageChange($event)" />
   } @else {
     <app-card flush>
-      @for (ws of documentWorkspaces(); track ws.id) {
-        <button type="button" class="wsl__row" (click)="open(ws)" [style.--ws-color]="ws.color || 'var(--accent)'">
+      @for (ws of items(); track ws.id) {
+        <div
+          class="wsl__row"
+          tabindex="0"
+          role="link"
+          [style.--ws-color]="ws.color || 'var(--accent)'"
+          [cdkContextMenuTriggerFor]="wsMenu"
+          [cdkContextMenuTriggerData]="{ $implicit: ws }"
+          (click)="open(ws)"
+          (keydown.enter)="open(ws)"
+        >
           <app-workspace-logo class="wsl__dot" [logoUrl]="ws.logoUrl" [color]="ws.color" [size]="40" />
           <span class="wsl__text">
-            <span class="wsl__name">{{ ws.name }}</span>
+            <span class="wsl__name">
+              {{ ws.name }}
+              @if (ws.pinned) {
+                <app-icon name="star-filled" [size]="13" class="wsl__pinned" />
+              }
+              @if (!isOwner(ws)) {
+                <span class="wsl__shared"><app-icon name="users" [size]="12" />{{ 'workspaces.shared' | t }}</span>
+              }
+            </span>
             @if (ws.description) {
               <span class="wsl__desc">{{ ws.description }}</span>
             }
+            @if (ws.labels?.length) {
+              <span class="wsl__tags">
+                @for (label of ws.labels; track label.id) {
+                  <span class="wsl__tag" [style.--label-color]="label.color"><span class="wsl__label-dot"></span>{{ label.name }}</span>
+                }
+              </span>
+            }
           </span>
-          <app-icon name="chevron-right" [size]="16" class="wsl__chevron" />
-        </button>
+          <span class="wsl__aside">
+            <app-badge [tone]="ws.myRole === 'ADMIN' ? 'accent' : 'neutral'">{{ roleLabel(ws.myRole) }}</app-badge>
+            @if (ws.lastActivityAt) {
+              <span class="wsl__time">{{ ws.lastActivityAt | relativeTime }}</span>
+            }
+          </span>
+          @if (unreadOf(ws) > 0) {
+            <span class="wsl__unread" [attr.title]="'workspaces.unread' | t: { count: unreadOf(ws) }">{{ unreadOf(ws) }}</span>
+          }
+          <button
+            type="button"
+            class="wsl__icon-btn wsl__pin"
+            [class.wsl__icon-btn--on]="ws.pinned"
+            [attr.aria-label]="(ws.pinned ? 'workspaces.menu.unpin' : 'workspaces.menu.pin') | t"
+            [attr.aria-pressed]="!!ws.pinned"
+            (click)="$event.stopPropagation(); togglePin(ws)"
+          >
+            <app-icon [name]="ws.pinned ? 'star-filled' : 'star'" [size]="16" />
+          </button>
+          <button
+            type="button"
+            class="wsl__icon-btn"
+            [attr.aria-label]="'explorer.menu.more' | t"
+            [cdkMenuTriggerFor]="wsMenu"
+            [cdkMenuTriggerData]="{ $implicit: ws }"
+            (click)="$event.stopPropagation()"
+          >
+            <app-icon name="more-vertical" [size]="16" />
+          </button>
+        </div>
       }
     </app-card>
-    <app-pagination
-      [page]="page()"
-      [totalPages]="totalPages()"
-      [first]="first()"
-      [last]="last()"
-      (pageChange)="onPageChange($event)"
-    />
+    <app-pagination [page]="page()" [totalPages]="totalPages()" [first]="first()" [last]="last()" (pageChange)="onPageChange($event)" />
   }
 </div>
+
+<!-- Sort options; picking the active one again reverses it -->
+<ng-template #sortMenu>
+  <div class="menu" cdkMenu>
+    <div class="menu__label">{{ 'workspaces.sort.label' | t }}</div>
+    @for (option of sorts; track option.key) {
+      <button type="button" class="menu__item" cdkMenuItem (click)="chooseSort(option)">
+        <app-icon [name]="sortKey() === option.key ? 'check' : 'minus'" [size]="14" [style.visibility]="sortKey() === option.key ? 'visible' : 'hidden'" />
+        {{ 'workspaces.sort.' + option.key | t }}
+        @if (sortKey() === option.key) {
+          <span class="menu__item-trailing">{{ (desc() ? 'workspaces.sort.desc' : 'workspaces.sort.asc') | t }}</span>
+        }
+      </button>
+    }
+  </div>
+</ng-template>
+
+<!-- Everything you can do to a workspace: the ⋮ button and right-click open the same menu -->
+<ng-template #wsMenu let-ws>
+  <div class="menu" cdkMenu>
+    <button type="button" class="menu__item" cdkMenuItem (click)="open(ws)">
+      <app-icon name="folder-open" [size]="16" /> {{ 'explorer.menu.open' | t }}
+    </button>
+    <button type="button" class="menu__item" cdkMenuItem (click)="togglePin(ws)">
+      <app-icon [name]="ws.pinned ? 'star-filled' : 'star'" [size]="16" />
+      {{ (ws.pinned ? 'workspaces.menu.unpin' : 'workspaces.menu.pin') | t }}
+    </button>
+    <button type="button" class="menu__item" cdkMenuItem (click)="editLabels(ws)">
+      <app-icon name="tag" [size]="16" /> {{ 'workspaces.menu.labels' | t }}
+    </button>
+    <div class="menu__divider"></div>
+    <button type="button" class="menu__item" cdkMenuItem (click)="duplicate(ws)">
+      <app-icon name="copy" [size]="16" /> {{ 'workspaces.menu.duplicate' | t }}
+    </button>
+    <button type="button" class="menu__item" cdkMenuItem (click)="exportBackup(ws)">
+      <app-icon name="download" [size]="16" /> {{ 'workspaces.menu.backup' | t }}
+    </button>
+    @if (ws.myRole === 'ADMIN') {
+      <button type="button" class="menu__item" cdkMenuItem (click)="openSettings(ws)">
+        <app-icon name="settings" [size]="16" /> {{ 'documentWorkspace.settings' | t }}
+      </button>
+    }
+    @if (isOwner(ws)) {
+      <button type="button" class="menu__item" cdkMenuItem (click)="transfer(ws)">
+        <app-icon name="swap" [size]="16" /> {{ 'workspaces.menu.transfer' | t }}
+      </button>
+      <button type="button" class="menu__item" cdkMenuItem (click)="requestStorage(ws)">
+        <app-icon name="database" [size]="16" /> {{ 'workspaces.menu.storage' | t }}
+      </button>
+    }
+    <div class="menu__divider"></div>
+    @if (isOwner(ws)) {
+      <button type="button" class="menu__item menu__item--danger" cdkMenuItem (click)="delete(ws)">
+        <app-icon name="trash" [size]="16" /> {{ 'workspaces.menu.delete' | t }}
+      </button>
+    } @else {
+      <button type="button" class="menu__item menu__item--danger" cdkMenuItem (click)="leave(ws)">
+        <app-icon name="logout" [size]="16" /> {{ 'workspaces.menu.leave' | t }}
+      </button>
+    }
+  </div>
+</ng-template>

@@ -39,6 +39,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.sophia.documentworkspace.domain.dto.request.WorkspaceListFilter;
+import java.time.Instant;
+import com.sophia.documentworkspace.application.service.WorkspaceDuplicationService;
+import com.sophia.documentworkspace.application.service.WorkspaceImpactService;
+import com.sophia.documentworkspace.domain.dto.response.WorkspaceImpactResponse;
+import jakarta.validation.constraints.Size;
 import java.util.UUID;
 
 @RestController
@@ -48,6 +54,11 @@ import java.util.UUID;
 public class WorkspaceController {
 
     private final WorkspaceService workspaceService;
+    private final WorkspaceDuplicationService duplicationService;
+    private final WorkspaceImpactService impactService;
+
+    public record DuplicateWorkspaceRequest(@Size(max = 120) String name) {
+    }
 
     @PostMapping
     @Operation(summary = "Create a workspace owned by the caller")
@@ -59,14 +70,61 @@ public class WorkspaceController {
     }
 
     @GetMapping
-    @Operation(summary = "List the workspaces the caller belongs to")
+    @Operation(summary = "List the workspaces the caller belongs to, pinned first")
     public ResponseEntity<ApiResponse<PageResponse<WorkspaceResponse>>> listMine(
             @CurrentUser AuthenticatedUser user,
             @Parameter(description = "Free-text search over the workspace name") @RequestParam(required = false) String search,
             @Parameter(description = "Filter by the caller's role in the workspace") @RequestParam(required = false) WorkspaceRole role,
             @Parameter(description = "Filter by workspace status") @RequestParam(required = false) WorkspaceStatus status,
-            @ParameterObject @PageableDefault(size = 20) Pageable pageable) {
-        return ResponseEntity.ok(ApiResponse.ok(workspaceService.listMine(user, search, role, status, pageable)));
+            @Parameter(description = "MINE: owned by the caller; SHARED: owned by someone else") @RequestParam(required = false) WorkspaceListFilter.Ownership ownership,
+            @Parameter(description = "Only the workspaces the caller pinned") @RequestParam(defaultValue = "false") boolean pinned,
+            @Parameter(description = "Only workspaces carrying this personal label") @RequestParam(required = false) UUID labelId,
+            @Parameter(description = "Created at or after") @RequestParam(required = false) Instant createdFrom,
+            @Parameter(description = "Created before") @RequestParam(required = false) Instant createdTo,
+            @Parameter(description = "Last activity at or after") @RequestParam(required = false) Instant activeFrom,
+            @Parameter(description = "Last activity before") @RequestParam(required = false) Instant activeTo,
+            @Parameter(description = "NAME, CREATED, ACTIVITY or ACCESSED") @RequestParam(required = false) WorkspaceListFilter.SortKey sort,
+            @Parameter(description = "Descending order") @RequestParam(defaultValue = "false") boolean desc,
+            @Parameter(description = "Include member/content/storage numbers (detailed cards)") @RequestParam(defaultValue = "false") boolean stats,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        WorkspaceListFilter filter = new WorkspaceListFilter(search, role, status, ownership, pinned, labelId,
+                createdFrom, createdTo, activeFrom, activeTo, sort, desc);
+        return ResponseEntity.ok(ApiResponse.ok(workspaceService.listMine(user, filter, page, size, stats)));
+    }
+
+    @PostMapping("/{workspaceId}/duplicate")
+    @Operation(summary = "Copy a workspace (content and configuration, not people or history)")
+    public ResponseEntity<ApiResponse<WorkspaceResponse>> duplicate(
+            @CurrentUser AuthenticatedUser user,
+            @PathVariable UUID workspaceId,
+            @Valid @RequestBody(required = false) DuplicateWorkspaceRequest request) {
+        WorkspaceResponse copy = duplicationService.duplicate(user, workspaceId, request == null ? null : request.name());
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(copy));
+    }
+
+    @GetMapping("/{workspaceId}/deletion-impact")
+    @Operation(summary = "What deleting the workspace would take with it (owner only)")
+    public ResponseEntity<ApiResponse<WorkspaceImpactResponse>> deletionImpact(
+            @CurrentUser AuthenticatedUser user,
+            @PathVariable UUID workspaceId) {
+        return ResponseEntity.ok(ApiResponse.ok(impactService.impact(user, workspaceId)));
+    }
+
+    @PutMapping("/{workspaceId}/pin")
+    @Operation(summary = "Pin the workspace to the top of the caller's list")
+    public ResponseEntity<ApiResponse<WorkspaceResponse>> pin(
+            @CurrentUser AuthenticatedUser user,
+            @PathVariable UUID workspaceId) {
+        return ResponseEntity.ok(ApiResponse.ok(workspaceService.pin(user, workspaceId, true)));
+    }
+
+    @DeleteMapping("/{workspaceId}/pin")
+    @Operation(summary = "Unpin the workspace")
+    public ResponseEntity<ApiResponse<WorkspaceResponse>> unpin(
+            @CurrentUser AuthenticatedUser user,
+            @PathVariable UUID workspaceId) {
+        return ResponseEntity.ok(ApiResponse.ok(workspaceService.pin(user, workspaceId, false)));
     }
 
     @GetMapping("/trash")

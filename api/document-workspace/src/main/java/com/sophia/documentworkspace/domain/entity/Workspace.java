@@ -12,6 +12,7 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+import java.time.Instant;
 import java.util.UUID;
 
 /**
@@ -63,6 +64,14 @@ public class Workspace extends SoftDeletableEntity {
     @Column(name = "updated_by")
     private UUID updatedBy;
 
+    /** Last time anything inside the workspace changed (content, members, settings). */
+    @Column(name = "last_activity_at", nullable = false)
+    private Instant lastActivityAt;
+
+    /** Set when the owner was warned that the trashed workspace is about to be erased for good. */
+    @Column(name = "purge_warning_sent_at")
+    private Instant purgeWarningSentAt;
+
     public static Workspace create(String name,
                                    String description,
                                    String logoUrl,
@@ -81,6 +90,7 @@ public class Workspace extends SoftDeletableEntity {
         workspace.timezone = "UTC";
         workspace.dateFormat = "yyyy-MM-dd";
         workspace.updatedBy = ownerId;
+        workspace.lastActivityAt = Instant.now();
         return workspace;
     }
 
@@ -123,6 +133,17 @@ public class Workspace extends SoftDeletableEntity {
         if (dateFormat != null) {
             this.dateFormat = dateFormat;
         }
+    }
+
+    public void markPurgeWarningSent() {
+        this.purgeWarningSentAt = Instant.now();
+    }
+
+    /** Trashing and restoring both reset the purge warning, so a restored workspace is warned again later. */
+    @Override
+    public void restore() {
+        super.restore();
+        this.purgeWarningSentAt = null;
     }
 
     public void markUpdatedBy(UUID userId) {

@@ -2,7 +2,8 @@ import { ChangeDetectionStrategy, Component, OnInit, computed, inject, input, si
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-import { DocumentWorkspace, DocumentWorkspaceMember, WorkspaceUsage } from '@core/models/document-workspace';
+import { DocumentWorkspace, DocumentWorkspaceMember, StorageRequest, WorkspaceUsage } from '@core/models/document-workspace';
+import { AuthenticationService } from '@core/services/authentication/authentication.service';
 import { AppError } from '@core/models/api.model';
 import { TranslatePipe } from '@core/services/i18n/translate.pipe';
 import { TranslationService } from '@core/services/i18n';
@@ -20,6 +21,10 @@ import { WORKSPACE_COLORS } from '../workspace-colors';
 import { WorkspaceLogoComponent } from '../ui/workspace-logo.component';
 import { WorkspaceDatePipe } from '../ui/workspace-date.pipe';
 import { PublicLinkService } from '../data/public-link.service';
+import { WorkspaceRequestsService } from '../data/workspace-extras.service';
+import { DeleteWorkspaceDialogComponent, DeleteWorkspaceData } from '../list-dialogs/delete-workspace-dialog.component';
+import { TransferOwnershipDialogComponent, TransferOwnershipData } from '../list-dialogs/transfer-ownership-dialog.component';
+import { StorageRequestDialogComponent, StorageRequestData } from '../list-dialogs/storage-request-dialog.component';
 
 const MB = 1024 * 1024;
 const LANGUAGES: { code: string; label: string }[] = [
@@ -62,6 +67,8 @@ export class DocumentWorkspaceSettingsComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly service = inject(DocumentWorkspaceService);
   private readonly publicLinks = inject(PublicLinkService);
+  private readonly auth = inject(AuthenticationService);
+  private readonly requests = inject(WorkspaceRequestsService);
   private readonly toast = inject(ToastService);
   private readonly dialog = inject(DialogService);
   private readonly router = inject(Router);
@@ -100,6 +107,15 @@ export class DocumentWorkspaceSettingsComponent implements OnInit {
   readonly timezone = computed(() => this.documentWorkspace()?.timezone ?? 'UTC');
   readonly dateFormat = computed(() => this.documentWorkspace()?.dateFormat ?? 'yyyy-MM-dd');
 
+  readonly isOwner = computed(() => !!this.documentWorkspace() && this.documentWorkspace()!.ownerId === this.auth.user()?.id);
+  /** The owner's latest request for more storage, to show whether it is still waiting. */
+  readonly storageRequest = signal<StorageRequest | null>(null);
+  readonly backupBusy = signal(false);
+  readonly storageState = computed<'ok' | 'warn' | 'full'>(() => {
+    const percent = this.usedPercent();
+    return percent >= 100 ? 'full' : percent >= 80 ? 'warn' : 'ok';
+  });
+
   readonly owner = computed(() => this.members().find((m) => m.userId === this.documentWorkspace()?.ownerId) ?? null);
 
   readonly updatedBy = computed(() => this.members().find((m) => m.userId === this.documentWorkspace()?.updatedBy) ?? null);
@@ -136,6 +152,7 @@ export class DocumentWorkspaceSettingsComponent implements OnInit {
       error: () => this.loading.set(false),
     });
     this.service.members(id).subscribe({ next: (list) => this.members.set(list) });
+    this.refreshStorageRequest();
     this.refreshUsage();
     this.refreshLinks();
   }
@@ -323,23 +340,71 @@ export class DocumentWorkspaceSettingsComponent implements OnInit {
     }
   }
 
-  // ---- delete ----
-  async remove(): Promise<void> {
+  // ---- backup, storage, ownership ----
+  downloadBackup(): void {
+    const ws = this.documentWorkspace();
+    if (!ws || this.backupBusy()) return;
+    this.backupBusy.set(true);
+    this.service.downloadArchive(ws.id, ws.name).subscribe({
+      next: () => this.backupBusy.set(false),
+      error: (err: AppError) => {
+        this.backupBusy.set(false);
+        this.toast.error(err.message);
+      },
+    });
+  }
+
+  private refreshStorageRequest(): void {
+    this.requests.latestStorageRequest(this.documentWorkspaceId()).subscribe({
+      next: (request) => this.storageRequest.set(request),
+      error: () => this.storageRequest.set(null),
+    });
+  }
+
+  requestStorage(): void {
     const ws = this.documentWorkspace();
     if (!ws) return;
-    const ok = await this.dialog.confirm({
-      title: this.i18n.translate('documentWorkspace.confirmDelete.title'),
-      message: this.i18n.translate('documentWorkspace.confirmDelete.message', { name: ws.name }),
-      confirmLabel: this.i18n.translate('documentWorkspace.confirmDelete.confirmLabel'),
-      danger: true,
-    });
-    if (!ok) return;
-    this.service.remove(this.documentWorkspaceId()).subscribe({
-      next: () => {
-        this.toast.success(this.i18n.translate('documentWorkspace.toast.deleted'));
-        this.router.navigate(['/']);
+    const usage = this.usage();
+    const ref = this.dialog.open<StorageRequestDialogComponent, StorageRequestData, boolean>(StorageRequestDialogComponent, {
+      data: {
+        workspace: {
+          ...ws,
+          stats: { memberCount: this.members().length, itemCount: 0, usedBytes: usage?.usedBytes ?? 0, quotaMb: usage?.quotaMb ?? null, members: [] },
+        },
       },
-      error: (err: AppError) => this.toast.error(err.message),
+    });
+    ref.closed.subscribe((sent) => {
+      if (!sent) return;
+      this.toast.success(this.i18n.translate('workspaces.toast.storageRequested'));
+      this.refreshStorageRequest();
+    });
+  }
+
+  transferOwnership(): void {
+    const ws = this.documentWorkspace();
+    if (!ws) return;
+    const ref = this.dialog.open<TransferOwnershipDialogComponent, TransferOwnershipData, boolean>(TransferOwnershipDialogComponent, {
+      data: { workspace: ws },
+    });
+    ref.closed.subscribe((done) => {
+      if (!done) return;
+      this.toast.success(this.i18n.translate('workspaces.toast.transferred', { name: ws.name }));
+      this.service.get(ws.id).subscribe((updated) => this.documentWorkspace.set(updated));
+      this.service.members(ws.id).subscribe({ next: (list) => this.members.set(list) });
+    });
+  }
+
+  // ---- delete ----
+  remove(): void {
+    const ws = this.documentWorkspace();
+    if (!ws) return;
+    const ref = this.dialog.open<DeleteWorkspaceDialogComponent, DeleteWorkspaceData, boolean>(DeleteWorkspaceDialogComponent, {
+      data: { workspace: ws },
+    });
+    ref.closed.subscribe((done) => {
+      if (!done) return;
+      this.toast.success(this.i18n.translate('documentWorkspace.toast.deleted'));
+      this.router.navigate(['/document-workspaces']);
     });
   }
 }

@@ -35,6 +35,12 @@ export const ADMIN_ROUTES: Routes = [
           import('./workspaces/admin-workspaces.component').then((m) => m.AdminWorkspacesComponent),
       },
       {
+        path: 'workspaces/storage-requests',
+        canActivate: [permissionGuard('WORKSPACE_MANAGE')],
+        loadComponent: () =>
+          import('./workspaces/admin-storage-requests.component').then((m) => m.AdminStorageRequestsComponent),
+      },
+      {
         path: 'workspaces/:id',
         canActivate: [permissionGuard('WORKSPACE_MANAGE')],
         loadComponent: () =>

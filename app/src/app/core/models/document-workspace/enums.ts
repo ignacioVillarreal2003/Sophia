@@ -17,6 +17,8 @@ export type ArtifactType =
   | 'MARKDOWN_DOCUMENT'
   | 'CHECKLIST'
   | 'SPREADSHEET'
+  | 'PRESENTATION'
+  | 'WHITEBOARD'
   | 'PDF'
   | 'DOCX'
   | 'XLSX'
@@ -30,17 +32,19 @@ export type ArtifactType =
   | 'TEMPLATE';
 
 /** Types with editable text content (Markdown notes, checklists, spreadsheets). */
-export const TEXT_DOCUMENT_TYPES: ArtifactType[] = ['MARKDOWN_DOCUMENT', 'CHECKLIST', 'SPREADSHEET'];
+export const TEXT_DOCUMENT_TYPES: ArtifactType[] = ['MARKDOWN_DOCUMENT', 'CHECKLIST', 'SPREADSHEET', 'PRESENTATION', 'WHITEBOARD'];
 
 export type AccessMode = 'READ' | 'WRITE' | 'DELETE' | 'COMMENT' | 'SHARE';
 
-export type ExportFormat = 'MARKDOWN' | 'HTML' | 'TXT' | 'JSON' | 'PDF' | 'DOCX' | 'CSV' | 'XLSX';
+export type ExportFormat = 'MARKDOWN' | 'HTML' | 'TXT' | 'JSON' | 'PDF' | 'DOCX' | 'PPTX' | 'CSV' | 'XLSX';
 
 export const KIND_BY_TYPE: Record<ArtifactType, ArtifactKind> = {
   FOLDER: 'FOLDER',
   MARKDOWN_DOCUMENT: 'DOCUMENT',
   CHECKLIST: 'DOCUMENT',
   SPREADSHEET: 'DOCUMENT',
+  PRESENTATION: 'DOCUMENT',
+  WHITEBOARD: 'DOCUMENT',
   PDF: 'FILE',
   DOCX: 'FILE',
   XLSX: 'FILE',

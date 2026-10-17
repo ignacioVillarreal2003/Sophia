@@ -147,6 +147,14 @@ public interface ArtifactRepository extends JpaRepository<Artifact, UUID> {
 
     long countByWorkspaceIdAndDeletedAtIsNotNull(UUID workspaceId);
 
+    /** Ids of the live items, parents before their children (shorter paths first). */
+    @Query("""
+            select a.id from Artifact a
+            where a.workspaceId = :workspaceId and a.deletedAt is null
+            order by length(a.path), a.id
+            """)
+    List<UUID> findLiveIdsParentsFirst(@Param("workspaceId") UUID workspaceId);
+
     @Query("select a.id from Artifact a where a.workspaceId = :workspaceId")
     List<UUID> findAllIdsByWorkspaceId(@Param("workspaceId") UUID workspaceId);
 

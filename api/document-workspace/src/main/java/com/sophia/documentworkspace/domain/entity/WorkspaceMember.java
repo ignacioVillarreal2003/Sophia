@@ -60,6 +60,13 @@ public class WorkspaceMember extends BaseEntity {
     @Column(name = "updated_by")
     private UUID updatedBy;
 
+    /** When this member pinned the workspace to the top of their list; null when it is not pinned. */
+    @Column(name = "pinned_at")
+    private Instant pinnedAt;
+
+    @Column(name = "last_accessed_at")
+    private Instant lastAccessedAt;
+
     public static WorkspaceMember ownerOf(Workspace workspace, UUID userId, String email, String displayName) {
         WorkspaceMember member = base(workspace, userId, email, displayName);
         member.role = WorkspaceRole.ADMIN;
@@ -94,6 +101,24 @@ public class WorkspaceMember extends BaseEntity {
     public void assignRole(WorkspaceRole newRole, UUID actorId) {
         this.role = newRole;
         this.updatedBy = actorId;
+    }
+
+    public boolean isPinned() {
+        return pinnedAt != null;
+    }
+
+    public void pin() {
+        if (pinnedAt == null) {
+            this.pinnedAt = Instant.now();
+        }
+    }
+
+    public void unpin() {
+        this.pinnedAt = null;
+    }
+
+    public void recordAccess(Instant at) {
+        this.lastAccessedAt = at;
     }
 
     public void suspend(UUID actorId) {

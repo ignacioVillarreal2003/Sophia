@@ -26,15 +26,63 @@ export interface DocumentWorkspace {
   readonly updatedBy: string | null;
   /** Only set for soft-deleted workspaces (trash listing). */
   readonly deletedAt?: string | null;
+  /** Last change anywhere in the workspace (content or people). */
+  readonly lastActivityAt?: string | null;
+  /** Trash listing only: when the workspace will be erased for good. */
+  readonly purgeAt?: string | null;
+  /** The caller pinned it to their favorites. */
+  readonly pinned?: boolean;
+  /** When the caller last opened it. */
+  readonly lastAccessedAt?: string | null;
+  /** The caller's own labels on it. */
+  readonly labels?: WorkspaceLabel[];
+  /** Only present when the list is asked for stats (detailed cards). */
+  readonly stats?: WorkspaceStats | null;
 }
+
+export interface WorkspaceMemberPreview {
+  readonly userId: string;
+  readonly displayName: string | null;
+  readonly email: string;
+}
+
+export interface WorkspaceStats {
+  readonly memberCount: number;
+  readonly itemCount: number;
+  readonly usedBytes: number;
+  /** Quota in MB; null means unlimited. */
+  readonly quotaMb: number | null;
+  readonly members: WorkspaceMemberPreview[];
+}
+
+export interface WorkspaceLabel {
+  readonly id: string;
+  readonly name: string;
+  readonly color: string;
+}
+
+export type WorkspaceOwnership = 'MINE' | 'SHARED';
+export type WorkspaceSortKey = 'NAME' | 'CREATED' | 'ACTIVITY' | 'ACCESSED';
+export type WorkspaceTemplate = 'BLANK' | 'PROJECT' | 'TEAM' | 'PERSONAL';
+export const WORKSPACE_TEMPLATES: WorkspaceTemplate[] = ['BLANK', 'PROJECT', 'TEAM', 'PERSONAL'];
 
 export interface DocumentWorkspaceListQuery {
   page?: number;
   size?: number;
-  sort?: string;
   search?: string;
   role?: DocumentWorkspaceRole;
   status?: DocumentWorkspaceStatus;
+  ownership?: WorkspaceOwnership;
+  pinned?: boolean;
+  labelId?: string;
+  createdFrom?: string;
+  createdTo?: string;
+  activeFrom?: string;
+  activeTo?: string;
+  sort?: WorkspaceSortKey;
+  desc?: boolean;
+  /** Include member/content/storage numbers (detailed cards). */
+  stats?: boolean;
   [key: string]: string | number | boolean | undefined;
 }
 
@@ -43,6 +91,77 @@ export interface CreateDocumentWorkspaceRequest {
   description?: string;
   color?: string;
   language?: string;
+  template?: WorkspaceTemplate;
+}
+
+/** What deleting a workspace would take with it. */
+export interface WorkspaceImpact {
+  readonly folders: number;
+  readonly documents: number;
+  readonly files: number;
+  readonly usedBytes: number;
+  readonly members: number;
+  readonly activePublicLinks: number;
+  readonly pendingAccessRequests: number;
+}
+
+export type RequestStatus = 'PENDING' | 'APPROVED' | 'DENIED';
+
+/** What a signed-in non-member sees of a workspace they followed a link to. */
+export interface AccessPreview {
+  readonly workspaceId: string;
+  readonly name: string;
+  readonly color: string | null;
+  readonly member: boolean;
+  readonly requestStatus: RequestStatus | null;
+  readonly requestedAt: string | null;
+}
+
+export interface AccessRequest {
+  readonly id: string;
+  readonly workspaceId: string;
+  readonly userId: string;
+  readonly email: string;
+  readonly message: string | null;
+  readonly status: RequestStatus;
+  readonly createdAt: string;
+  readonly decidedAt: string | null;
+}
+
+export interface StorageRequest {
+  readonly id: string;
+  readonly workspaceId: string;
+  readonly workspaceName: string;
+  readonly requestedBy: string;
+  readonly requestedByEmail: string | null;
+  readonly requestedMb: number;
+  readonly message: string | null;
+  readonly status: RequestStatus;
+  readonly grantedMb: number | null;
+  readonly createdAt: string;
+  readonly handledAt: string | null;
+  readonly usedBytes: number;
+  readonly quotaMb: number | null;
+}
+
+/** One thing somebody else did in one of the caller's workspaces. */
+export interface WorkspaceActivityItem {
+  readonly id: string;
+  readonly workspaceId: string;
+  readonly workspaceName: string;
+  readonly action: string;
+  readonly actorId: string | null;
+  readonly actorEmail: string | null;
+  readonly actorName: string | null;
+  readonly resourceType: string | null;
+  readonly resourceId: string | null;
+  readonly resourceName: string | null;
+  readonly occurredAt: string;
+}
+
+export interface RestoredWorkspace {
+  readonly workspace: DocumentWorkspace;
+  readonly artifacts: number;
 }
 
 export interface UpdateDocumentWorkspaceRequest {

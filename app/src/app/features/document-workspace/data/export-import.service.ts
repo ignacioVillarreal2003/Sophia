@@ -11,6 +11,7 @@ const EXTENSIONS: Record<ExportFormat, string> = {
   JSON: 'json',
   PDF: 'pdf',
   DOCX: 'docx',
+  PPTX: 'pptx',
   TXT: 'txt',
   CSV: 'csv',
   XLSX: 'xlsx',

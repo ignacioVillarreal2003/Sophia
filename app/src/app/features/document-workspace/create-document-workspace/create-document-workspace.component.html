@@ -38,6 +38,26 @@
       </div>
 
       <div class="cw__field">
+        <label class="cw__label" id="cw-template-label">{{ 'workspaces.template.label' | t }}</label>
+        <div class="cw__templates" role="radiogroup" aria-labelledby="cw-template-label">
+          @for (tpl of templates; track tpl) {
+            <button
+              type="button"
+              role="radio"
+              class="cw__template"
+              [class.cw__template--active]="template() === tpl"
+              [attr.aria-checked]="template() === tpl"
+              (click)="template.set(tpl)"
+            >
+              <span class="cw__template-icon"><app-icon [name]="templateIcons[tpl]" [size]="18" /></span>
+              <span class="cw__template-name">{{ 'workspaces.template.' + tpl | t }}</span>
+              <span class="cw__template-desc">{{ 'workspaces.template.' + tpl + '.desc' | t }}</span>
+            </button>
+          }
+        </div>
+      </div>
+
+      <div class="cw__field">
         <label class="cw__label">{{ 'documentWorkspace.colorLabel' | t }}</label>
         <div class="cw__swatches">
           @for (c of swatches; track c) {

@@ -169,6 +169,16 @@ public class DocumentContentService {
     }
 
     private void validate(ArtifactType type, String content) {
+        if (type == ArtifactType.PRESENTATION && !content.isBlank()
+                && !com.sophia.documentworkspace.domain.util.PresentationCodec.isValid(content)) {
+            throw new BadRequestException(ErrorCode.VALIDATION_FAILED,
+                    "A presentation must be a JSON object with a slides array");
+        }
+        if (type == ArtifactType.WHITEBOARD && !content.isBlank()
+                && !com.sophia.documentworkspace.domain.util.WhiteboardCodec.isValid(content)) {
+            throw new BadRequestException(ErrorCode.VALIDATION_FAILED,
+                    "A whiteboard must be a JSON object with an elements array");
+        }
         if (type == ArtifactType.SPREADSHEET && !content.isBlank()) {
             try {
                 var tree = objectMapper.readTree(content);

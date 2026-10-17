@@ -3,6 +3,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AppError } from '@core/models/api.model';
+import { WORKSPACE_TEMPLATES, WorkspaceTemplate } from '@core/models/document-workspace';
 import { TranslatePipe } from '@core/services/i18n/translate.pipe';
 import { TranslationService } from '@core/services/i18n';
 import { ToastService } from '@core/services/toast.service';
@@ -12,6 +13,7 @@ import { CardComponent } from '@shared/ui/card/card.component';
 import { TextFieldComponent } from '@shared/ui/form-field/text-field.component';
 import { TextareaComponent } from '@shared/ui/form-field/textarea.component';
 import { IconComponent } from '@shared/ui/icon/icon.component';
+import { IconName } from '@shared/ui/icon/icons';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { firstErrorKey } from '@shared/utils/form-errors';
 import { WORKSPACE_COLORS } from '../workspace-colors';
@@ -42,6 +44,14 @@ export class CreateDocumentWorkspaceComponent {
   private readonly toast = inject(ToastService);
 
   readonly swatches = SWATCHES;
+  readonly templates = WORKSPACE_TEMPLATES;
+  readonly template = signal<WorkspaceTemplate>('BLANK');
+  readonly templateIcons: Record<WorkspaceTemplate, IconName> = {
+    BLANK: 'file',
+    PROJECT: 'target',
+    TEAM: 'users',
+    PERSONAL: 'book',
+  };
   readonly color = signal(SWATCHES[0]);
   readonly loading = signal(false);
 
@@ -67,7 +77,7 @@ export class CreateDocumentWorkspaceComponent {
     const { name, description } = this.form.getRawValue();
 
     this.service
-      .create({ name, description, color: this.color(), language: this.i18n.locale() })
+      .create({ name, description, color: this.color(), language: this.i18n.locale(), template: this.template() })
       .subscribe({
         next: (ws) => {
           this.toast.success(this.i18n.translate('common.create'));

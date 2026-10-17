@@ -280,6 +280,12 @@
     <button class="menu__item" cdkMenuItem (click)="create('SPREADSHEET')">
       <app-icon name="table" [size]="16" /> {{ 'explorer.newSheet' | t }}
     </button>
+    <button class="menu__item" cdkMenuItem (click)="create('PRESENTATION')">
+      <app-icon name="layout-cards" [size]="16" /> {{ 'explorer.newDeck' | t }}
+    </button>
+    <button class="menu__item" cdkMenuItem (click)="create('WHITEBOARD')">
+      <app-icon name="pencil" [size]="16" /> {{ 'explorer.newBoard' | t }}
+    </button>
     <div class="menu__divider"></div>
     <button class="menu__item" cdkMenuItem (click)="pickUpload()">
       <app-icon name="upload" [size]="16" /> {{ 'explorer.upload' | t }}

@@ -58,6 +58,7 @@ public class FileService {
     private final ArtifactAccessService artifactAccess;
     private final ResourceAccessEvaluator accessEvaluator;
     private final StorageService storageService;
+    private final StorageQuotaService quotaService;
     private final VirusScanner virusScanner;
     private final DomainEventPublisher eventPublisher;
     private final ArtifactMapper artifactMapper;
@@ -222,6 +223,7 @@ public class FileService {
                     "This upload would exceed the workspace storage quota",
                     Map.of("quotaMb", quotaMb, "usedBytes", used));
         }
+        quotaService.evaluate(workspaceId, additionalBytes);
     }
 
     void ensureWithinMaxSize(long sizeBytes) {

@@ -12,6 +12,10 @@ export interface RailItem {
   /** Optional section header; consecutive items sharing one are grouped under
    *  it. Omit on every item to keep the flat list this component started with. */
   group?: string;
+  /** Renders a button that only runs `onClick` (a setting, not a destination); `link` is then just a unique key. */
+  action?: boolean;
+  /** Highlights an action item, e.g. the selected view mode. */
+  active?: boolean;
 }
 
 interface RailSection {
@@ -67,17 +71,31 @@ interface RailSection {
             }
             @if (!section.label || !isCollapsed(section)) {
               @for (item of section.items; track item.link) {
-                <a
-                  [routerLink]="item.link"
-                  routerLinkActive="rail__link--active"
-                  [routerLinkActiveOptions]="item.exact ? exactMatch : subsetMatch"
-                  class="rail__link"
-                  [attr.title]="expanded() ? null : item.label"
-                  (click)="onLinkClick(item, section)"
-                >
-                  <app-icon [name]="item.icon" [size]="18" />
-                  <span class="rail__label">{{ item.label }}</span>
-                </a>
+                @if (item.action) {
+                  <button
+                    type="button"
+                    class="rail__link"
+                    [class.rail__link--active]="item.active"
+                    [attr.aria-pressed]="item.active ?? false"
+                    [attr.title]="expanded() ? null : item.label"
+                    (click)="item.onClick?.()"
+                  >
+                    <app-icon [name]="item.icon" [size]="18" />
+                    <span class="rail__label">{{ item.label }}</span>
+                  </button>
+                } @else {
+                  <a
+                    [routerLink]="item.link"
+                    routerLinkActive="rail__link--active"
+                    [routerLinkActiveOptions]="item.exact ? exactMatch : subsetMatch"
+                    class="rail__link"
+                    [attr.title]="expanded() ? null : item.label"
+                    (click)="onLinkClick(item, section)"
+                  >
+                    <app-icon [name]="item.icon" [size]="18" />
+                    <span class="rail__label">{{ item.label }}</span>
+                  </a>
+                }
               }
             }
           </div>

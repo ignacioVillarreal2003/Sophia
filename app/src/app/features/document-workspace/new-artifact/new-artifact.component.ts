@@ -19,8 +19,10 @@ import { DocumentWorkspaceService } from '../data/document-workspace.service';
 import { ExportImportService } from '../data/export-import.service';
 import { UploadManagerService } from '../data/upload-manager.service';
 import { WORKSPACE_COLORS } from '../workspace-colors';
+import { deckOf } from '../presentation/deck.model';
+import { TEMPLATE_IDS, templateJson } from '../whiteboard/board-templates';
 
-type CreatableType = Extract<ArtifactType, 'FOLDER' | 'MARKDOWN_DOCUMENT' | 'CHECKLIST' | 'SPREADSHEET'>;
+type CreatableType = Extract<ArtifactType, 'FOLDER' | 'MARKDOWN_DOCUMENT' | 'CHECKLIST' | 'SPREADSHEET' | 'PRESENTATION' | 'WHITEBOARD'>;
 
 interface TypeOption {
   readonly type: CreatableType;
@@ -32,6 +34,8 @@ const TYPES: TypeOption[] = [
   { type: 'MARKDOWN_DOCUMENT', icon: 'file-text' },
   { type: 'CHECKLIST', icon: 'check-circle' },
   { type: 'SPREADSHEET', icon: 'table' },
+  { type: 'PRESENTATION', icon: 'layout-cards' },
+  { type: 'WHITEBOARD', icon: 'pencil' },
 ];
 
 /** Starting points offered for each document type. The first one is always the blank page. */
@@ -39,6 +43,8 @@ export interface Starter {
   readonly id: string;
   /** Builds the initial content from the document name. */
   readonly build: (name: string) => string;
+  /** Same, for starters whose content carries words that must follow the user's language. */
+  readonly buildWith?: (name: string, translate: (key: string) => string) => string;
 }
 
 function sheet(cells: Record<string, unknown>, extra: Record<string, unknown> = {}): string {
@@ -51,7 +57,7 @@ function sheet(cells: Record<string, unknown>, extra: Record<string, unknown> = 
 
 const HEADER = { b: true, bg: '#eef2ff' };
 
-const STARTERS: Record<'MARKDOWN_DOCUMENT' | 'CHECKLIST' | 'SPREADSHEET', Starter[]> = {
+const STARTERS: Record<'MARKDOWN_DOCUMENT' | 'CHECKLIST' | 'SPREADSHEET' | 'PRESENTATION' | 'WHITEBOARD', Starter[]> = {
   MARKDOWN_DOCUMENT: [
     { id: 'blank', build: (name) => `# ${name}\n\n` },
     {
@@ -71,6 +77,47 @@ const STARTERS: Record<'MARKDOWN_DOCUMENT' | 'CHECKLIST' | 'SPREADSHEET', Starte
     { id: 'weekly', build: () => '## Monday\n\n- [ ] \n\n## Tuesday\n\n- [ ] \n\n## Wednesday\n\n- [ ] \n\n## Thursday\n\n- [ ] \n\n## Friday\n\n- [ ] \n' },
     { id: 'shopping', build: () => '## Groceries\n\n- [ ] \n\n## Household\n\n- [ ] \n' },
     { id: 'release', build: () => '## Before release\n\n- [ ] Tests green\n- [ ] Changelog updated\n- [ ] Version bumped\n\n## Release\n\n- [ ] Deploy\n- [ ] Smoke test\n\n## After release\n\n- [ ] Announce\n- [ ] Monitor errors\n' },
+  ],
+  PRESENTATION: [
+    { id: 'blank', build: () => deckOf([['', '']]) },
+    {
+      id: 'concepts',
+      build: (name) =>
+        deckOf([
+          [name, 'Idea central en una frase.', 'violet'],
+          ['Concepto 1', '**Definición:** \n\n**Ejemplo:** ', 'blue'],
+          ['Concepto 2', '**Definición:** \n\n**Ejemplo:** ', 'green'],
+          ['Concepto 3', '**Definición:** \n\n**Ejemplo:** ', 'amber'],
+          ['Resumen', '- Lo esencial\n- Lo que suelo olvidar\n- Cómo se conecta con otros temas', 'rose'],
+        ]),
+    },
+    {
+      id: 'timeline',
+      build: () =>
+        deckOf([
+          ['Origen', 'Fecha · qué pasó · por qué importa', 'slate'],
+          ['Desarrollo', 'Fecha · qué pasó · por qué importa', 'blue'],
+          ['Punto de quiebre', 'Fecha · qué pasó · por qué importa', 'amber'],
+          ['Consecuencias', 'Fecha · qué pasó · por qué importa', 'rose'],
+        ]),
+    },
+    {
+      id: 'compare',
+      build: () =>
+        deckOf([
+          ['A', '- Qué es\n- Ventajas\n- Límites', 'blue'],
+          ['B', '- Qué es\n- Ventajas\n- Límites', 'green'],
+          ['A vs B', '| | A | B |\n| --- | --- | --- |\n| Uso | | |\n| Costo | | |', 'violet'],
+        ]),
+    },
+  ],
+  WHITEBOARD: [
+    { id: 'blank', build: () => templateJson('blank', (k) => k), buildWith: (_name, t) => templateJson('blank', t) },
+    ...TEMPLATE_IDS.map((id) => ({
+      id,
+      build: (name: string) => templateJson(id, (k) => k, name),
+      buildWith: (name: string, t: (key: string) => string) => templateJson(id, t, name),
+    })),
   ],
   SPREADSHEET: [
     { id: 'blank', build: () => sheet({}) },
@@ -248,7 +295,7 @@ export class NewArtifactComponent implements OnInit {
       parentId,
       ...(v.description.trim() ? { description: v.description.trim() } : {}),
       ...(type === 'FOLDER' && v.color ? { color: v.color } : {}),
-      ...(starter ? { content: starter.build(v.name.trim()) } : {}),
+      ...(starter ? { content: starter.buildWith ? starter.buildWith(v.name.trim(), (k) => this.i18n.translate(k)) : starter.build(v.name.trim()) } : {}),
     };
 
     this.artifacts.create(ws, request).subscribe({

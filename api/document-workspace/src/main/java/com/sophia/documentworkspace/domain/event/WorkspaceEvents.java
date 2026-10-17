@@ -38,6 +38,29 @@ public final class WorkspaceEvents {
         }
     }
 
+    public record WorkspaceDuplicated(UUID eventId, UUID workspaceId, UUID actorId, Instant occurredAt,
+                                      UUID sourceWorkspaceId) implements DomainEvent {
+
+        public static WorkspaceDuplicated of(UUID workspaceId, UUID actorId, UUID sourceWorkspaceId) {
+            return new WorkspaceDuplicated(UUID.randomUUID(), workspaceId, actorId, Instant.now(), sourceWorkspaceId);
+        }
+
+        @Override
+        public String eventType() {
+            return "workspace.duplicated";
+        }
+
+        @Override
+        public String aggregateType() {
+            return AGGREGATE_WORKSPACE;
+        }
+
+        @Override
+        public UUID aggregateId() {
+            return workspaceId;
+        }
+    }
+
     public record WorkspaceUpdated(UUID eventId, UUID workspaceId, UUID actorId, Instant occurredAt,
                                    Snapshot before) implements DomainEvent {
 

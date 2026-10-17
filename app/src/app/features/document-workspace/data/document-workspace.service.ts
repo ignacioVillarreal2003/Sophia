@@ -1,7 +1,10 @@
+import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Observable, map, tap } from 'rxjs';
+import { environment } from '@env/environment';
+import { silentErrors } from '@core/services/http-context';
 import { ApiService } from '@core/services/document-workspace/api.service';
-import { WorkspaceUsage, AddMemberRequest, CreateDocumentWorkspaceRequest, UpdateDocumentWorkspaceRequest, DocumentWorkspace, DocumentWorkspaceListQuery, DocumentWorkspaceMember, DocumentWorkspaceRole, WorkspaceAuditEntry, WorkspaceAuditQuery } from '@core/models/document-workspace';
+import { WorkspaceUsage, AddMemberRequest, CreateDocumentWorkspaceRequest, UpdateDocumentWorkspaceRequest, DocumentWorkspace, DocumentWorkspaceListQuery, DocumentWorkspaceMember, DocumentWorkspaceRole, RestoredWorkspace, WorkspaceAuditEntry, WorkspaceAuditQuery, WorkspaceImpact } from '@core/models/document-workspace';
 import { PageResponse } from '@core/models/api.model';
 
 /**
@@ -11,6 +14,7 @@ import { PageResponse } from '@core/models/api.model';
 @Injectable({ providedIn: 'root' })
 export class DocumentWorkspaceService {
   private readonly api = inject(ApiService);
+  private readonly http = inject(HttpClient);
 
   private readonly _documentWorkspaces = signal<DocumentWorkspace[]>([]);
   private readonly _activeId = signal<string | null>(null);
@@ -62,16 +66,74 @@ export class DocumentWorkspaceService {
     this._activeId.set(id);
   }
 
-  get(id: string): Observable<DocumentWorkspace> {
-    return this.api.get<DocumentWorkspace>(`/api/v1/workspaces/${id}`).pipe(
-      tap((ws) => this.upsert(ws)),
-    );
+  /** @param silent keeps the global error toast away, for callers that handle a 403/404 themselves. */
+  get(id: string, silent = false): Observable<DocumentWorkspace> {
+    return this.api
+      .get<DocumentWorkspace>(`/api/v1/workspaces/${id}`, undefined, silent ? silentErrors() : undefined)
+      .pipe(tap((ws) => this.upsert(ws)));
   }
 
   create(request: CreateDocumentWorkspaceRequest): Observable<DocumentWorkspace> {
     return this.api
       .post<DocumentWorkspace>('/api/v1/workspaces', request)
       .pipe(tap((ws) => this._documentWorkspaces.update((list) => [...list, ws])));
+  }
+
+  /** Pin or unpin a workspace for the caller (their favorites). */
+  setPinned(id: string, pinned: boolean): Observable<DocumentWorkspace> {
+    const path = `/api/v1/workspaces/${id}/pin`;
+    const call = pinned ? this.api.put<DocumentWorkspace>(path) : this.api.delete<DocumentWorkspace>(path);
+    return call.pipe(tap((ws) => this.upsert(ws)));
+  }
+
+  /** Copies content and configuration into a new workspace owned by the caller (no people, no history). */
+  duplicate(id: string, name?: string): Observable<DocumentWorkspace> {
+    return this.api
+      .post<DocumentWorkspace>(`/api/v1/workspaces/${id}/duplicate`, name ? { name } : {})
+      .pipe(tap((ws) => this.upsert(ws)));
+  }
+
+  /** What deleting the workspace would take with it (owner only). */
+  impact(id: string): Observable<WorkspaceImpact> {
+    return this.api.get<WorkspaceImpact>(`/api/v1/workspaces/${id}/deletion-impact`);
+  }
+
+  /** The caller leaves a workspace they do not own. */
+  leave(id: string): Observable<void> {
+    return this.api
+      .delete<void>(`/api/v1/workspaces/${id}/members/me`)
+      .pipe(tap(() => this._documentWorkspaces.update((list) => list.filter((w) => w.id !== id))));
+  }
+
+  /** Owner only: hands the workspace to another active member, who becomes its owner and admin. */
+  transferOwnership(id: string, newOwnerUserId: string): Observable<void> {
+    return this.api.put<void>(`/api/v1/workspaces/${id}/owner`, { newOwnerUserId });
+  }
+
+  /** Downloads the whole workspace as a ZIP (content only; no people or history). */
+  downloadArchive(id: string, name: string): Observable<void> {
+    return this.http
+      .get(`${environment.documentWorkspaceApiUrl}/api/v1/workspaces/${id}/archive`, { responseType: 'blob' })
+      .pipe(
+        map((blob) => {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${name.replace(/[\\/:*?"<>|]/g, '_').trim() || 'workspace'}.zip`;
+          a.click();
+          URL.revokeObjectURL(url);
+        }),
+      );
+  }
+
+  /** Creates a new workspace, owned by the caller, from a ZIP produced by {@link downloadArchive}. */
+  restoreArchive(file: File, name?: string): Observable<RestoredWorkspace> {
+    const form = new FormData();
+    form.append('file', file, file.name);
+    const query = name ? `?name=${encodeURIComponent(name)}` : '';
+    return this.api
+      .post<RestoredWorkspace>(`/api/v1/workspaces/restore${query}`, form)
+      .pipe(tap((result) => this.upsert(result.workspace)));
   }
 
   update(id: string, request: UpdateDocumentWorkspaceRequest): Observable<DocumentWorkspace> {

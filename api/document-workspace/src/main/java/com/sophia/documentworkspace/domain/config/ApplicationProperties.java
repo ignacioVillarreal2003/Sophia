@@ -93,7 +93,12 @@ public record ApplicationProperties(
     ) {
     }
 
-    public record Retention(@Min(1) int trashRetentionDays) {
+    public record Retention(
+            @Min(1) int trashRetentionDays,
+            /** Days a deleted workspace stays in the trash before it is erased for good. */
+            @Min(1) @DefaultValue("30") int workspaceTrashDays,
+            /** The owner is warned this many days before a trashed workspace is erased. */
+            @Min(1) @DefaultValue("3") int workspacePurgeWarningDays) {
     }
 
     public record Realtime(@NotNull List<String> allowedOrigins) {

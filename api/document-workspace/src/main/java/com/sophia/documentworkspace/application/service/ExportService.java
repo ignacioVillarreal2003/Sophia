@@ -14,7 +14,9 @@ import com.sophia.documentworkspace.domain.exception.BadRequestException;
 import com.sophia.documentworkspace.domain.exception.ErrorCode;
 import com.sophia.documentworkspace.domain.util.MarkdownDocxWriter;
 import com.sophia.documentworkspace.domain.util.MarkdownUtil;
+import com.sophia.documentworkspace.domain.util.PresentationCodec;
 import com.sophia.documentworkspace.domain.util.SpreadsheetCodec;
+import com.sophia.documentworkspace.domain.util.WhiteboardCodec;
 import com.sophia.documentworkspace.infrastructure.repository.ArtifactRepository;
 import com.sophia.documentworkspace.infrastructure.service.StorageService;
 import lombok.RequiredArgsConstructor;
@@ -73,6 +75,10 @@ public class ExportService {
             return exportRawFile(file);
         }
 
+        if (artifact.getType() == ArtifactType.PRESENTATION || artifact.getType() == ArtifactType.WHITEBOARD) {
+            return exportBoard(artifact, baseName, format);
+        }
+
         boolean spreadsheet = artifact.getType() == ArtifactType.SPREADSHEET;
         byte[] content;
         try {
@@ -89,12 +95,40 @@ public class ExportService {
                 case PDF -> pdfOf(artifact);
                 case DOCX -> requireDocument(spreadsheet, format)
                         ? MarkdownDocxWriter.write(artifact.getName(), contentOf(artifact)) : new byte[0];
+                case PPTX -> throw new BadRequestException(ErrorCode.EXPORT_FAILED, "PPTX export is only available for presentations");
                 case ZIP -> exportSubtreeZip(artifact);
             };
         } catch (IOException e) {
             throw exportFailure("Export to " + format + " failed", e);
         }
         return new ExportResult(baseName + "." + format.extension(), format.contentType(), content);
+    }
+
+    /** Presentations (study decks) and whiteboards: their own formats plus the text-based ones. */
+    private ExportResult exportBoard(Artifact artifact, String baseName, ExportFormat format) {
+        boolean deck = artifact.getType() == ArtifactType.PRESENTATION;
+        String json = contentOf(artifact);
+        String markdown = markdownFor(artifact);
+        try {
+            byte[] bytes = switch (format) {
+                case JSON -> json.getBytes(StandardCharsets.UTF_8);
+                case MARKDOWN, TXT -> markdown.getBytes(StandardCharsets.UTF_8);
+                case HTML -> MarkdownUtil.markdownToHtml(markdown).getBytes(StandardCharsets.UTF_8);
+                case PDF -> pdfOf(artifact);
+                case PPTX -> {
+                    if (!deck) {
+                        throw new BadRequestException(ErrorCode.EXPORT_FAILED, "PPTX export is only available for presentations");
+                    }
+                    yield PresentationCodec.toPptx(json);
+                }
+                case DOCX -> MarkdownDocxWriter.write(artifact.getName(), markdown);
+                case ZIP -> exportSubtreeZip(artifact);
+                default -> throw new BadRequestException(ErrorCode.EXPORT_FAILED, format + " export is not available for this document");
+            };
+            return new ExportResult(baseName + "." + format.extension(), format.contentType(), bytes);
+        } catch (IOException e) {
+            throw exportFailure("Export to " + format + " failed", e);
+        }
     }
 
     private boolean requireSpreadsheet(boolean spreadsheet, ExportFormat format) {
@@ -114,10 +148,12 @@ public class ExportService {
 
     /** Markdown rendition of a document (a table for spreadsheets), used by the anonymous public view. */
     public String markdownFor(Artifact artifact) {
-        if (artifact.getType() == ArtifactType.SPREADSHEET) {
-            return spreadsheetMarkdown(contentOf(artifact));
-        }
-        return contentOf(artifact);
+        return switch (artifact.getType()) {
+            case SPREADSHEET -> spreadsheetMarkdown(contentOf(artifact));
+            case PRESENTATION -> PresentationCodec.toMarkdown(contentOf(artifact));
+            case WHITEBOARD -> WhiteboardCodec.toMarkdown(contentOf(artifact));
+            default -> contentOf(artifact);
+        };
     }
 
     private String contentOf(Artifact artifact) {
@@ -145,9 +181,11 @@ public class ExportService {
     }
 
     private byte[] pdfOf(Artifact artifact) {
-        String text = artifact.getType() == ArtifactType.SPREADSHEET
-                ? spreadsheetMarkdown(contentOf(artifact))
-                : MarkdownUtil.plainText(contentOf(artifact));
+        String text = switch (artifact.getType()) {
+            case SPREADSHEET -> spreadsheetMarkdown(contentOf(artifact));
+            case PRESENTATION, WHITEBOARD -> MarkdownUtil.plainText(markdownFor(artifact));
+            default -> MarkdownUtil.plainText(contentOf(artifact));
+        };
         try (PDDocument document = new PDDocument()) {
             PDType1Font font = new PDType1Font(Standard14Fonts.FontName.HELVETICA);
             float fontSize = 10;
@@ -208,6 +246,14 @@ public class ExportService {
         }
     }
 
+    /** Writes top-level artifacts (and everything under them) straight into an open archive. */
+    void writeRoots(ZipOutputStream zip, List<Artifact> roots) throws IOException {
+        Set<String> usedNames = new HashSet<>();
+        for (Artifact root : roots) {
+            writeArtifactToZip(zip, root, "", usedNames);
+        }
+    }
+
     private byte[] exportSubtreeZip(Artifact root) {
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();
         Set<String> usedNames = new HashSet<>();
@@ -243,6 +289,12 @@ public class ExportService {
                 if (artifact.getType() == ArtifactType.SPREADSHEET) {
                     entryName = name + ".xlsx";
                     content = SpreadsheetCodec.toXlsx(contentOf(artifact));
+                } else if (artifact.getType() == ArtifactType.PRESENTATION) {
+                    entryName = name + ".pptx";
+                    content = PresentationCodec.toPptx(contentOf(artifact));
+                } else if (artifact.getType() == ArtifactType.WHITEBOARD) {
+                    entryName = name + ".whiteboard.json";
+                    content = contentOf(artifact).getBytes(StandardCharsets.UTF_8);
                 } else {
                     entryName = name + ".md";
                     content = contentOf(artifact).getBytes(StandardCharsets.UTF_8);

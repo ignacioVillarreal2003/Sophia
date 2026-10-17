@@ -35,6 +35,10 @@ public class WorkspaceLimits {
     @Column(name = "updated_by")
     private UUID updatedBy;
 
+    /** Highest storage alert already sent to the owner: 0 none, 80 almost full, 100 full. */
+    @Column(name = "quota_alert_level", nullable = false)
+    private int quotaAlertLevel;
+
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -51,6 +55,10 @@ public class WorkspaceLimits {
         WorkspaceLimits limits = new WorkspaceLimits();
         limits.workspaceId = workspaceId;
         return limits;
+    }
+
+    public void recordQuotaAlert(int level) {
+        this.quotaAlertLevel = level;
     }
 
     /** A value of null or 0 removes the limit. */

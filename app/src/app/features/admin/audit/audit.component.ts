@@ -809,7 +809,7 @@ export class AuditComponent implements OnInit {
 
   private loadAuditableWorkspaces(): void {
     this.workspaceApi
-      .search({size: 100, sort: 'name,asc'})
+      .search({size: 100, sort: 'NAME'})
       .pipe(catchError(() => of(emptyPage<DocumentWorkspace>())))
       .subscribe((page) => {
         const auditable = page.content.filter(

@@ -160,7 +160,44 @@
         </div>
       }
 
+      @if (storageState() !== 'ok') {
+        <p class="wss__storage-alert" [class.wss__storage-alert--full]="storageState() === 'full'">
+          <app-icon name="alert-circle" [size]="15" />
+          {{ (storageState() === 'full' ? 'workspaces.card.storageFull' : 'workspaces.card.storageWarn') | t }}
+        </p>
+      }
+
       <p class="wss__setting-desc wss__setting-desc--flush">{{ 'documentWorkspace.settings.storage.managed' | t }}</p>
+
+      @if (isOwner() && usage()?.quotaMb) {
+        <div class="wss__storage-actions">
+          @if (storageRequest()?.status === 'PENDING') {
+            <span class="wss__setting-desc wss__setting-desc--flush">
+              {{ 'workspaces.storage.pending' | t: { amount: storageRequest()!.requestedMb } }}
+            </span>
+          } @else {
+            <button type="button" class="wss__btn" (click)="requestStorage()">
+              <app-icon name="database" [size]="15" /> {{ 'workspaces.menu.storage' | t }}
+            </button>
+            @if (storageRequest(); as last) {
+              <span class="wss__setting-desc wss__setting-desc--flush">
+                {{ ('workspaces.storage.last.' + last.status) | t: { amount: last.grantedMb ?? last.requestedMb } }}
+              </span>
+            }
+          }
+        </div>
+      }
+    </app-card>
+
+    <!-- Backup -->
+    <app-card class="wss__card">
+      <h2 class="wss__section-title">{{ 'workspaces.backup.title' | t }}</h2>
+      <p class="wss__setting-desc wss__setting-desc--flush">{{ 'workspaces.backup.desc' | t }}</p>
+      <div class="wss__storage-actions">
+        <button type="button" class="wss__btn" [disabled]="backupBusy()" (click)="downloadBackup()">
+          <app-icon name="download" [size]="15" /> {{ 'workspaces.backup.download' | t }}
+        </button>
+      </div>
     </app-card>
 
     <!-- Regional format -->
@@ -275,6 +312,11 @@
         <h3 class="wss__danger-title">{{ 'documentWorkspace.dangerZone.title' | t }}</h3>
         <p class="wss__danger-desc">{{ 'documentWorkspace.dangerZone.description' | t }}</p>
       </div>
+      @if (isOwner()) {
+        <button type="button" class="wss__btn" (click)="transferOwnership()">
+          <app-icon name="swap" [size]="15" /> {{ 'workspaces.menu.transfer' | t }}
+        </button>
+      }
       <button type="button" class="wss__delete" (click)="remove()">
         <app-icon name="trash" [size]="16" />
         <span>{{ 'documentWorkspace.dangerZone.button' | t }}</span>

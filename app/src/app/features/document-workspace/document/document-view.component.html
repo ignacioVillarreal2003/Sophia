@@ -89,6 +89,10 @@
           />
         } @else if (isSpreadsheet()) {
           <app-spreadsheet [content]="text()" [readonly]="!canEdit()" (contentChange)="onSheet($event)" (saveRequested)="saveNow()" />
+        } @else if (isPresentation()) {
+          <app-presentation [content]="text()" [readonly]="!canEdit()" (contentChange)="onSheet($event)" (saveRequested)="saveNow()" />
+        } @else if (isWhiteboard()) {
+          <app-whiteboard [content]="text()" [readonly]="!canEdit()" (contentChange)="onSheet($event)" (saveRequested)="saveNow()" />
         } @else if (isFile()) {
           <app-file-viewer [documentWorkspaceId]="documentWorkspaceId()" [artifact]="art" />
         }
@@ -105,7 +109,7 @@
         <app-revision-history
           [documentWorkspaceId]="documentWorkspaceId()"
           [documentId]="artifactId()"
-          [currentContent]="isSpreadsheet() ? '' : text()"
+          [currentContent]="isStructured() ? '' : text()"
           (close)="panel.set('none')"
           (restored)="onRevisionRestored()"
         />

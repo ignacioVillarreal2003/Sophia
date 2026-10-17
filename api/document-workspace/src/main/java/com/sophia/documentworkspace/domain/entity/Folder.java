@@ -47,7 +47,7 @@ public class Folder extends Artifact {
     }
 
     @Override
-    public Artifact copyWith(String name, Folder targetParent, UUID newOwnerId) {
-        return create(getWorkspaceId(), targetParent, name, newOwnerId, getDescription(), color);
+    public Artifact copyTo(UUID targetWorkspaceId, String name, Folder targetParent, UUID newOwnerId) {
+        return create(targetWorkspaceId, targetParent, name, newOwnerId, getDescription(), color);
     }
 }

@@ -207,6 +207,14 @@
   &:hover { background: color-mix(in srgb, var(--text) 8%, transparent); color: var(--text); text-decoration: none; }
   app-icon { flex-shrink: 0; color: var(--text-subtle); }
 
+  // Action items are buttons; make them look like the link items next to them.
+  &:where(button) {
+    border: 0;
+    background: transparent;
+    font: inherit;
+    cursor: pointer;
+  }
+
   &--active {
     background: color-mix(in srgb, var(--text) 10%, transparent);
     color: var(--text);

@@ -80,8 +80,8 @@ public class TemplateArtifact extends Artifact {
     }
 
     @Override
-    public Artifact copyWith(String name, Folder targetParent, UUID newOwnerId) {
-        return create(getWorkspaceId(), targetParent, name, newOwnerId, targetType,
+    public Artifact copyTo(UUID targetWorkspaceId, String name, Folder targetParent, UUID newOwnerId) {
+        return create(targetWorkspaceId, targetParent, name, newOwnerId, targetType,
                 getDescription(), templateContent);
     }
 }

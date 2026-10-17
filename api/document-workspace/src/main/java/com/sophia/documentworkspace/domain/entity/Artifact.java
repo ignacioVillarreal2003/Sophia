@@ -77,7 +77,13 @@ public abstract class Artifact extends SoftDeletableEntity implements SecuredRes
 
     public abstract ArtifactType.Kind kind();
 
-    public abstract Artifact copyWith(String name, Folder targetParent, UUID newOwnerId);
+    /** Copy into the same workspace. */
+    public Artifact copyWith(String name, Folder targetParent, UUID newOwnerId) {
+        return copyTo(getWorkspaceId(), name, targetParent, newOwnerId);
+    }
+
+    /** Copy into any workspace; the parent, when given, must belong to that workspace. */
+    public abstract Artifact copyTo(UUID targetWorkspaceId, String name, Folder targetParent, UUID newOwnerId);
 
     public void rename(String name) {
         this.name = name;

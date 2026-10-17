@@ -24,6 +24,8 @@ import {findRouteData} from '@core/utils/route-data';
 import {DocumentWorkspaceService} from '@features/document-workspace/data/document-workspace.service';
 import {WorkspaceLogoService} from '@features/document-workspace/data/workspace-logo.service';
 import {NotificationService} from '@features/notifications/data/notification.service';
+import {WorkspaceListPrefsService} from '@features/document-workspace/data/workspace-list-prefs.service';
+import {WorkspaceActivityService} from '@features/document-workspace/data/workspace-extras.service';
 import {RealtimeService} from '@features/document-workspace/data/realtime.service';
 import {AppHeaderComponent} from './header/app-header.component';
 import {IconRailComponent, RailItem} from '@shared/ui/icon-rail/icon-rail.component';
@@ -59,7 +61,7 @@ const SIDEBAR_STORAGE_KEY = 'sophia.appSidebar.railPinned';
       <app-header/>
 
       <div class="shell__body" [class.shell__body--no-sidebar]="hideSidebar()">
-        @if (sidebarConfig(); as sidebar) {
+        @if (!hideSidebar() && sidebarConfig(); as sidebar) {
           <app-icon-rail
             [items]="sidebar.items"
             [footItems]="sidebar.footItems ?? []"
@@ -90,6 +92,8 @@ const SIDEBAR_STORAGE_KEY = 'sophia.appSidebar.railPinned';
 })
 export class ShellComponent implements OnInit, OnDestroy {
   private readonly documentWorkspaces = inject(DocumentWorkspaceService);
+  private readonly listPrefs = inject(WorkspaceListPrefsService);
+  private readonly workspaceActivity = inject(WorkspaceActivityService);
   private readonly logos = inject(WorkspaceLogoService);
   private readonly notifications = inject(NotificationService);
   private readonly realtime = inject(RealtimeService);
@@ -140,6 +144,7 @@ export class ShellComponent implements OnInit, OnDestroy {
 
     this.notifications.incoming$.pipe(takeUntilDestroyed()).subscribe((notification) => {
       this.toast.show(notification.title, 'info');
+      this.workspaceActivity.refreshUnread().subscribe({error: () => undefined});
     });
   }
 
@@ -196,6 +201,7 @@ export class ShellComponent implements OnInit, OnDestroy {
         onClick: () => this.documentWorkspaces.setActive(null),
       });
     }
+    const view = this.listPrefs.view();
     items.push(
       {
         label: this.i18n.translate('nav.documentWorkspaces'),
@@ -204,9 +210,37 @@ export class ShellComponent implements OnInit, OnDestroy {
         exact: true,
       },
       {
+        label: this.i18n.translate('nav.favorites'),
+        icon: 'star',
+        link: '/document-workspaces/favorites',
+      },
+      {
+        label: this.i18n.translate('nav.workspaceActivity'),
+        icon: 'clock',
+        link: '/document-workspaces/activity',
+      },
+      {
         label: this.i18n.translate('nav.trash'),
         icon: 'trash',
         link: '/document-workspaces/trash',
+      },
+      {
+        label: this.i18n.translate('nav.viewList'),
+        icon: 'list',
+        link: '#view-list',
+        group: this.i18n.translate('nav.view'),
+        action: true,
+        active: view === 'list',
+        onClick: () => this.listPrefs.setView('list'),
+      },
+      {
+        label: this.i18n.translate('nav.viewCards'),
+        icon: 'layout-cards',
+        link: '#view-cards',
+        group: this.i18n.translate('nav.view'),
+        action: true,
+        active: view === 'cards',
+        onClick: () => this.listPrefs.setView('cards'),
       },
     );
     return items;
@@ -217,6 +251,7 @@ export class ShellComponent implements OnInit, OnDestroy {
       this.documentWorkspaces.loadAll().subscribe();
     }
     this.notifications.refreshUnread().subscribe();
+    this.workspaceActivity.refreshUnread().subscribe({error: () => undefined});
     this.notifications.connectStream();
 
     this.realtime.connect();

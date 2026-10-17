@@ -1,13 +1,14 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { DocumentWorkspaceMember, DocumentWorkspaceRole } from '@core/models/document-workspace';
+import { AccessRequest, DocumentWorkspaceMember, DocumentWorkspaceRole } from '@core/models/document-workspace';
 import { AppError } from '@core/models/api.model';
 import { AuthenticationService } from '@core/services/authentication/authentication.service';
 import { TranslatePipe } from '@core/services/i18n/translate.pipe';
 import { TranslationService } from '@core/services/i18n';
 import { ToastService } from '@core/services/toast.service';
 import { DocumentWorkspaceService } from '../data/document-workspace.service';
+import { WorkspaceRequestsService } from '../data/workspace-extras.service';
 import { ButtonComponent } from '@shared/ui/button/button.component';
 import { CardComponent } from '@shared/ui/card/card.component';
 import { AvatarComponent } from '@shared/ui/avatar/avatar.component';
@@ -48,6 +49,7 @@ const SWAPPABLE_ROLES: DocumentWorkspaceRole[] = ['EDITOR', 'VIEWER'];
 export class MembersComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly service = inject(DocumentWorkspaceService);
+  private readonly requestsService = inject(WorkspaceRequestsService);
   private readonly auth = inject(AuthenticationService);
   private readonly toast = inject(ToastService);
   private readonly dialog = inject(DialogService);
@@ -71,12 +73,75 @@ export class MembersComponent implements OnInit {
     role: ['EDITOR' as DocumentWorkspaceRole, [Validators.required]],
   });
 
+  /** People who asked to join (admins only), oldest first. */
+  readonly requests = signal<AccessRequest[]>([]);
+  readonly requestRoles = signal<Record<string, DocumentWorkspaceRole>>({});
+  readonly busyRequest = signal<string | null>(null);
+  private requestsLoaded = false;
+
+  constructor() {
+    // The role (and so admin-ness) arrives with the workspace, which may load after this page opens.
+    effect(() => {
+      if (this.isAdmin() && !untracked(() => this.requestsLoaded)) {
+        this.requestsLoaded = true;
+        untracked(() => this.loadRequests());
+      }
+    });
+  }
+
   readonly selectedRole = toSignal(this.addForm.controls.role.valueChanges, {
     initialValue: this.addForm.controls.role.value,
   });
 
   ngOnInit(): void {
     this.reload();
+  }
+
+  private loadRequests(): void {
+    this.requestsService.pendingAccess(this.documentWorkspaceId()).subscribe({
+      next: (list) => this.requests.set(list),
+      error: () => undefined,
+    });
+  }
+
+  requestRole(request: AccessRequest): DocumentWorkspaceRole {
+    return this.requestRoles()[request.id] ?? 'EDITOR';
+  }
+
+  setRequestRole(request: AccessRequest, role: string): void {
+    this.requestRoles.update((map) => ({ ...map, [request.id]: role as DocumentWorkspaceRole }));
+  }
+
+  approveRequest(request: AccessRequest): void {
+    this.busyRequest.set(request.id);
+    this.requestsService.approveAccess(this.documentWorkspaceId(), request.id, this.requestRole(request)).subscribe({
+      next: () => {
+        this.busyRequest.set(null);
+        this.requests.update((list) => list.filter((r) => r.id !== request.id));
+        this.toast.success(this.i18n.translate('workspaces.access.approved', { email: request.email }));
+        this.reload();
+      },
+      error: (err: AppError) => {
+        this.busyRequest.set(null);
+        this.toast.error(err.message);
+        this.loadRequests();
+      },
+    });
+  }
+
+  denyRequest(request: AccessRequest): void {
+    this.busyRequest.set(request.id);
+    this.requestsService.denyAccess(this.documentWorkspaceId(), request.id).subscribe({
+      next: () => {
+        this.busyRequest.set(null);
+        this.requests.update((list) => list.filter((r) => r.id !== request.id));
+      },
+      error: (err: AppError) => {
+        this.busyRequest.set(null);
+        this.toast.error(err.message);
+        this.loadRequests();
+      },
+    });
   }
 
   roleLabel(role: DocumentWorkspaceRole): string {

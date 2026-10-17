@@ -255,6 +255,8 @@ public class ArtifactService {
         return switch (request.type()) {
             case SPREADSHEET -> com.sophia.documentworkspace.domain.util.SpreadsheetCodec.emptyWorkbook();
             case CHECKLIST -> "- [ ] ";
+            case PRESENTATION -> com.sophia.documentworkspace.domain.util.PresentationCodec.empty();
+            case WHITEBOARD -> com.sophia.documentworkspace.domain.util.WhiteboardCodec.empty();
             default -> "";
         };
     }

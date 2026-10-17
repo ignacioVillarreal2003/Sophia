@@ -9,6 +9,7 @@ public enum ExportFormat {
     DOCX("application/vnd.openxmlformats-officedocument.wordprocessingml.document", "docx"),
     TXT("text/plain; charset=utf-8", "txt"),
     CSV("text/csv; charset=utf-8", "csv"),
+    PPTX("application/vnd.openxmlformats-officedocument.presentationml.presentation", "pptx"),
     XLSX("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "xlsx"),
     ZIP("application/zip", "zip");
 

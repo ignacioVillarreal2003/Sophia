@@ -11,6 +11,11 @@ public interface WorkspaceMapper {
 
     @Mapping(target = "myRole", source = "myRole")
     @Mapping(target = "logoUrl", expression = "java(logoUrl(workspace))")
+    @Mapping(target = "purgeAt", ignore = true)
+    @Mapping(target = "pinned", ignore = true)
+    @Mapping(target = "lastAccessedAt", ignore = true)
+    @Mapping(target = "labels", ignore = true)
+    @Mapping(target = "stats", ignore = true)
     WorkspaceResponse toResponse(Workspace workspace, WorkspaceRole myRole);
 
     /** The stored value is a storage key; clients get the authenticated endpoint, versioned by the key's file name. */
