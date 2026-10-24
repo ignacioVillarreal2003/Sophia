@@ -100,11 +100,15 @@ public class ArtifactService {
 
     /** Documents of the workspace the caller can read, for note links and pickers. */
     @Transactional(readOnly = true)
-    public List<ArtifactResponse> findDocuments(AuthenticatedUser user, UUID workspaceId, String text, int limit) {
+    public List<ArtifactResponse> findDocuments(AuthenticatedUser user, UUID workspaceId, String text, int limit,
+                                                boolean studySources) {
         WorkspaceAccessSnapshot access = workspaceAuthorization.requireActiveMember(workspaceId, user);
         String query = text == null ? "" : text.trim();
-        return artifactRepository.findDocumentsByName(workspaceId, query,
-                        org.springframework.data.domain.PageRequest.of(0, Math.max(1, Math.min(limit, 200))))
+        var page = org.springframework.data.domain.PageRequest.of(0, Math.max(1, Math.min(limit, 200)));
+        var found = studySources
+                ? artifactRepository.findStudySourcesByName(workspaceId, query, page)
+                : artifactRepository.findDocumentsByName(workspaceId, query, page);
+        return found
                 .stream()
                 .map(artifactMapper::toResponse)
                 .toList();

@@ -1,6 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { IconComponent } from '../icon/icon.component';
-import { TranslatePipe } from '@core/services/i18n/translate.pipe';
+
+/** How many page buttons are on show at most. */
+const PAGES_SHOWN = 8;
 
 /** A page button (0-based `index`) or a collapsed gap between two buttons. */
 type PageItem = { readonly index: number } | { readonly gap: true };
@@ -8,7 +10,7 @@ type PageItem = { readonly index: number } | { readonly gap: true };
 @Component({
   selector: 'app-pagination',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent, TranslatePipe],
+  imports: [IconComponent],
   template: `
     @if (totalPages() > 1) {
       <nav class="pg" aria-label="Pagination">
@@ -39,8 +41,6 @@ type PageItem = { readonly index: number } | { readonly gap: true };
             }
           }
         </div>
-
-        <span class="pg__status">{{ 'pagination.status' | t: { page: page() + 1, total: totalPages() } }}</span>
 
         <button
           type="button"
@@ -149,23 +149,11 @@ export class PaginationComponent {
   readonly last = input.required<boolean>();
   readonly pageChange = output<number>();
 
-  /** First, last and the current page with its neighbours; everything else collapses to a gap. */
+  /** Up to eight page buttons around the current page, sliding as it moves; the two arrows do the rest. */
   readonly items = computed<PageItem[]>(() => {
     const total = this.totalPages();
-    const current = this.page();
-    const keep = new Set<number>([0, total - 1, current - 1, current, current + 1]);
-    const result: PageItem[] = [];
-    let previous = -1;
-    for (const index of [...keep].filter((i) => i >= 0 && i < total).sort((a, b) => a - b)) {
-      if (index - previous === 2) {
-        // A single hidden page is cheaper to show than an ellipsis.
-        result.push({ index: previous + 1 });
-      } else if (index - previous > 2) {
-        result.push({ gap: true });
-      }
-      result.push({ index });
-      previous = index;
-    }
-    return result;
+    const shown = Math.min(PAGES_SHOWN, total);
+    const start = Math.max(0, Math.min(this.page() - Math.floor(PAGES_SHOWN / 2) + 1, total - shown));
+    return Array.from({ length: shown }, (_, i) => ({ index: start + i }));
   });
 }

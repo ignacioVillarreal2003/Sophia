@@ -2,47 +2,41 @@
   padding-block: var(--space-xl);
 }
 
-// Live preview of the row this workspace will have in the list.
+// How the workspace will look: its mark and, beside it, its name, on a soft ground.
 .cw__preview {
   display: flex;
-  align-items: center;
-  gap: var(--space-md);
-  margin-bottom: var(--space-xl);
-  padding: 16px 18px;
+  align-items: flex-start;
+  gap: var(--space-lg);
+  padding: 28px 32px;
   border-radius: var(--radius-md);
-  background: var(--surface-muted);
-  border: 1px dashed var(--border-strong, var(--border));
+  background: var(--surface-sunken);
+  background-image: radial-gradient(color-mix(in srgb, var(--text) 9%, transparent) 1px, transparent 1px);
+  background-size: 14px 14px;
 }
 
-.cw__preview-icon {
-  display: grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  flex-shrink: 0;
-  border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--ws-color) 16%, var(--surface));
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ws-color) 28%, transparent);
-  color: color-mix(in srgb, var(--ws-color) 70%, var(--text));
-  transition: background var(--duration-base) var(--ease-standard),
-    color var(--duration-base) var(--ease-standard),
-    box-shadow var(--duration-base) var(--ease-standard);
+.cw__preview-mark {
+  border-radius: var(--radius-lg);
+
+  // No outline around the mark here.
+  ::ng-deep .wl__mark { box-shadow: none; }
 }
 
 .cw__preview-text {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  align-items: flex-start;
+  gap: 4px;
+  flex: 1;
   min-width: 0;
 }
 
 .cw__preview-name {
-  font-size: var(--type-body-strong-size);
+  font-family: var(--font-display);
+  font-size: 26px;
   font-weight: 600;
+  letter-spacing: -0.01em;
   color: var(--text);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 
   &--empty {
     color: var(--text-subtle);
@@ -51,11 +45,12 @@
 }
 
 .cw__preview-desc {
-  font-size: 13px;
-  color: var(--text-subtle);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-size: var(--type-body-size);
+  line-height: 1.55;
+  color: var(--text-muted);
+  // The whole text, with the line breaks the person typed.
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .cw__field {
@@ -110,36 +105,26 @@
   &:active { transform: scale(0.94); }
 }
 
-.cw__templates {
+// ---- the marks to choose from ----
+.cw__patterns {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr));
+  grid-template-columns: repeat(auto-fill, 84px);
   gap: 10px;
 }
 
-.cw__template {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 6px;
-  padding: 14px;
-  border: none;
-  border-radius: var(--radius-md);
-  background: var(--surface);
-  box-shadow: inset 0 0 0 1px var(--border);
-  color: var(--text);
-  text-align: left;
+.cw__pattern {
+  display: grid;
+  place-items: center;
+  width: 84px;
+  height: 84px;
+  border-radius: var(--radius-lg);
   cursor: pointer;
-  transition: box-shadow var(--duration-fast) var(--ease-standard), background var(--duration-fast) var(--ease-standard);
 
-  &:hover { box-shadow: inset 0 0 0 1px var(--border-strong); }
-  &:focus-visible { outline: none; box-shadow: var(--focus-ring); }
-
-  &--active {
-    background: color-mix(in srgb, var(--accent) 8%, var(--surface));
-    box-shadow: inset 0 0 0 2px var(--accent);
-  }
+  &:hover:not(.cw__pattern--on) { background: var(--surface-muted); }
+  &:focus-visible { outline: 2px solid var(--accent-focus); outline-offset: 2px; }
+  &--on { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--text); }
 }
 
-.cw__template-icon { color: var(--accent); }
-.cw__template-name { font-size: var(--type-body-strong-size); font-weight: 600; }
-.cw__template-desc { font-size: var(--type-fine-size); color: var(--text-subtle); line-height: 1.4; }
+.cw__card {
+  margin-bottom: var(--space-lg);
+}

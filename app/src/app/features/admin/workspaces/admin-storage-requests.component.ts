@@ -13,6 +13,7 @@ import { PageHeaderComponent } from '@shared/ui/page-header/page-header.componen
 import { PaginationComponent } from '@shared/ui/pagination/pagination.component';
 import { SpinnerComponent } from '@shared/ui/spinner/spinner.component';
 import { WorkspaceRequestsService } from '@features/document-workspace/data/workspace-extras.service';
+import { bindUrlState } from '@shared/utils/url-state';
 
 const TABS: RequestStatus[] = ['PENDING', 'APPROVED', 'DENIED'];
 
@@ -168,6 +169,12 @@ export class AdminStorageRequestsComponent implements OnInit {
   readonly loading = signal(true);
   readonly busyId = signal<string | null>(null);
   readonly page = signal(0);
+
+  /** The address and this state are one: filters, order and page are read from it and kept in it. */
+  private readonly urlState = bindUrlState([
+    { signal: this.status, param: 'status', allowed: ['PENDING', 'APPROVED', 'REJECTED'] },
+    { signal: this.page, param: 'page', page: true },
+  ]);
   readonly totalPages = signal(0);
   readonly first = signal(true);
   readonly last = signal(true);

@@ -9,20 +9,18 @@ import com.sophia.documentworkspace.infrastructure.repository.WorkspaceRepositor
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Duration;
-import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.UUID;
 
 /**
- * Trashed workspaces live for a fixed number of days. A few days before the end the owner gets one warning; once the
+ * Trashed workspaces live for as many days as their owner chose (the deployment default when they did not). A few days before the end the owner gets one warning; once the
  * time is up the workspace and everything in it is erased for good. Each workspace is handled in its own transaction
  * so one failure cannot hold back the rest.
  */
@@ -40,6 +38,7 @@ public class WorkspacePurgeJob {
     private final DomainEventPublisher eventPublisher;
     private final WorkspaceAccessCache accessCache;
     private final ApplicationProperties properties;
+    private final UserWorkspacePreferencesService preferences;
     private final TransactionTemplate transactions;
 
     @Scheduled(cron = "0 30 4 * * *")
@@ -50,11 +49,10 @@ public class WorkspacePurgeJob {
     }
 
     void warnOwners() {
-        Duration keep = Duration.ofDays(properties.retention().workspaceTrashDays());
-        Duration warn = Duration.ofDays(properties.retention().workspacePurgeWarningDays());
-        Instant now = Instant.now();
-        List<Workspace> due = workspaceRepository.findToWarn(now.minus(keep.minus(warn)), now.minus(keep));
+        List<Workspace> due = workspaceRepository.findToWarn(preferences.defaultDays(),
+                properties.retention().workspacePurgeWarningDays());
         for (Workspace candidate : due) {
+            Duration keep = Duration.ofDays(preferences.trashRetentionDays(candidate.getOwnerId()));
             try {
                 transactions.executeWithoutResult(status -> workspaceRepository.findById(candidate.getId())
                         .filter(w -> w.isDeleted() && w.getPurgeWarningSentAt() == null)
@@ -72,12 +70,11 @@ public class WorkspacePurgeJob {
     }
 
     void purgeExpired() {
-        Instant cutoff = Instant.now().minus(Duration.ofDays(properties.retention().workspaceTrashDays()));
         int purged = 0;
         int failed = 0;
         List<Workspace> batch;
         do {
-            batch = workspaceRepository.findAllByDeletedAtIsNotNullAndDeletedAtBefore(cutoff, PageRequest.of(failed, BATCH));
+            batch = workspaceRepository.findExpired(preferences.defaultDays(), BATCH);
             for (Workspace workspace : batch) {
                 UUID id = workspace.getId();
                 try {

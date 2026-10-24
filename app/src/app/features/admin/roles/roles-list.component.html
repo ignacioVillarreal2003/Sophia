@@ -9,6 +9,7 @@
   <input
     class="rls__search-input"
     type="search"
+    [attr.value]="search()"
     [placeholder]="'admin.roles.searchPlaceholder' | t"
     (input)="onSearchInput($any($event.target).value)"
   />

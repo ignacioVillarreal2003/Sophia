@@ -9,20 +9,15 @@ export const DOCUMENT_WORKSPACE_ROUTES: Routes = [
         (m) => m.DocumentWorkspacesListComponent,
       ),
   },
+  // Favorites are a filter of the main list now; the old address lands there with it applied.
+  { path: 'favorites', redirectTo: '/document-workspaces?fav=true', pathMatch: 'full' },
   {
-    // Same list, restricted to the workspaces the user pinned.
-    path: 'favorites',
-    data: { pinnedOnly: true },
-    loadComponent: () =>
-      import('./document-workspaces-list/document-workspaces-list.component').then(
-        (m) => m.DocumentWorkspacesListComponent,
-      ),
+    // Workspaces other people invited the caller to; accepting makes them a member.
+    path: 'invitations',
+    loadComponent: () => import('./invitations/invitations.component').then((m) => m.InvitationsComponent),
   },
-  {
-    path: 'activity',
-    loadComponent: () =>
-      import('./activity-feed/activity-feed.component').then((m) => m.ActivityFeedComponent),
-  },
+  // The preferences page is gone; a saved link to it lands on the list instead of being read as a workspace.
+  { path: 'preferences', redirectTo: '', pathMatch: 'full' },
   {
     path: 'new',
     loadComponent: () =>

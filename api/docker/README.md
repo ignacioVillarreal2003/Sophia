@@ -10,9 +10,10 @@ y unidos por una única red externa de Docker (`sophia`).
 | `docker-compose.authentication.yml` | API de autenticación | 8080 |
 | `docker-compose.document-workspace.yml` | API de gestión documental (+ websocket `/ws`) | 8081 |
 | `docker-compose.notification.yml` | API de notificaciones (in-app + email) | 8082 |
+| `docker-compose.ai.yml` | API de IA (generación de contenido y chat con documentos) | 8083 |
 
 Cada API mantiene su `Dockerfile` en su propio directorio (`api/authentication`,
-`api/document-workspace`, `api/notification`); estos composes solo los construyen.
+`api/document-workspace`, `api/notification`, `api/ai`); estos composes solo los construyen.
 
 > **Puertos:** este proyecto usa los mismos puertos de host que Lumen (y que Miga).
 > Si querés correr varios a la vez, cambiá los puertos publicados de uno; los
@@ -32,6 +33,7 @@ docker compose -f docker-compose.infrastructure.yml up -d --wait
 docker compose -f docker-compose.authentication.yml up -d --build
 docker compose -f docker-compose.document-workspace.yml up -d --build
 docker compose -f docker-compose.notification.yml up -d --build
+docker compose -f docker-compose.ai.yml up -d --build
 ```
 
 **PowerShell:** igual, pero los `.sh` se llaman con `bash ./scripts/init.sh`.
@@ -68,7 +70,7 @@ va en `api/<servicio>/.env` (ver sus `.env.example`).
 | `scripts/init-storage.sh` | Crea los buckets de MinIO con versionado |
 | `scripts/init.sh` | Corre los dos anteriores |
 
-Bases: `sophia_authentication`, `sophia_document_workspace`, `sophia_notification`.
+Bases: `sophia_authentication`, `sophia_document_workspace`, `sophia_notification`, `sophia_ai`.
 
 ## URLs útiles
 
@@ -77,6 +79,7 @@ Bases: `sophia_authentication`, `sophia_document_workspace`, `sophia_notificatio
 | Authentication API / Swagger | http://localhost:8080/swagger-ui.html |
 | Document API / Swagger | http://localhost:8081/swagger-ui.html |
 | Notification API / Swagger | http://localhost:8082/swagger-ui.html |
+| AI API / Swagger | http://localhost:8083/swagger-ui.html |
 | Grafana (admin/admin) | http://localhost:3001 |
 | Prometheus | http://localhost:9090 |
 | MailHog | http://localhost:8025 |
@@ -89,6 +92,7 @@ Bases: `sophia_authentication`, `sophia_document_workspace`, `sophia_notificatio
 docker compose -f docker-compose.infrastructure.yml ps
 docker logs -f sophia-document-workspace-api
 
+docker compose -f docker-compose.ai.yml down
 docker compose -f docker-compose.notification.yml down
 docker compose -f docker-compose.document-workspace.yml down
 docker compose -f docker-compose.authentication.yml down

@@ -1,0 +1,32 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: sophia-ai
+  labels:
+    app.kubernetes.io/name: sophia-ai
+    release: prometheus
+spec:
+  groups:
+    - name: sophia-ai
+      rules:
+        - alert: AiGenerationFailures
+          expr: >-
+            sum(increase(ai_generations_total{application="ai", status="FAILED"}[15m]))
+            / clamp_min(sum(increase(ai_generations_total{application="ai"}[15m])), 1) > 0.25
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: More than a quarter of AI generations are failing
+            description: >-
+              Check the provider status and the UPSTREAM_ERROR / AI_NOT_CONFIGURED codes in the AI API logs.
+
+        - alert: AiTokenSpendSpike
+          expr: sum(increase(ai_tokens_total{application="ai"}[1h])) > 5000000
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: The AI service spent more than 5M tokens in the last hour
+            description: >-
+              Look at /admin/ai (usage per user and per feature) and lower the daily limits if it is abuse.

@@ -40,3 +40,13 @@ scrape_configs:
       - targets: ['sophia-notification-api:8082']
         labels:
           service: notification
+
+  - job_name: ai
+    metrics_path: /actuator/prometheus
+    basic_auth:
+      username: prometheus
+      password: prometheus
+    static_configs:
+      - targets: ['sophia-ai-api:8083']
+        labels:
+          service: ai

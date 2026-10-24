@@ -13,7 +13,6 @@ import {
   viewChild,
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { CdkContextMenuTrigger, CdkMenu, CdkMenuItem, CdkMenuTrigger } from '@angular/cdk/menu';
 import { Subject, debounceTime, distinctUntilChanged, switchMap } from 'rxjs';
 import {
   DocumentWorkspace,
@@ -28,13 +27,10 @@ import { TranslatePipe } from '@core/services/i18n/translate.pipe';
 import { TranslationService } from '@core/services/i18n';
 import { ToastService } from '@core/services/toast.service';
 import { RelativeTimePipe } from '@shared/pipes/relative-time.pipe';
-import { FileSizePipe } from '@shared/pipes/file-size.pipe';
+import { DatePipe } from '@angular/common';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { ButtonComponent } from '@shared/ui/button/button.component';
-import { CardComponent } from '@shared/ui/card/card.component';
 import { IconComponent } from '@shared/ui/icon/icon.component';
-import { AvatarComponent } from '@shared/ui/avatar/avatar.component';
-import { BadgeComponent } from '@shared/ui/badge/badge.component';
 import { SpinnerComponent } from '@shared/ui/spinner/spinner.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { FilterToggleComponent } from '@shared/ui/filter-toggle/filter-toggle.component';
@@ -48,20 +44,15 @@ import {
 import { PaginationComponent } from '@shared/ui/pagination/pagination.component';
 import { WorkspaceLogoComponent } from '../ui/workspace-logo.component';
 import { DocumentWorkspaceService } from '../data/document-workspace.service';
-import { WorkspaceListPrefsService } from '../data/workspace-list-prefs.service';
-import { WorkspaceActivityService, WorkspaceLabelService } from '../data/workspace-extras.service';
 import { DuplicateWorkspaceDialogComponent, DuplicateWorkspaceData } from '../list-dialogs/duplicate-workspace-dialog.component';
 import { DeleteWorkspaceDialogComponent, DeleteWorkspaceData } from '../list-dialogs/delete-workspace-dialog.component';
 import { TransferOwnershipDialogComponent, TransferOwnershipData } from '../list-dialogs/transfer-ownership-dialog.component';
-import { WorkspaceLabelsDialogComponent, WorkspaceLabelsData } from '../list-dialogs/workspace-labels-dialog.component';
 import { StorageRequestDialogComponent, StorageRequestData } from '../list-dialogs/storage-request-dialog.component';
 
 const ROLES: DocumentWorkspaceRole[] = ['ADMIN', 'EDITOR', 'VIEWER'];
 const STATUSES: DocumentWorkspaceStatus[] = ['ACTIVE', 'READ_ONLY', 'SUSPENDED'];
 const LIST_PAGE_SIZE = 20;
-const CARDS_PAGE_SIZE = 12;
 /** Storage usage from which a workspace is flagged as almost full. */
-const QUOTA_WARN = 0.8;
 
 interface SortOption {
   readonly key: WorkspaceSortKey;
@@ -89,30 +80,22 @@ function dayStart(value: string, addDays = 0): string | undefined {
 /**
  * The user's workspaces: a plain list or detailed cards (chosen from the sidebar), with search, ownership tabs,
  * role/date/label filters, sorting, favorites and a menu (⋮ or right-click) for the things you do to a workspace.
- * The favorites page is this same component with `pinnedOnly`.
  */
 @Component({
   selector: 'app-document-workspaces-list',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     RouterLink,
-    CdkContextMenuTrigger,
-    CdkMenu,
-    CdkMenuItem,
-    CdkMenuTrigger,
     PageHeaderComponent,
     ButtonComponent,
-    CardComponent,
     WorkspaceLogoComponent,
     IconComponent,
-    AvatarComponent,
-    BadgeComponent,
     SpinnerComponent,
     EmptyStateComponent,
     FilterToggleComponent,
     PaginationComponent,
+    DatePipe,
     RelativeTimePipe,
-    FileSizePipe,
     TranslatePipe,
   ],
   templateUrl: './document-workspaces-list.component.html',
@@ -120,9 +103,6 @@ function dayStart(value: string, addDays = 0): string | undefined {
 })
 export class DocumentWorkspacesListComponent implements OnInit, AfterViewInit {
   private readonly workspaces = inject(DocumentWorkspaceService);
-  private readonly prefs = inject(WorkspaceListPrefsService);
-  private readonly labelService = inject(WorkspaceLabelService);
-  private readonly activity = inject(WorkspaceActivityService);
   private readonly auth = inject(AuthenticationService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
@@ -131,29 +111,23 @@ export class DocumentWorkspacesListComponent implements OnInit, AfterViewInit {
   private readonly toast = inject(ToastService);
 
   private readonly searchInputEl = viewChild<ElementRef<HTMLInputElement>>('searchInput');
-  private readonly restoreInputEl = viewChild<ElementRef<HTMLInputElement>>('restoreInput');
-
-  /** Set by the favorites route: only the workspaces the user pinned. */
-  readonly pinnedOnly = input(false);
 
   readonly items = signal<DocumentWorkspace[]>([]);
   readonly loading = signal(true);
-  readonly restoring = signal(false);
   readonly page = signal(0);
   readonly totalPages = signal(0);
   readonly totalElements = signal(0);
   readonly first = signal(true);
   readonly last = signal(true);
 
-  readonly view = this.prefs.view;
-  readonly labels = this.labelService.labels;
-  readonly unread = this.activity.unreadByWorkspace;
+
 
   readonly search = signal('');
   readonly ownership = signal<OwnershipTab>('');
+  /** Only the workspaces the user pinned (a filter like the others). */
+  readonly favorites = signal(false);
   readonly role = signal<string>('');
   readonly status = signal<string>('');
-  readonly labelId = signal<string>('');
   readonly createdFrom = signal('');
   readonly createdTo = signal('');
   readonly activeFrom = signal('');
@@ -171,38 +145,24 @@ export class DocumentWorkspacesListComponent implements OnInit, AfterViewInit {
 
   readonly filterCount = computed(
     () =>
+      (this.ownership() ? 1 : 0) +
+      (this.favorites() ? 1 : 0) +
       (this.role() ? 1 : 0) +
       (this.status() ? 1 : 0) +
-      (this.labelId() ? 1 : 0) +
       (this.createdFrom() || this.createdTo() ? 1 : 0) +
       (this.activeFrom() || this.activeTo() ? 1 : 0),
   );
   readonly hasCriteria = computed(() => !!this.search() || this.filterCount() > 0 || !!this.ownership());
 
-  readonly title = computed(() => this.i18n.translate(this.pinnedOnly() ? 'nav.favorites' : 'nav.documentWorkspaces'));
+  readonly title = computed(() => this.i18n.translate('nav.documentWorkspaces'));
   readonly currentUserId = computed(() => this.auth.user()?.id ?? null);
 
   private readonly searchInput$ = new Subject<string>();
   private readonly refresh$ = new Subject<void>();
   private started = false;
 
-  constructor() {
-    // Switching between list and cards in the sidebar changes what the server must return (cards carry stats).
-    effect(() => {
-      this.view();
-      untracked(() => {
-        if (this.started) {
-          this.page.set(0);
-          this.refresh$.next();
-        }
-      });
-    });
-  }
-
   ngOnInit(): void {
     this.restoreFromUrl();
-    this.labelService.load().subscribe({ error: () => undefined });
-    this.activity.refreshUnread().subscribe({ error: () => undefined });
 
     this.searchInput$.pipe(debounceTime(300), distinctUntilChanged()).subscribe((value) => {
       this.search.set(value);
@@ -255,9 +215,9 @@ export class DocumentWorkspacesListComponent implements OnInit, AfterViewInit {
     this.page.set(Number.isFinite(page) && page > 0 ? page : 0);
     const own = p.get('own');
     this.ownership.set(own === 'MINE' || own === 'SHARED' ? own : '');
+    this.favorites.set(p.get('fav') === 'true');
     this.role.set(ROLES.includes(p.get('role') as DocumentWorkspaceRole) ? (p.get('role') as string) : '');
     this.status.set(STATUSES.includes(p.get('status') as DocumentWorkspaceStatus) ? (p.get('status') as string) : '');
-    this.labelId.set(p.get('label') ?? '');
     this.createdFrom.set(p.get('cf') ?? '');
     this.createdTo.set(p.get('ct') ?? '');
     this.activeFrom.set(p.get('af') ?? '');
@@ -267,21 +227,23 @@ export class DocumentWorkspacesListComponent implements OnInit, AfterViewInit {
     if (known) {
       this.sortKey.set(known.key);
       this.desc.set(p.has('desc') ? p.get('desc') === 'true' : known.desc);
+    } else {
+      this.sortKey.set('ACCESSED');
+      this.desc.set(true);
     }
   }
 
   private syncUrl(): void {
-    const defaultSort = SORTS[0];
-    const isDefaultSort = this.sortKey() === defaultSort.key && this.desc() === defaultSort.desc;
+    const isDefaultSort = this.sortKey() === 'ACCESSED' && this.desc();
     this.router.navigate([], {
       relativeTo: this.route,
       replaceUrl: true,
       queryParams: {
         q: this.search() || null,
         own: this.ownership() || null,
+        fav: this.favorites() ? 'true' : null,
         role: this.role() || null,
         status: this.status() || null,
-        label: this.labelId() || null,
         cf: this.createdFrom() || null,
         ct: this.createdTo() || null,
         af: this.activeFrom() || null,
@@ -294,7 +256,7 @@ export class DocumentWorkspacesListComponent implements OnInit, AfterViewInit {
   }
 
   private pageSize(): number {
-    return this.view() === 'cards' ? CARDS_PAGE_SIZE : LIST_PAGE_SIZE;
+    return LIST_PAGE_SIZE;
   }
 
   private buildQuery(): DocumentWorkspaceListQuery {
@@ -305,15 +267,13 @@ export class DocumentWorkspacesListComponent implements OnInit, AfterViewInit {
       ownership: this.ownership() || undefined,
       role: (this.role() || undefined) as DocumentWorkspaceRole | undefined,
       status: (this.status() || undefined) as DocumentWorkspaceStatus | undefined,
-      labelId: this.labelId() || undefined,
-      pinned: this.pinnedOnly() || undefined,
+      pinned: this.favorites() || undefined,
       createdFrom: dayStart(this.createdFrom()),
       createdTo: dayStart(this.createdTo(), 1),
       activeFrom: dayStart(this.activeFrom()),
       activeTo: dayStart(this.activeTo(), 1),
       sort: this.sortKey(),
       desc: this.desc(),
-      stats: this.view() === 'cards',
     };
   }
 
@@ -326,25 +286,36 @@ export class DocumentWorkspacesListComponent implements OnInit, AfterViewInit {
     this.searchInput$.next(value);
   }
 
-  setOwnership(value: OwnershipTab): void {
-    if (this.ownership() === value) return;
-    this.ownership.set(value);
-    this.reload();
-  }
-
-  toggleLabel(id: string): void {
-    this.labelId.set(this.labelId() === id ? '' : id);
-    this.reload();
-  }
-
-  chooseSort(option: SortOption): void {
-    if (this.sortKey() === option.key) {
-      this.desc.update((d) => !d);
-    } else {
-      this.sortKey.set(option.key);
-      this.desc.set(option.desc);
-    }
-    this.reload();
+  /** The order is chosen in a dialog, like the filters: what to order by, and which way. */
+  openSort(): void {
+    const t = (key: string) => this.i18n.translate(key);
+    const ref = this.dialog.open<FiltersDialogComponent, FiltersDialogData, FiltersDialogResult | undefined>(FiltersDialogComponent, {
+      data: {
+        title: t('workspaces.sort.label'),
+        fields: [
+              { key: 'sort', type: 'select', label: t('workspaces.sort.by'), options: SORTS.map((o) => ({ value: o.key, label: t(`workspaces.sort.${o.key}`) })) },
+              {
+                key: 'dir',
+                type: 'select',
+                label: t('workspaces.sort.direction'),
+                options: [
+                  { value: 'asc', label: t('workspaces.sort.asc') },
+                  { value: 'desc', label: t('workspaces.sort.desc') },
+                ],
+              },
+            ],
+        applyLabel: t('workspaces.sort.apply'),
+        clearLabel: t('workspaces.sort.reset'),
+        values: { sort: this.sortKey(), dir: this.desc() ? 'desc' : 'asc' },
+      },
+    });
+    ref.closed.subscribe((result) => {
+      if (!result) return;
+      const known = SORTS.find((o) => o.key === result['sort']);
+      this.sortKey.set(known?.key ?? 'ACCESSED');
+      this.desc.set(result['dir'] ? result['dir'] === 'desc' : (known ?? SORTS[0]).desc);
+      this.reload();
+    });
   }
 
   clearAll(): void {
@@ -352,9 +323,9 @@ export class DocumentWorkspacesListComponent implements OnInit, AfterViewInit {
     const el = this.searchInputEl()?.nativeElement;
     if (el) el.value = '';
     this.ownership.set('');
+    this.favorites.set(false);
     this.role.set('');
     this.status.set('');
-    this.labelId.set('');
     this.createdFrom.set('');
     this.createdTo.set('');
     this.activeFrom.set('');
@@ -379,9 +350,18 @@ export class DocumentWorkspacesListComponent implements OnInit, AfterViewInit {
             {
               label: t('workspaces.filter.tab.general'),
               fields: [
+                { key: 'ownership', type: 'select', label: t('workspaces.filter.ownership'), options: this.ownershipOptions() },
+                {
+                  key: 'favorites',
+                  type: 'select',
+                  label: t('workspaces.filter.favorites'),
+                  options: [
+                    { value: '', label: t('workspaces.filter.favorites.all') },
+                    { value: 'true', label: t('workspaces.filter.favorites.only') },
+                  ],
+                },
                 { key: 'role', type: 'select', label: t('documentWorkspaces.filter.role'), options: this.roleOptions() },
                 { key: 'status', type: 'select', label: t('documentWorkspaces.filter.status'), options: this.statusOptions() },
-                { key: 'label', type: 'select', label: t('workspaces.filter.label'), options: this.labelOptions() },
               ],
             },
             {
@@ -404,9 +384,10 @@ export class DocumentWorkspacesListComponent implements OnInit, AfterViewInit {
             },
           ],
           values: {
+            ownership: this.ownership(),
+            favorites: this.favorites() ? 'true' : '',
             role: this.role(),
             status: this.status(),
-            label: this.labelId(),
             createdFrom: this.createdFrom(),
             createdTo: this.createdTo(),
             activeFrom: this.activeFrom(),
@@ -418,15 +399,20 @@ export class DocumentWorkspacesListComponent implements OnInit, AfterViewInit {
     ref.closed.subscribe((result) => {
       this.filtersOpen.set(false);
       if (!result) return;
+      this.ownership.set((result['ownership'] ?? '') as OwnershipTab);
+      this.favorites.set(result['favorites'] === 'true');
       this.role.set(result['role'] ?? '');
       this.status.set(result['status'] ?? '');
-      this.labelId.set(result['label'] ?? '');
       this.createdFrom.set(result['createdFrom'] ?? '');
       this.createdTo.set(result['createdTo'] ?? '');
       this.activeFrom.set(result['activeFrom'] ?? '');
       this.activeTo.set(result['activeTo'] ?? '');
       this.reload();
     });
+  }
+
+  private ownershipOptions(): SelectOption[] {
+    return this.tabs.map((tab) => ({ value: tab.value, label: this.i18n.translate(tab.label) }));
   }
 
   private roleOptions(): SelectOption[] {
@@ -443,52 +429,14 @@ export class DocumentWorkspacesListComponent implements OnInit, AfterViewInit {
     ];
   }
 
-  private labelOptions(): SelectOption[] {
-    return [
-      { value: '', label: this.i18n.translate('workspaces.filter.allLabels') },
-      ...this.labels().map((l) => ({ value: l.id, label: l.name })),
-    ];
-  }
-
   // ---- per-item helpers ---------------------------------------------------------------------------------------
 
   isOwner(ws: DocumentWorkspace): boolean {
     return !!this.currentUserId() && ws.ownerId === this.currentUserId();
   }
 
-  unreadOf(ws: DocumentWorkspace): number {
-    return this.unread()[ws.id] ?? 0;
-  }
-
   roleLabel(role: DocumentWorkspaceRole): string {
     return this.i18n.translate(`documentWorkspace.role.${role}`);
-  }
-
-  /** Fraction of the quota in use, or null when there is no limit (or no stats were loaded). */
-  quotaRatio(ws: DocumentWorkspace): number | null {
-    const stats = ws.stats;
-    if (!stats || stats.quotaMb == null || stats.quotaMb <= 0) return null;
-    return stats.usedBytes / (stats.quotaMb * 1024 * 1024);
-  }
-
-  quotaState(ws: DocumentWorkspace): 'ok' | 'warn' | 'full' {
-    const ratio = this.quotaRatio(ws);
-    if (ratio == null) return 'ok';
-    return ratio >= 1 ? 'full' : ratio >= QUOTA_WARN ? 'warn' : 'ok';
-  }
-
-  quotaWidth(ws: DocumentWorkspace): number {
-    return Math.min(100, Math.round((this.quotaRatio(ws) ?? 0) * 100));
-  }
-
-  quotaText(ws: DocumentWorkspace): string {
-    const mb = ws.stats?.quotaMb;
-    if (mb == null) return this.i18n.translate('workspaces.card.unlimited');
-    return mb >= 1024 ? `${+(mb / 1024).toFixed(1)} GB` : `${mb} MB`;
-  }
-
-  memberName(member: { displayName: string | null; email: string }): string {
-    return member.displayName || member.email;
   }
 
   // ---- actions -----------------------------------------------------------------------------------------------
@@ -509,26 +457,6 @@ export class DocumentWorkspacesListComponent implements OnInit, AfterViewInit {
         this.refresh$.next();
       },
       error: (err) => this.toast.error(err.message),
-    });
-  }
-
-  editLabels(ws: DocumentWorkspace): void {
-    const ref = this.dialog.open<WorkspaceLabelsDialogComponent, WorkspaceLabelsData, boolean>(WorkspaceLabelsDialogComponent, {
-      data: { workspace: ws },
-    });
-    ref.closed.subscribe((changed) => {
-      if (changed) this.refresh$.next();
-    });
-  }
-
-  manageLabels(): void {
-    const ref = this.dialog.open<WorkspaceLabelsDialogComponent, WorkspaceLabelsData, boolean>(WorkspaceLabelsDialogComponent, {
-      data: {},
-    });
-    ref.closed.subscribe(() => {
-      // A deleted label that was the active filter would leave an empty list nobody can explain.
-      if (this.labelId() && !this.labels().some((l) => l.id === this.labelId())) this.labelId.set('');
-      this.refresh$.next();
     });
   }
 
@@ -601,31 +529,6 @@ export class DocumentWorkspacesListComponent implements OnInit, AfterViewInit {
         action: { label: this.i18n.translate('workspaces.toast.viewTrash'), run: () => this.router.navigate(['/document-workspaces/trash']) },
       });
       this.refresh$.next();
-    });
-  }
-
-  pickBackup(): void {
-    this.restoreInputEl()?.nativeElement.click();
-  }
-
-  onBackupPicked(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
-    input.value = '';
-    if (!file || this.restoring()) return;
-    this.restoring.set(true);
-    this.workspaces.restoreArchive(file).subscribe({
-      next: (result) => {
-        this.restoring.set(false);
-        this.toast.success(this.i18n.translate('workspaces.toast.restored', { name: result.workspace.name, count: result.artifacts }), {
-          action: { label: this.i18n.translate('common.open'), run: () => this.open(result.workspace) },
-        });
-        this.refresh$.next();
-      },
-      error: (err) => {
-        this.restoring.set(false);
-        this.toast.error(err.message);
-      },
     });
   }
 }

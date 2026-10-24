@@ -3,47 +3,60 @@
 } @else if (artifact(); as art) {
   <div class="dv" [class.dv--paneled]="panel() !== 'none'">
     <div class="dv__main">
-      <!-- Toolbar -->
-      <div class="dv__toolbar">
-        <div class="dv__toolbar-left">
-          <input
-            class="dv__title"
-            [value]="title()"
-            [readOnly]="!canEdit()"
-            [attr.aria-label]="'documentView.title' | t"
-            (input)="title.set($any($event.target).value)"
-            (blur)="rename()"
-            (keydown.enter)="$any($event.target).blur()"
+      <!-- Header: back, the title (read only here), and the actions -->
+      <header class="dv__header">
+        <div class="dv__header-left">
+          <app-button
+            class="dv__back"
+            variant="text"
+            size="sm"
+            icon="arrow-left"
+            iconOnly
+            [routerLink]="backUrl()"
+            [attr.aria-label]="'common.back' | t"
           />
-          @if (isText()) {
-            @switch (saveState()) {
-              @case ('saving') { <span class="dv__state">{{ 'documentView.saving' | t }}</span> }
-              @case ('dirty') { <span class="dv__state">{{ 'documentView.unsaved' | t }}</span> }
-              @case ('error') {
-                <span class="dv__state dv__state--error">{{ 'documentView.saveError' | t }}
-                  <button type="button" class="dv__link" (click)="retrySave()">{{ 'documentView.retry' | t }}</button>
-                </span>
-              }
-              @case ('conflict') { <span class="dv__state dv__state--error">{{ 'documentView.conflict' | t }}</span> }
-              @default { <span class="dv__state dv__state--ok">{{ 'documentView.saved' | t: { time: (art.updatedAt | relativeTime) } }}</span> }
-            }
-          }
-          @if (!canEdit() && isText()) {
-            <span class="dv__state">{{ 'markdown.readonly' | t }}</span>
-          }
+          <h1 class="dv__title" [title]="art.name">{{ art.name }}</h1>
         </div>
 
-        <div class="dv__toolbar-right">
+        <div class="dv__header-right">
           <app-presence-bar [users]="presence()" />
-          <app-button variant="text" size="sm" [icon]="isFavorite() ? 'star-filled' : 'star'" iconOnly (click)="toggleFavorite()" />
-          <app-button variant="text" size="sm" icon="share" iconOnly (click)="openShare()" />
-          @if (isText()) {
-            <app-button variant="text" size="sm" icon="download" iconOnly [cdkMenuTriggerFor]="exportMenu" />
-            <app-button variant="text" size="sm" icon="message-circle" iconOnly [class.is-active]="panel() === 'comments'" (click)="togglePanel('comments')" />
-            <app-button variant="text" size="sm" icon="history" iconOnly [class.is-active]="panel() === 'history'" (click)="togglePanel('history')" />
+          @if (isText() && canEdit()) {
+            <app-button
+              variant="dark"
+              size="sm"
+              class="dv__save"
+              [disabled]="saveState() === 'saved' || saveState() === 'saving'"
+              [loading]="saveState() === 'saving'"
+              (click)="saveNow()"
+            >
+              {{ 'common.save' | t }}
+            </app-button>
           }
+          <app-button
+            variant="text"
+            size="sm"
+            [icon]="isFavorite() ? 'star-filled' : 'star'"
+            iconOnly
+            [attr.aria-label]="'explorer.menu.star' | t"
+            (click)="toggleFavorite()"
+          />
+          @if (isText()) {
+            <app-button variant="text" size="sm" icon="download" iconOnly [attr.aria-label]="'documentView.exportAs' | t" [cdkMenuTriggerFor]="exportMenu" />
+          } @else if (isFile()) {
+            <app-button variant="text" size="sm" icon="download" iconOnly [attr.aria-label]="'documentView.download' | t" (click)="downloadFile()" />
+          }
+          <app-button
+            variant="text"
+            size="sm"
+            icon="sparkles"
+            iconOnly
+            [attr.aria-label]="'ai.assistant.title' | t"
+            [class.is-active]="panel() === 'ai'"
+            (click)="openAi()"
+          />
+          <app-button variant="text" size="sm" icon="more-vertical" iconOnly [attr.aria-label]="'documentView.options' | t" [routerLink]="optionsUrl()" />
         </div>
-      </div>
+      </header>
 
       @if (saveState() === 'conflict') {
         <div class="dv__banner" role="alert">
@@ -97,21 +110,62 @@
           <app-file-viewer [documentWorkspaceId]="documentWorkspaceId()" [artifact]="art" />
         }
       </div>
+
+      <!-- Footer: how the document stands -->
+      <footer class="dv__footer">
+        <span class="dv__f-state dv__f-state--{{ saveState() }}">
+          <span class="dv__dot"></span>
+          @if (isText()) {
+            @switch (saveState()) {
+              @case ('saving') { {{ 'documentView.saving' | t }} }
+              @case ('dirty') { {{ 'documentView.unsaved' | t }} }
+              @case ('error') {
+                {{ 'documentView.saveError' | t }}
+                <button type="button" class="dv__link" (click)="retrySave()">{{ 'documentView.retry' | t }}</button>
+              }
+              @case ('conflict') { {{ 'documentView.conflict' | t }} }
+              @default { {{ 'documentView.saved' | t: { time: (art.updatedAt | relativeTime) } }} }
+            }
+          } @else {
+            {{ 'documentView.updated' | t: { time: (art.updatedAt | relativeTime) } }}
+          }
+        </span>
+        <span class="dv__f-item">{{ 'shared.type.' + art.type | t }}</span>
+        @if (isText() && art.contentVersion) {
+          <span class="dv__f-item">{{ 'documentView.footer.version' | t: { n: art.contentVersion } }}</span>
+        }
+        @if (art.sizeBytes) {
+          <span class="dv__f-item">{{ art.sizeBytes | fileSize }}</span>
+        }
+        <span class="dv__f-item dv__f-item--wide">{{ 'documentView.footer.created' | t: { time: (art.createdAt | relativeTime) } }}</span>
+        <span class="dv__f-spacer"></span>
+        @if (!canEdit()) {
+          <span class="dv__f-item dv__f-item--tag">{{ 'markdown.readonly' | t }}</span>
+        }
+      </footer>
     </div>
 
     <!-- Side panel -->
     @if (panel() === 'comments') {
       <aside class="dv__panel">
-        <app-comment-thread [documentWorkspaceId]="documentWorkspaceId()" [artifactId]="artifactId()" (close)="panel.set('none')" />
+        <app-comment-thread [documentWorkspaceId]="documentWorkspaceId()" [artifactId]="artifactId()" [closable]="true" (close)="panel.set('none')" />
       </aside>
     } @else if (panel() === 'history') {
       <aside class="dv__panel">
         <app-revision-history
           [documentWorkspaceId]="documentWorkspaceId()"
           [documentId]="artifactId()"
-          [currentContent]="isStructured() ? '' : text()"
           (close)="panel.set('none')"
           (restored)="onRevisionRestored()"
+        />
+      </aside>
+    } @else if (panel() === 'ai') {
+      <aside class="dv__panel">
+        <app-ai-assistant-panel
+          [workspaceId]="documentWorkspaceId()"
+          [editor]="editor()"
+          [readonly]="!canEdit()"
+          (close)="panel.set('none')"
         />
       </aside>
     }
@@ -123,11 +177,6 @@
       @for (format of exportFormats(); track format) {
         <button class="menu__item" cdkMenuItem (click)="export(format)">
           <app-icon name="download" [size]="15" /> {{ formatLabel(format) }}
-        </button>
-      }
-      @if (isMarkdown()) {
-        <button class="menu__item" cdkMenuItem (click)="print()">
-          <app-icon name="file-text" [size]="15" /> {{ 'markdown.print' | t }}
         </button>
       }
     </div>

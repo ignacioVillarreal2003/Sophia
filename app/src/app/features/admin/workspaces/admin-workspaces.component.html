@@ -7,6 +7,7 @@
       <input
         class="aw__search-input"
         type="search"
+    [attr.value]="search()"
         [placeholder]="'documentWorkspaces.searchPlaceholder' | t"
         (input)="onSearch($any($event.target).value)"
       />
@@ -46,7 +47,7 @@
       @for (ws of items(); track ws.id) {
         <div class="aw__row">
           <a class="aw__name" [routerLink]="['/admin/workspaces', ws.id]">
-            <app-workspace-logo [logoUrl]="ws.logoUrl" [color]="ws.color" [size]="36" [iconSize]="16" />
+            <app-workspace-logo [logoUrl]="ws.logoUrl" [pattern]="ws.color" [seed]="ws.id" [size]="36" />
             <span class="aw__name-text">
               <span class="aw__name-main">{{ ws.name }}</span>
               <span class="aw__name-sub">{{ 'admin.workspaces.members' | t: { count: ws.memberCount } }}</span>

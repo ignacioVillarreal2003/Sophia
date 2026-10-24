@@ -177,6 +177,28 @@ groups:
           summary: "Document workspace API 5xx rate above 5%"
           description: "More than 5% of requests are failing with 5xx over the last 5 minutes."
 
+  - name: ai-availability
+    rules:
+      - alert: AiServiceDown
+        expr: up{service="ai"} == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "AI API is down"
+          description: "Prometheus has not been able to scrape the AI API for 2 minutes."
+
+      - alert: AiGenerationFailures
+        expr: >
+          sum(increase(ai_generations_total{status="FAILED"}[15m]))
+          / clamp_min(sum(increase(ai_generations_total[15m])), 1) > 0.25
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "More than a quarter of AI generations are failing"
+          description: "Check the provider status and the AI_NOT_CONFIGURED / UPSTREAM_ERROR codes in the AI API logs."
+
   - name: platform-resources
     rules:
       - alert: HikariPoolNearExhaustion

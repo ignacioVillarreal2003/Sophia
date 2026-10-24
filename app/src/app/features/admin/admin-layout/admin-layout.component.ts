@@ -16,6 +16,7 @@ interface AdminTab {
 const TABS: AdminTab[] = [
   {labelKey: 'admin.tab.users', link: 'users', icon: 'users', permissions: ['USER_READ']},
   {labelKey: 'admin.tab.workspaces', link: 'workspaces', icon: 'grid', permissions: ['WORKSPACE_MANAGE']},
+  {labelKey: 'admin.tab.ai', link: 'ai', icon: 'sparkles', permissions: ['WORKSPACE_MANAGE']},
   {labelKey: 'admin.tab.roles', link: 'roles', icon: 'shield', permissions: ['ROLE_READ']},
   {labelKey: 'admin.tab.permissions', link: 'permissions', icon: 'lock', permissions: ['PERMISSION_READ']},
   {

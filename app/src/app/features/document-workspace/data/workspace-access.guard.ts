@@ -5,7 +5,7 @@ import { DocumentWorkspaceService } from './document-workspace.service';
 
 /**
  * Opens a workspace only for its members. Anyone else who followed a link lands on the page where they can ask the
- * admins to let them in; other failures (network, server) fall through so the workspace shows its own errors.
+ * admins to let them in. Other failures (network, server) fall through so the workspace shows its own errors.
  */
 export const workspaceAccessGuard: CanActivateFn = (route) => {
   const id = route.paramMap.get('documentWorkspaceId');

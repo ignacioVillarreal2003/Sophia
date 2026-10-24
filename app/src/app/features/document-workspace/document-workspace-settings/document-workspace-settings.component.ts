@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, input, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { DocumentWorkspace, DocumentWorkspaceMember, StorageRequest, WorkspaceUsage } from '@core/models/document-workspace';
 import { AuthenticationService } from '@core/services/authentication/authentication.service';
@@ -12,19 +12,20 @@ import { DocumentWorkspaceService } from '../data/document-workspace.service';
 import { ButtonComponent } from '@shared/ui/button/button.component';
 import { CardComponent } from '@shared/ui/card/card.component';
 import { IconComponent } from '@shared/ui/icon/icon.component';
+import { SelectFieldComponent, SelectOption } from '@shared/ui/form-field/select-field.component';
 import { TextFieldComponent } from '@shared/ui/form-field/text-field.component';
 import { TextareaComponent } from '@shared/ui/form-field/textarea.component';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { SpinnerComponent } from '@shared/ui/spinner/spinner.component';
 import { DialogService } from '@shared/ui/dialog/dialog.service';
-import { WORKSPACE_COLORS } from '../workspace-colors';
+import { WORKSPACE_PATTERNS, patternFor } from '../workspace-patterns';
 import { WorkspaceLogoComponent } from '../ui/workspace-logo.component';
 import { WorkspaceDatePipe } from '../ui/workspace-date.pipe';
-import { PublicLinkService } from '../data/public-link.service';
 import { WorkspaceRequestsService } from '../data/workspace-extras.service';
 import { DeleteWorkspaceDialogComponent, DeleteWorkspaceData } from '../list-dialogs/delete-workspace-dialog.component';
 import { TransferOwnershipDialogComponent, TransferOwnershipData } from '../list-dialogs/transfer-ownership-dialog.component';
 import { StorageRequestDialogComponent, StorageRequestData } from '../list-dialogs/storage-request-dialog.component';
+import { DuplicateWorkspaceDialogComponent, DuplicateWorkspaceData } from '../list-dialogs/duplicate-workspace-dialog.component';
 
 const MB = 1024 * 1024;
 const LANGUAGES: { code: string; label: string }[] = [
@@ -48,10 +49,12 @@ const MAX_LOGO_BYTES = 2 * MB;
   selector: 'app-document-workspace-settings',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    FormsModule,
     ReactiveFormsModule,
     ButtonComponent,
     CardComponent,
     IconComponent,
+    SelectFieldComponent,
     TextFieldComponent,
     TextareaComponent,
     PageHeaderComponent,
@@ -66,7 +69,6 @@ const MAX_LOGO_BYTES = 2 * MB;
 export class DocumentWorkspaceSettingsComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly service = inject(DocumentWorkspaceService);
-  private readonly publicLinks = inject(PublicLinkService);
   private readonly auth = inject(AuthenticationService);
   private readonly requests = inject(WorkspaceRequestsService);
   private readonly toast = inject(ToastService);
@@ -83,29 +85,32 @@ export class DocumentWorkspaceSettingsComponent implements OnInit {
   readonly saving = signal(false);
   readonly logoBusy = signal(false);
 
-  readonly swatches = WORKSPACE_COLORS;
-  readonly languages = LANGUAGES;
+  readonly patterns = WORKSPACE_PATTERNS;
+  readonly languageOptions: SelectOption[] = LANGUAGES.map((l) => ({ value: l.code, label: l.label }));
   readonly dateFormats = DATE_FORMATS;
-  readonly timezones = this.loadTimezones();
+  private readonly zones = this.loadTimezones();
   /** Public links currently working in this workspace (shown next to "stop sharing everything"). */
-  readonly activeLinks = signal(0);
-
-  /** How the workspace home lists items; a per-user preference shared by every workspace. */
-  readonly view = signal<'grid' | 'list'>(this.readView());
 
   readonly form = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.minLength(2)]],
     description: [''],
-    color: [WORKSPACE_COLORS[0]],
+    color: [WORKSPACE_PATTERNS[0].id],
     language: ['es'],
   });
   readonly draft = toSignal(this.form.valueChanges, { initialValue: this.form.getRawValue() });
-  readonly color = computed(() => this.draft().color || WORKSPACE_COLORS[0]);
+  /** The mark the form holds: a pattern id. */
+  readonly color = computed(() => this.draft().color || WORKSPACE_PATTERNS[0].id);
+
 
   readonly retentionDays = computed(() => this.documentWorkspace()?.trashRetentionDays ?? 0);
-  readonly publicSharing = computed(() => this.documentWorkspace()?.publicSharingEnabled === true);
   readonly timezone = computed(() => this.documentWorkspace()?.timezone ?? 'UTC');
   readonly dateFormat = computed(() => this.documentWorkspace()?.dateFormat ?? 'yyyy-MM-dd');
+
+  /** Only the owner and the admins may change how the workspace is set up; everyone else reads it. */
+  readonly canManage = computed(() => {
+    const ws = this.documentWorkspace();
+    return !!ws && (ws.ownerId === this.auth.user()?.id || ws.myRole === 'ADMIN');
+  });
 
   readonly isOwner = computed(() => !!this.documentWorkspace() && this.documentWorkspace()!.ownerId === this.auth.user()?.id);
   /** The owner's latest request for more storage, to show whether it is still waiting. */
@@ -121,7 +126,17 @@ export class DocumentWorkspaceSettingsComponent implements OnInit {
   readonly updatedBy = computed(() => this.members().find((m) => m.userId === this.documentWorkspace()?.updatedBy) ?? null);
 
   /** The preset list, plus whatever value is currently stored when it is not one of them. */
+  /** The zones the browser knows, plus the one stored when it is not among them (UTC, for one). */
+  readonly timezoneOptions = computed<SelectOption[]>(() => {
+    const current = this.timezone();
+    const all = this.zones.includes(current) ? this.zones : [current, ...this.zones];
+    return all.map((zone) => ({ value: zone, label: zone }));
+  });
+
   readonly retentionOptions = computed(() => this.withCurrent(RETENTION_DAYS, this.retentionDays()));
+  readonly retentionSelect = computed<SelectOption[]>(() =>
+    this.retentionOptions().map((days) => ({ value: String(days), label: this.retentionLabel(days) })),
+  );
 
   readonly usedPercent = computed(() => {
     const usage = this.usage();
@@ -136,7 +151,7 @@ export class DocumentWorkspaceSettingsComponent implements OnInit {
       !!ws &&
       (v.name !== ws.name ||
         (v.description ?? '') !== (ws.description ?? '') ||
-        (v.color ?? '').toLowerCase() !== (ws.color ?? WORKSPACE_COLORS[0]).toLowerCase() ||
+        (v.color ?? '') !== patternFor(ws.color, ws.id).id ||
         (v.language ?? '') !== (ws.language ?? 'es'))
     );
   });
@@ -147,6 +162,9 @@ export class DocumentWorkspaceSettingsComponent implements OnInit {
       next: (ws) => {
         this.documentWorkspace.set(ws);
         this.patchForm(ws);
+        if (!this.canManage()) {
+          this.form.disable({ emitEvent: false });
+        }
         this.loading.set(false);
       },
       error: () => this.loading.set(false),
@@ -154,27 +172,19 @@ export class DocumentWorkspaceSettingsComponent implements OnInit {
     this.service.members(id).subscribe({ next: (list) => this.members.set(list) });
     this.refreshStorageRequest();
     this.refreshUsage();
-    this.refreshLinks();
   }
 
   private patchForm(ws: DocumentWorkspace): void {
     this.form.setValue({
       name: ws.name,
       description: ws.description ?? '',
-      color: ws.color ?? WORKSPACE_COLORS[0],
+      color: patternFor(ws.color, ws.id).id,
       language: ws.language ?? 'es',
     });
   }
 
   private refreshUsage(): void {
     this.service.usage(this.documentWorkspaceId()).subscribe({ next: (u) => this.usage.set(u), error: () => this.usage.set(null) });
-  }
-
-  private refreshLinks(): void {
-    this.publicLinks.activeCount(this.documentWorkspaceId()).subscribe({
-      next: (n) => this.activeLinks.set(n),
-      error: () => this.activeLinks.set(0),
-    });
   }
 
   private loadTimezones(): string[] {
@@ -300,46 +310,6 @@ export class DocumentWorkspaceSettingsComponent implements OnInit {
     this.patchSettings({ dateFormat: format });
   }
 
-  setPublicSharing(enabled: boolean): void {
-    this.patchSettings({ publicSharingEnabled: enabled });
-  }
-
-  /** "Stop sharing everything": revoke every public link of the workspace. */
-  async stopSharingAll(): Promise<void> {
-    const ok = await this.dialog.confirm({
-      title: this.i18n.translate('documentWorkspace.settings.sharing.stop.title'),
-      message: this.i18n.translate('documentWorkspace.settings.sharing.stop.message', { count: this.activeLinks() }),
-      confirmLabel: this.i18n.translate('documentWorkspace.settings.sharing.stop.confirm'),
-      danger: true,
-    });
-    if (!ok) return;
-    this.publicLinks.revokeAll(this.documentWorkspaceId()).subscribe({
-      next: (revoked) => {
-        this.activeLinks.set(0);
-        this.toast.success(this.i18n.translate('documentWorkspace.settings.sharing.stop.done', { count: revoked }));
-      },
-      error: (err: AppError) => this.toast.error(err.message),
-    });
-  }
-
-  // ---- view preference ----
-  setView(view: 'grid' | 'list'): void {
-    this.view.set(view);
-    try {
-      localStorage.setItem('sophia.explorer.view', view);
-    } catch {
-      // Preference only; ignore storage failures.
-    }
-  }
-
-  private readView(): 'grid' | 'list' {
-    try {
-      return localStorage.getItem('sophia.explorer.view') === 'list' ? 'list' : 'grid';
-    } catch {
-      return 'grid';
-    }
-  }
-
   // ---- backup, storage, ownership ----
   downloadBackup(): void {
     const ws = this.documentWorkspace();
@@ -391,6 +361,41 @@ export class DocumentWorkspaceSettingsComponent implements OnInit {
       this.toast.success(this.i18n.translate('workspaces.toast.transferred', { name: ws.name }));
       this.service.get(ws.id).subscribe((updated) => this.documentWorkspace.set(updated));
       this.service.members(ws.id).subscribe({ next: (list) => this.members.set(list) });
+    });
+  }
+
+  // ---- copies and leaving ----
+  duplicate(): void {
+    const ws = this.documentWorkspace();
+    if (!ws) return;
+    const ref = this.dialog.open<DuplicateWorkspaceDialogComponent, DuplicateWorkspaceData, DocumentWorkspace | undefined>(
+      DuplicateWorkspaceDialogComponent,
+      { data: { workspace: ws } },
+    );
+    ref.closed.subscribe((copy) => {
+      if (!copy) return;
+      this.toast.success(this.i18n.translate('workspaces.toast.duplicated', { name: copy.name }), {
+        action: { label: this.i18n.translate('common.open'), run: () => this.router.navigate(['/document-workspaces', copy.id]) },
+      });
+    });
+  }
+
+  async leave(): Promise<void> {
+    const ws = this.documentWorkspace();
+    if (!ws) return;
+    const ok = await this.dialog.confirm({
+      title: this.i18n.translate('workspaces.leave.title'),
+      message: this.i18n.translate('workspaces.leave.message', { name: ws.name }),
+      confirmLabel: this.i18n.translate('workspaces.leave.confirm'),
+      danger: true,
+    });
+    if (!ok) return;
+    this.service.leave(ws.id).subscribe({
+      next: () => {
+        this.toast.success(this.i18n.translate('workspaces.toast.left', { name: ws.name }));
+        this.router.navigate(['/document-workspaces']);
+      },
+      error: (err: AppError) => this.toast.error(err.message),
     });
   }
 

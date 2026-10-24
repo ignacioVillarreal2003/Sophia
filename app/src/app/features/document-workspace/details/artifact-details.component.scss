@@ -1,8 +1,64 @@
 @use 'mixins' as *;
 
 .ad {
+  // Wider than the other pages: the options of a document use the room there is.
+  max-width: none;
   padding-block: var(--space-xl);
+  padding-inline: var(--space-xl);
 }
+
+.ad__header {
+  // Stays at the top while the sections scroll underneath.
+  @include frosted;
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+  margin: 0 calc(var(--space-xl) * -1) var(--space-lg);
+  padding-inline: var(--space-xl);
+  border-bottom: 1px solid var(--divider);
+}
+
+.ad__heading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  min-width: 0;
+}
+
+.ad__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--type-display-md-size);
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+// Which document these options are for.
+.ad__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 420px;
+  height: 32px;
+  padding-inline: 12px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--border);
+  color: var(--text-muted);
+  font-size: var(--type-caption-size);
+  font-weight: 600;
+}
+
+.ad__item-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
 
 .ad__loading {
   display: grid;
@@ -31,10 +87,10 @@
 }
 
 .ad__grid {
-  // One section under another: General, Sharing, Information, Actions.
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr;
   gap: var(--space-lg);
+  align-items: start;
 }
 
 .ad__section-title {
@@ -167,10 +223,12 @@
 }
 
 .ad__col {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr;
   gap: var(--space-lg);
+  align-items: start;
   min-width: 0;
+
 }
 
 .ad__section-title--flush { margin-bottom: 0; }
@@ -335,4 +393,217 @@
   background: color-mix(in srgb, #d92d20 10%, var(--surface));
   box-shadow: inset 0 0 0 1px color-mix(in srgb, #d92d20 30%, transparent);
   color: #d92d20;
+}
+
+.ad__open ::ng-deep .btn {
+  height: 36px;
+  border-radius: var(--radius-sm);
+}
+
+.ad__formats {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+
+// The title bar of the page: back, the title, which document, and the way back into it.
+.ad__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-lg);
+}
+
+.ad__bar-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  min-width: 0;
+}
+
+.ad__bar-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--type-display-md-size);
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+// ---- the section selector ---------------------------------------------------------------------------------------
+.ad__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: var(--space-lg);
+  padding: 4px;
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.ad__tab {
+  flex: 1 1 0;
+  min-width: 96px;
+  height: 36px;
+  padding-inline: 14px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-text);
+  font-size: var(--type-caption-size);
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover:not(.ad__tab--active) { color: var(--text); }
+  &:focus-visible { outline: 2px solid var(--accent-focus); outline-offset: 2px; }
+
+  &--active {
+    background: var(--text);
+    color: var(--surface);
+  }
+}
+
+// Comments and history bring their own header, list and box; they get a frame with a height of their own.
+.ad__embed {
+  display: flex;
+  flex-direction: column;
+  height: 70vh;
+  min-height: 420px;
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  overflow: hidden;
+
+  > * { flex: 1; min-height: 0; }
+}
+
+.ad__lead { margin-bottom: var(--space-md); }
+.ad__formats--start { justify-content: flex-start; }
+
+// Which document this is, always on show: its name is the title and "Properties" is what is being looked at.
+.ad__bar-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+
+.ad__bar-kicker {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-subtle);
+}
+
+.ad__bar-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  font-size: 28px;
+}
+
+.ad__bar-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+// ---- share: pick a person and share ----
+.ad__share-row {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: flex-start;
+  margin-bottom: var(--space-lg);
+
+  @include below($bp-phone) { flex-direction: column; align-items: stretch; }
+}
+
+.ad__share-who { flex: 1; min-width: 0; }
+
+.ad__share-go ::ng-deep .btn {
+  height: 44px;
+  padding-inline: 22px;
+  border-radius: var(--radius-sm);
+}
+
+.ad__person-who { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.ad__person-mail { font-size: 12px; color: var(--text-subtle); @include truncate; }
+
+// ---- tags of this item ----
+.ad__tags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: var(--space-md); }
+
+.ad__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 6px 0 10px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--border);
+  font-size: var(--type-caption-size);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.ad__chip-dot { width: 10px; height: 10px; flex: none; border-radius: 3px; }
+
+.ad__chip-x {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-sm);
+  color: var(--text-subtle);
+  cursor: pointer;
+  &:hover { background: var(--surface-muted); color: var(--text); }
+}
+
+.ad__tag-add { position: relative; max-width: 420px; }
+
+.ad__tag-input {
+  width: 100%;
+  height: 44px;
+  padding-inline: 14px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--border);
+  font-family: var(--font-text);
+  font-size: var(--type-body-size);
+  color: var(--text);
+  outline: none;
+
+  &:focus { box-shadow: inset 0 0 0 1.5px var(--accent-focus); }
+  &::placeholder { color: var(--text-subtle); }
+}
+
+.ad__tag-menu {
+  position: absolute;
+  inset-inline: 0;
+  top: calc(100% + 6px);
+  z-index: 5;
+  margin: 0;
+  padding: 4px;
+  max-height: 220px;
+  overflow-y: auto;
+  list-style: none;
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  box-shadow: inset 0 0 0 1px var(--border), 0 8px 24px -12px rgb(0 0 0 / 30%);
+}
+
+.ad__tag-opt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-text);
+  font-size: var(--type-caption-size);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  &:hover { background: var(--surface-muted); }
+  &--new { color: var(--text-muted); font-weight: 600; }
 }

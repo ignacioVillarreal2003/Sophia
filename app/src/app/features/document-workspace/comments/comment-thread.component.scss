@@ -3,7 +3,7 @@
 .ct {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  gap: var(--space-lg);
   min-height: 0;
 }
 
@@ -11,7 +11,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-sm) var(--space-md);
+  padding-bottom: var(--space-sm);
   border-bottom: 1px solid var(--divider);
 }
 
@@ -24,15 +24,83 @@
   app-icon { color: var(--text-subtle); }
 }
 
+// ---- writing ----
+.ct__compose {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+// Two separate boxes: one to write in, one with what has been written.
+.ct__section {
+  padding: 20px 24px;
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.ct__h {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 var(--space-md);
+  font-size: var(--type-body-strong-size);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.ct__badge {
+  padding: 1px 9px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--border);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.ct__compose-main { flex: 1; min-width: 0; }
+
+.ct__input {
+  width: 100%;
+  min-height: 64px;
+  padding: 10px 12px;
+  resize: vertical;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--border);
+  font-family: var(--font-text);
+  font-size: var(--type-body-size);
+  line-height: 1.5;
+  color: var(--text);
+  outline: none;
+
+  &:focus { box-shadow: inset 0 0 0 1.5px var(--accent-focus); }
+  &::placeholder { color: var(--text-subtle); }
+}
+
+.ct__compose-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+}
+
+.ct__count { font-size: 12px; color: var(--text-subtle); }
+
+.ct__send ::ng-deep .btn {
+  height: 34px;
+  padding-inline: 18px;
+  border-radius: var(--radius-sm);
+}
+
+// ---- the comments ----
 .ct__list {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  padding: var(--space-md);
   display: flex;
   flex-direction: column;
-  gap: var(--space-md);
-  @include scrollbar-thin;
+  gap: 0;
+  min-height: 0;
 }
 
 .ct__loading {
@@ -43,21 +111,20 @@
 
 .ct__comment {
   display: flex;
-  gap: 10px;
+  gap: 12px;
+  padding: 18px 4px;
+  border-bottom: 1px solid var(--divider);
 
-  &--resolved {
-    opacity: 0.55;
-  }
+  &:first-child { padding-top: 4px; }
+  &:last-child { border-bottom: 0; padding-bottom: 4px; }
+  &--resolved .ct__text { color: var(--text-muted); }
 }
 
-.ct__comment-body {
-  flex: 1;
-  min-width: 0;
-}
+.ct__comment-body { flex: 1; min-width: 0; }
 
 .ct__comment-head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 8px;
 }
 
@@ -67,67 +134,74 @@
   color: var(--text);
 }
 
-.ct__time {
+.ct__time { font-size: 12px; color: var(--text-subtle); }
+
+.ct__tag {
+  padding: 1px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--border);
   font-size: 11px;
-  color: var(--text-subtle);
+  font-weight: 600;
+  color: var(--text-muted);
 }
 
 .ct__text {
-  margin-top: 2px;
-  font-size: var(--type-caption-size);
-  line-height: 1.5;
+  margin: 4px 0 0;
+  font-size: var(--type-body-size);
+  line-height: 1.55;
   color: var(--text);
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .ct__actions {
   display: flex;
-  gap: var(--space-sm);
-  margin-top: 6px;
+  gap: var(--space-md);
+  margin-top: 8px;
 }
 
 .ct__action {
   font-size: 12px;
+  font-weight: 600;
   color: var(--text-subtle);
-  &:hover { color: var(--accent); }
-  &--danger:hover { color: var(--danger); }
+  cursor: pointer;
+  &:hover { color: var(--text); }
+  &--danger:hover { color: #d92d20; }
+  &--push { margin-left: auto; }
 }
 
-.ct__reply {
+.ct__replies {
+  margin-top: 12px;
+  padding-left: 14px;
+  border-left: 2px solid var(--divider);
   display: flex;
-  gap: 8px;
-  margin-top: 10px;
-  padding-left: 4px;
+  flex-direction: column;
+  gap: 14px;
 }
+
+.ct__reply { display: flex; gap: 10px; }
+.ct__reply-body { flex: 1; min-width: 0; }
 
 .ct__reply-box {
   display: flex;
-  gap: 6px;
-  margin-top: 8px;
-}
-
-.ct__compose {
-  display: flex;
   gap: 8px;
-  padding: var(--space-sm) var(--space-md);
-  border-top: 1px solid var(--divider);
+  margin-top: 12px;
 }
 
-.ct__input {
+.ct__field {
   flex: 1;
   min-width: 0;
-  height: 38px;
-  padding-inline: 14px;
+  height: 36px;
+  padding-inline: 12px;
   border: none;
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-sm);
   background: var(--surface-sunken);
   box-shadow: inset 0 0 0 1px var(--border);
+  font-family: var(--font-text);
   font-size: var(--type-caption-size);
   color: var(--text);
   outline: none;
 
-  &:focus {
-    box-shadow: inset 0 0 0 1.5px var(--accent);
-  }
-  &::placeholder { color: var(--text-subtle); }
+  &:focus { box-shadow: inset 0 0 0 1.5px var(--accent-focus); }
 }

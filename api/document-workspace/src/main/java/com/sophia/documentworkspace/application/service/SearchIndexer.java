@@ -9,7 +9,6 @@ import com.sophia.documentworkspace.domain.event.ArtifactEvents;
 import com.sophia.documentworkspace.domain.event.CommentEvents;
 import com.sophia.documentworkspace.domain.event.DocumentEvents;
 import com.sophia.documentworkspace.domain.event.FileEvents;
-import com.sophia.documentworkspace.domain.event.PermissionEvents;
 import com.sophia.documentworkspace.domain.event.WorkspaceEvents;
 import com.sophia.documentworkspace.infrastructure.repository.ArtifactRepository;
 import com.sophia.documentworkspace.infrastructure.repository.CommentRepository;

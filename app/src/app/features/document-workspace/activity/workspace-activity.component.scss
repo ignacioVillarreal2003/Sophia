@@ -1,7 +1,8 @@
-@use 'mixins' as *;
-
 .act {
   padding-block: var(--space-xl);
+  container-type: inline-size;
+
+  &--embedded { padding-block: 0; }
 }
 
 .act__loading {
@@ -10,99 +11,56 @@
   padding: var(--space-section);
 }
 
-.act__day {
-  margin-bottom: var(--space-xl);
-}
-
-.act__day-title {
-  margin-bottom: var(--space-sm);
-  font-size: var(--type-caption-size);
-  font-weight: 600;
-  color: var(--text-muted);
-}
-
-.act__list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  border-radius: var(--radius-lg);
+// ---- a table headed by its columns ---------------------------------------------------------------------------
+.act__table {
+  --cols: minmax(0, 1.4fr) minmax(0, 1.6fr) minmax(0, 1.2fr) 130px;
   background: var(--surface);
+  border-radius: var(--radius-lg);
   border: 1px solid var(--border);
   overflow: hidden;
 }
 
+.act__head,
 .act__row {
-  display: flex;
+  display: grid;
+  grid-template-columns: var(--cols);
   align-items: center;
   gap: var(--space-md);
-  padding: 14px 20px;
-  transition: background var(--duration-fast) var(--ease-standard);
+  padding-inline: 18px;
+}
 
-  &:not(:last-child) { border-bottom: 1px solid var(--divider); }
-  &:hover { background: var(--surface-muted); }
+.act__head {
+  height: 40px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-subtle);
+  background: var(--surface-sunken);
+  border-bottom: 1px solid var(--divider);
+}
+
+.act__row {
+  min-height: 56px;
+  border-bottom: 1px solid var(--divider);
+  &:last-child { border-bottom: 0; }
   &--failed .act__label { color: #d92d20; }
 }
 
-// Soft tinted square per kind of event, same shape language as the rest of the app.
-.act__icon {
-  --tone: var(--text-muted);
+.act__label { font-size: var(--type-body-strong-size); font-weight: 600; color: var(--text); overflow-wrap: anywhere; }
+.act__detail { font-size: var(--type-caption-size); color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-  display: grid;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  flex-shrink: 0;
-  border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--tone) 14%, var(--surface));
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tone) 26%, transparent);
-  color: color-mix(in srgb, var(--tone) 80%, var(--text));
+.act__who { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.act__actor { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--type-caption-size); color: var(--text-muted); }
 
-  &--success { --tone: #1a9d5b; }
-  &--accent { --tone: var(--accent); }
-  &--warning { --tone: #d98e04; }
-  &--danger { --tone: #d92d20; }
+.act__time { font-size: var(--type-caption-size); color: var(--text-subtle); white-space: nowrap; }
+
+@container (max-width: 760px) {
+  .act__table { --cols: minmax(0, 1.4fr) minmax(0, 1.2fr) 120px; }
+  .act__head span:nth-child(2), .act__detail { display: none; }
 }
 
-.act__text {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.act__label {
-  font-size: var(--type-body-strong-size);
-  font-weight: 600;
-  @include truncate;
-}
-
-.act__detail {
-  font-size: 13px;
-  color: var(--text-subtle);
-  @include truncate;
-}
-
-.act__who {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-  max-width: 220px;
-
-  @include below($bp-tablet-landscape) { display: none; }
-}
-
-.act__actor {
-  font-size: 13px;
-  color: var(--text-muted);
-  @include truncate;
-}
-
-.act__time {
-  flex-shrink: 0;
-  min-width: 96px;
-  text-align: right;
-  font-size: 13px;
-  color: var(--text-subtle);
+@container (max-width: 520px) {
+  .act__table { --cols: minmax(0, 1fr) 100px; }
+  .act__head span:nth-child(3), .act__who { display: none; }
 }

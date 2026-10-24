@@ -5,7 +5,6 @@ import com.sophia.documentworkspace.application.security.WorkspaceAuthorizationS
 import com.sophia.documentworkspace.domain.dto.response.WorkspaceImpactResponse;
 import com.sophia.documentworkspace.domain.entity.enums.RequestStatus;
 import com.sophia.documentworkspace.infrastructure.repository.AccessRequestRepository;
-import com.sophia.documentworkspace.infrastructure.repository.PublicLinkRepository;
 import com.sophia.documentworkspace.infrastructure.repository.WorkspaceMemberRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -13,7 +12,6 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
 import java.util.UUID;
 
 @Service
@@ -23,7 +21,6 @@ public class WorkspaceImpactService {
     private final NamedParameterJdbcTemplate jdbc;
     private final WorkspaceAuthorizationService authorization;
     private final WorkspaceMemberRepository memberRepository;
-    private final PublicLinkRepository publicLinkRepository;
     private final AccessRequestRepository accessRequestRepository;
 
     @Transactional(readOnly = true)
@@ -39,7 +36,6 @@ public class WorkspaceImpactService {
                 (rs, row) -> new long[]{rs.getLong(1), rs.getLong(2), rs.getLong(3), rs.getLong(4)});
         return new WorkspaceImpactResponse(counts[0], counts[1], counts[2], counts[3],
                 memberRepository.countByWorkspaceId(workspaceId),
-                publicLinkRepository.countActive(workspaceId, Instant.now()),
                 accessRequestRepository.countByWorkspaceIdAndStatus(workspaceId, RequestStatus.PENDING));
     }
 }

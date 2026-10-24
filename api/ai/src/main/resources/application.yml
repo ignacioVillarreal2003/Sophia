@@ -1,0 +1,142 @@
+spring:
+  application:
+    name: ai
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/sophia_ai}
+    username: ${DB_USERNAME:sophia}
+    password: ${DB_PASSWORD:sophia}
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:10}
+      minimum-idle: 2
+      connection-timeout: 10000
+      max-lifetime: 1800000
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      ssl:
+        enabled: ${REDIS_SSL:false}
+
+  servlet:
+    multipart:
+      max-file-size: 16MB
+      max-request-size: 17MB
+
+  jackson:
+    default-property-inclusion: non_null
+    time-zone: UTC
+
+  lifecycle:
+    timeout-per-shutdown-phase: ${SHUTDOWN_TIMEOUT:60s}
+
+server:
+  port: ${SERVER_PORT:8083}
+  shutdown: graceful
+  forward-headers-strategy: framework
+  compression:
+    enabled: true
+    # Server-sent events must not be compressed or buffered.
+    mime-types: application/json
+    min-response-size: 1024
+
+sophia:
+  security:
+    jwt:
+      json-web-key-set-uri: ${JWT_JSON_WEB_KEY_SET_URI:}
+      secret: ${JWT_SECRET:}
+      issuer: ${JWT_ISSUER:sophia-authentication}
+    cors:
+      allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200,http://localhost:3000}
+      allowed-methods: GET,POST,PUT,PATCH,DELETE,OPTIONS
+      allowed-headers: "*"
+      exposed-headers: X-Request-Id
+      allow-credentials: true
+      max-age: 3600
+    rate-limit:
+      enabled: ${RATE_LIMIT_ENABLED:true}
+      requests: ${RATE_LIMIT_REQUESTS:60}
+      window: ${RATE_LIMIT_WINDOW:1m}
+  ai:
+    # gemini: Google Gemini (same GEMINI_* variables as the Lumen services). mock: canned answers, for local UI work and tests only.
+    provider: ${AI_PROVIDER:gemini}
+    api-key: ${GEMINI_API_KEY:}
+    base-url: ${GEMINI_API_BASE_URL:https://generativelanguage.googleapis.com/v1beta}
+    model: ${GEMINI_MODEL:gemini-3.6-flash}
+    request-timeout: ${AI_REQUEST_TIMEOUT:5m}
+    max-retries: ${AI_MAX_RETRIES:2}
+    # Most characters of source material one request may carry (all documents together).
+    max-source-chars: ${AI_MAX_SOURCE_CHARS:120000}
+    max-sources: ${AI_MAX_SOURCES:12}
+    # Generations running at the same time per user.
+    max-concurrent-per-user: ${AI_MAX_CONCURRENT_PER_USER:2}
+    # Calls per window allowed to the generation endpoints (the general limit above still applies).
+    generation-rate-limit:
+      requests: ${AI_RATE_LIMIT_REQUESTS:20}
+      window: ${AI_RATE_LIMIT_WINDOW:1m}
+    # Initial values of the limits administrators can change at runtime.
+    defaults:
+      enabled: ${AI_ENABLED:true}
+      daily-tokens-per-user: ${AI_DAILY_TOKENS_PER_USER:400000}
+      daily-tokens-per-workspace: ${AI_DAILY_TOKENS_PER_WORKSPACE:2000000}
+    upload:
+      max-image-bytes: ${AI_MAX_IMAGE_BYTES:5242880}
+      max-pdf-bytes: ${AI_MAX_PDF_BYTES:15728640}
+      # Best effort (see AttachmentReader); the provider itself stops at 100 pages.
+      max-pdf-pages: ${AI_MAX_PDF_PAGES:50}
+    chat:
+      full-context-chars: ${AI_CHAT_FULL_CONTEXT_CHARS:60000}
+      top-chunks: ${AI_CHAT_TOP_CHUNKS:8}
+      chunk-chars: ${AI_CHAT_CHUNK_CHARS:1200}
+      max-indexed-chars: ${AI_CHAT_MAX_INDEXED_CHARS:1500000}
+      history-messages: ${AI_CHAT_HISTORY_MESSAGES:24}
+      max-messages: ${AI_CHAT_MAX_MESSAGES:400}
+      max-conversations: ${AI_CHAT_MAX_CONVERSATIONS:100}
+      retention: ${AI_CHAT_RETENTION:180d}
+    workspace-api-url: ${WORKSPACE_API_URL:http://localhost:8081}
+    usage-retention: ${AI_USAGE_RETENTION:90d}
+  monitoring:
+    username: ${MONITORING_USERNAME:prometheus}
+    password: ${MONITORING_PASSWORD:prometheus}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: when-authorized
+      group:
+        readiness:
+          include: readinessState,db,redis
+        liveness:
+          include: livenessState
+  info:
+    git:
+      mode: full
+  metrics:
+    tags:
+      application: ${spring.application.name}
+  tracing:
+    sampling:
+      probability: ${TRACING_SAMPLING_PROBABILITY:0.1}

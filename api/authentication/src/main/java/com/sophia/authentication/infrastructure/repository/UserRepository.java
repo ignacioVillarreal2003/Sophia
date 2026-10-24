@@ -1,6 +1,8 @@
 package com.sophia.authentication.infrastructure.repository;
 
 import com.sophia.authentication.domain.entity.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
@@ -19,6 +21,15 @@ public interface UserRepository extends JpaRepository<User, UUID>, JpaSpecificat
     Optional<User> findByEmailIgnoreCase(String email);
 
     boolean existsByEmailIgnoreCase(String email);
+
+    /** Active users whose email or full name contains the (already lower-cased, escaped) pattern, by name. */
+    @EntityGraph(attributePaths = {"preferences"})
+    @Query(value = "SELECT u FROM User u WHERE u.active = true AND (lower(u.email) LIKE :pattern ESCAPE '\\' "
+            + "OR lower(concat(u.firstName, ' ', u.lastName)) LIKE :pattern ESCAPE '\\') "
+            + "ORDER BY u.firstName, u.lastName, u.email",
+            countQuery = "SELECT count(u) FROM User u WHERE u.active = true AND (lower(u.email) LIKE :pattern ESCAPE '\\' "
+            + "OR lower(concat(u.firstName, ' ', u.lastName)) LIKE :pattern ESCAPE '\\')")
+    Page<User> searchActive(@Param("pattern") String pattern, Pageable pageable);
 
     @EntityGraph(attributePaths = {"roles", "roles.permissions", "directPermissions", "preferences", "oauthAccounts"})
     @Query("SELECT u FROM User u WHERE lower(u.email) = lower(:email)")

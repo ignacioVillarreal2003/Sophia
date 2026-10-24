@@ -16,9 +16,13 @@ public class WorkspaceNotifier {
     private final NotificationCommandPublisher commandPublisher;
 
     public void notify(UUID recipientId, UUID actorId, String title, String body, UUID workspaceId) {
+        notify(NotificationType.MEMBERSHIP, recipientId, actorId, title, body, workspaceId);
+    }
+
+    public void notify(NotificationType type, UUID recipientId, UUID actorId, String title, String body, UUID workspaceId) {
         commandPublisher.publish(NotificationCommandPayload.inApp(
                 NotificationCommandComposer.CATEGORY_WORKSPACE, recipientId, actorId,
-                NotificationType.MEMBERSHIP.name(), title, body,
+                type.name(), title, body,
                 NotificationCommandComposer.context(workspaceId, null),
                 NotificationCommandPayload.TARGET_WORKSPACE, workspaceId));
     }

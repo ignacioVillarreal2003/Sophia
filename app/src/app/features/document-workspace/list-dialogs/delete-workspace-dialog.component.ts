@@ -48,10 +48,6 @@ export interface DeleteWorkspaceData {
               <span class="wd__stat-value">{{ i.members }}</span>
               <span class="wd__stat-label">{{ 'workspaces.delete.members' | t }}</span>
             </li>
-            <li class="wd__stat">
-              <span class="wd__stat-value">{{ i.activePublicLinks }}</span>
-              <span class="wd__stat-label">{{ 'workspaces.delete.publicLinks' | t }}</span>
-            </li>
           </ul>
         } @else if (loading()) {
           <div class="wd__loading"><app-spinner /></div>

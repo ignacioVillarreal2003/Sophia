@@ -12,7 +12,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { CdkMenu, CdkMenuItem, CdkMenuTrigger } from '@angular/cdk/menu';
 import { Artifact, ExportFormat, PresenceUser } from '@core/models/document-workspace';
 import { TranslatePipe } from '@core/services/i18n/translate.pipe';
@@ -22,6 +22,7 @@ import { DialogService } from '@shared/ui/dialog/dialog.service';
 import { ButtonComponent } from '@shared/ui/button/button.component';
 import { IconComponent } from '@shared/ui/icon/icon.component';
 import { SpinnerComponent } from '@shared/ui/spinner/spinner.component';
+import { FileSizePipe } from '@shared/pipes/file-size.pipe';
 import { RelativeTimePipe } from '@shared/pipes/relative-time.pipe';
 import { FavoriteService } from '../data/favorite.service';
 import { ArtifactService } from '../data/artifact.service';
@@ -30,12 +31,12 @@ import { DocumentWorkspaceService } from '../data/document-workspace.service';
 import { ExportImportService } from '../data/export-import.service';
 import { FileService } from '../data/file.service';
 import { RealtimeService } from '../data/realtime.service';
-import { ShareDialogComponent, ShareDialogData } from '../ui/share-dialog.component';
 import { FileViewerComponent } from '../ui/file-viewer.component';
 import { PresenceBarComponent } from '../ui/presence-bar.component';
 import { CommentThreadComponent } from '../comments/comment-thread.component';
 import { RevisionHistoryComponent } from '../revisions/revision-history.component';
 import { LinkTarget, MarkdownEditorComponent, MarkdownMode } from '../markdown/markdown-editor.component';
+import { AssistantPanelComponent } from '../../ai/assistant/assistant-panel.component';
 import { SpreadsheetComponent } from '../spreadsheet/spreadsheet.component';
 import { PresentationComponent } from '../presentation/presentation.component';
 import { WhiteboardComponent } from '../whiteboard/whiteboard.component';
@@ -44,7 +45,7 @@ import { markdownStats } from '../markdown/markdown-render';
 const PRESENCE_COLORS = ['#0066cc', '#5856d6', '#af52de', '#ff9500', '#34c759', '#00c7be'];
 const MODE_KEY = 'sophia.markdown.mode';
 
-type SidePanel = 'none' | 'comments' | 'history';
+type SidePanel = 'none' | 'comments' | 'history' | 'ai';
 type SaveState = 'saved' | 'dirty' | 'saving' | 'error' | 'conflict';
 
 const TEXT_EXPORTS: ExportFormat[] = ['MARKDOWN', 'HTML', 'PDF', 'DOCX', 'TXT'];
@@ -65,6 +66,7 @@ const BOARD_EXPORTS: ExportFormat[] = ['JSON', 'MARKDOWN', 'PDF'];
     CdkMenuItem,
     CdkMenuTrigger,
     MarkdownEditorComponent,
+    AssistantPanelComponent,
     SpreadsheetComponent,
     PresentationComponent,
     WhiteboardComponent,
@@ -75,7 +77,9 @@ const BOARD_EXPORTS: ExportFormat[] = ['JSON', 'MARKDOWN', 'PDF'];
     ButtonComponent,
     IconComponent,
     SpinnerComponent,
+    FileSizePipe,
     RelativeTimePipe,
+    RouterLink,
     TranslatePipe,
   ],
   templateUrl: './document-view.component.html',
@@ -96,8 +100,10 @@ export class DocumentViewComponent implements OnDestroy {
 
   readonly documentWorkspaceId = input.required<string>();
   readonly artifactId = input.required<string>();
+  /** A side panel to open on arrival (?panel=comments|history|ai), as the options page links to them. */
+  readonly panelParam = input<string | undefined>(undefined, { alias: 'panel' });
 
-  private readonly editor = viewChild(MarkdownEditorComponent);
+  readonly editor = viewChild(MarkdownEditorComponent);
   private readonly sheet = viewChild(SpreadsheetComponent);
   private readonly deck = viewChild(PresentationComponent);
   private readonly board = viewChild(WhiteboardComponent);
@@ -112,7 +118,6 @@ export class DocumentViewComponent implements OnDestroy {
   readonly presence = signal<PresenceUser[]>([]);
   readonly mode = signal<MarkdownMode>(this.storedMode());
   readonly linkTargets = signal<LinkTarget[]>([]);
-  readonly title = signal('');
 
   private joined: { ws: string; doc: string } | null = null;
   /** The document whose text is in `text`/`version`; routed inputs may already point somewhere else. */
@@ -142,6 +147,15 @@ export class DocumentViewComponent implements OnDestroy {
   readonly exportFormats = computed<ExportFormat[]>(() =>
     this.isSpreadsheet() ? SHEET_EXPORTS : this.isPresentation() ? DECK_EXPORTS : this.isWhiteboard() ? BOARD_EXPORTS : TEXT_EXPORTS,
   );
+  /** Words, reading time and the like, for the footer. */
+  readonly stats = computed(() => markdownStats(this.text()));
+  /** Where the back arrow leads: the folder the document is in. */
+  readonly optionsUrl = computed(() => `/document-workspaces/${this.documentWorkspaceId()}/details/${this.artifactId()}`);
+  readonly backUrl = computed(() => {
+    const base = `/document-workspaces/${this.documentWorkspaceId()}`;
+    const parent = this.artifact()?.parentId;
+    return parent ? `${base}/folder/${parent}` : base;
+  });
   readonly progress = computed(() => (this.isChecklist() ? markdownStats(this.text()) : null));
   readonly quickItem = signal('');
 
@@ -202,7 +216,7 @@ export class DocumentViewComponent implements OnDestroy {
     this.artifacts.get(ws, id).subscribe({
       next: (artifact) => {
         this.artifact.set(artifact);
-        this.title.set(artifact.name);
+        this.openRequestedPanel();
         if (this.isText()) {
           this.loadContent(ws, id);
           this.joinRealtime(ws, id);
@@ -213,6 +227,15 @@ export class DocumentViewComponent implements OnDestroy {
       },
       error: () => this.loading.set(false),
     });
+  }
+
+  private openRequestedPanel(): void {
+    const wanted = this.panelParam();
+    if (wanted === 'comments' || wanted === 'history') {
+      if (this.isText()) this.panel.set(wanted);
+    } else if (wanted === 'ai' && this.isMarkdown()) {
+      this.panel.set('ai');
+    }
   }
 
   private loadContent(ws: string, id: string): void {
@@ -408,22 +431,6 @@ export class DocumentViewComponent implements OnDestroy {
     });
   }
 
-  rename(): void {
-    const name = this.title().trim();
-    const artifact = this.artifact();
-    if (!artifact || !name || name === artifact.name || !this.canEdit()) {
-      this.title.set(artifact?.name ?? '');
-      return;
-    }
-    this.artifacts.update(this.documentWorkspaceId(), this.artifactId(), { name }).subscribe({
-      next: (updated) => this.artifact.set(updated),
-      error: (err) => {
-        this.title.set(artifact.name);
-        this.toast.error(err.message);
-      },
-    });
-  }
-
   // ------------------------------------------------------------------
   // Toolbar actions
   // ------------------------------------------------------------------
@@ -472,9 +479,48 @@ export class DocumentViewComponent implements OnDestroy {
     return format === 'MARKDOWN' ? 'Markdown' : format === 'XLSX' ? 'Excel (.xlsx)' : format === 'DOCX' ? 'Word (.docx)' : format === 'PPTX' ? 'PowerPoint (.pptx)' : format;
   }
 
-  openShare(): void {
-    this.dialog.open<ShareDialogComponent, ShareDialogData>(ShareDialogComponent, {
-      data: { documentWorkspaceId: this.documentWorkspaceId(), artifactId: this.artifactId() },
+  /** The full data of the document, on its own page. */
+  openDetails(): void {
+    void this.router.navigate(['/document-workspaces', this.documentWorkspaceId(), 'details', this.artifactId()]);
+  }
+
+  openActivity(): void {
+    void this.router.navigate(['/document-workspaces', this.documentWorkspaceId(), 'activity']);
+  }
+
+  /** The assistant panel where the editor supports it, the workspace assistant elsewhere. */
+  openAi(): void {
+    if (this.isMarkdown()) {
+      this.togglePanel('ai');
+      return;
+    }
+    void this.router.navigate(['/document-workspaces', this.documentWorkspaceId(), 'ai']);
+  }
+
+  downloadFile(): void {
+    this.files.downloadUrl(this.documentWorkspaceId(), this.artifactId()).subscribe({
+      next: (url) => window.open(url, '_blank', 'noopener'),
+      error: () => this.toast.error(this.i18n.translate('documentView.exportError')),
+    });
+  }
+
+  async trash(): Promise<void> {
+    const art = this.artifact();
+    if (!art) return;
+    const ok = await this.dialog.confirm({
+      title: this.i18n.translate('explorer.menu.trash'),
+      message: this.i18n.translate('details.actions.trash.confirm', { name: art.name }),
+      confirmLabel: this.i18n.translate('explorer.menu.trash'),
+      danger: true,
+    });
+    if (!ok) return;
+    this.flushPending();
+    this.artifacts.trash(this.documentWorkspaceId(), art.id).subscribe({
+      next: () => {
+        this.toast.success(this.i18n.translate('explorer.toast.trashed'));
+        void this.router.navigateByUrl(this.backUrl());
+      },
+      error: (err) => this.toast.error(err.message),
     });
   }
 }

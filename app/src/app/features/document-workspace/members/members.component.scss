@@ -58,6 +58,12 @@
   }
 }
 
+.mem__send ::ng-deep .btn {
+  height: 44px;
+  padding-inline: 22px;
+  border-radius: var(--radius-sm);
+}
+
 .mem__invite-email {
   flex: 1;
   min-width: 0;
@@ -242,6 +248,7 @@
   transition: background var(--duration-fast) var(--ease-standard);
 
   &:hover { background: var(--surface-sunken); }
+  &:disabled { opacity: 0.5; cursor: default; }
   &:focus-visible {
     outline: 2px solid var(--accent-focus);
     outline-offset: 2px;

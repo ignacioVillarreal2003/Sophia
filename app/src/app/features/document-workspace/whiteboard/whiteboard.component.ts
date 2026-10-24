@@ -408,8 +408,14 @@ export class WhiteboardComponent {
         this.lastEmitted = json;
         const next = parseBoard(json);
         // Keep the user's viewport once the board is open; adopt the saved one only on first load.
+        const firstLoad = !this.loaded;
         this.board.set(this.loaded ? { ...next, view: this.board().view } : next);
         this.loaded = true;
+        // A board that was generated (never panned or zoomed) starts centred on its content, not on its corner.
+        const pristine = next.view.x === 0 && next.view.y === 0 && next.view.zoom === 1;
+        if (firstLoad && pristine && next.elements.length > 0) {
+          setTimeout(() => this.fit());
+        }
         const ids = new Set(next.elements.map((e) => e.id));
         this.selection.update((s) => s.filter((id) => ids.has(id)));
       });

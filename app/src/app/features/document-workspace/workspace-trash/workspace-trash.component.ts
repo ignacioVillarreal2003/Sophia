@@ -1,26 +1,29 @@
+import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit, inject, input, signal } from '@angular/core';
 import { Artifact } from '@core/models/document-workspace';
 import { TranslatePipe } from '@core/services/i18n/translate.pipe';
 import { TranslationService } from '@core/services/i18n';
 import { ToastService } from '@core/services/toast.service';
-import { CardComponent } from '@shared/ui/card/card.component';
-import { IconComponent } from '@shared/ui/icon/icon.component';
+import { ButtonComponent } from '@shared/ui/button/button.component';
 import { SpinnerComponent } from '@shared/ui/spinner/spinner.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { PaginationComponent } from '@shared/ui/pagination/pagination.component';
 import { DialogService } from '@shared/ui/dialog/dialog.service';
 import { RelativeTimePipe } from '@shared/pipes/relative-time.pipe';
-import { artifactIcon } from '@shared/utils/artifact-icon';
 import { TrashService } from '../trash/data/trash.service';
+import { bindUrlState } from '@shared/utils/url-state';
+
+/** How many rows one page of the list holds. */
+const PAGE_SIZE = 30;
 
 /** Trash of one workspace: deleted folders/documents/files, restorable or removable for good. */
 @Component({
   selector: 'app-workspace-trash',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    CardComponent,
-    IconComponent,
+    ButtonComponent,
+    DatePipe,
     SpinnerComponent,
     EmptyStateComponent,
     PageHeaderComponent,
@@ -44,10 +47,18 @@ export class WorkspaceTrashComponent implements OnInit {
   readonly loading = signal(true);
   readonly busyId = signal<string | null>(null);
   readonly page = signal(0);
+
+  /** The address and this state are one: filters, order and page are read from it and kept in it. */
+  private readonly urlState = bindUrlState([
+    { signal: this.page, param: 'page', page: true },
+  ]);
   readonly totalPages = signal(0);
   readonly first = signal(true);
   readonly last = signal(true);
-  readonly icon = artifactIcon;
+
+  typeLabel(item: Artifact): string {
+    return this.i18n.translate(`shared.type.${item.type}`);
+  }
 
   ngOnInit(): void {
     this.load();
@@ -60,7 +71,7 @@ export class WorkspaceTrashComponent implements OnInit {
 
   private load(): void {
     this.loading.set(true);
-    this.service.listPage(this.documentWorkspaceId(), this.page()).subscribe({
+    this.service.listPage(this.documentWorkspaceId(), this.page(), PAGE_SIZE).subscribe({
       next: (result) => {
         // The last row of a page can disappear (restore/purge); step back instead of showing an empty page.
         if (result.content.length === 0 && result.totalPages > 0 && this.page() > 0) {

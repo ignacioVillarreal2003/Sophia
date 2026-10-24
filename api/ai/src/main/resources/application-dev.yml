@@ -1,0 +1,18 @@
+sophia:
+  security:
+    jwt:
+      json-web-key-set-uri: ${JWT_JSON_WEB_KEY_SET_URI:http://localhost:8080/.well-known/json-web-key-set.json}
+
+logging:
+  level:
+    com.sophia: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.springframework.security: INFO
+
+management:
+  endpoint:
+    health:
+      show-details: always
+  tracing:
+    sampling:
+      probability: 1.0

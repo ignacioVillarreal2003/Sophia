@@ -3,13 +3,15 @@ import { NgTemplateOutlet } from '@angular/common';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { TranslatePipe } from '@core/services/i18n/translate.pipe';
+import { Observable } from 'rxjs';
 import { ButtonComponent } from '../button/button.component';
 import { IconComponent } from '../icon/icon.component';
 import { CheckboxComponent } from '../checkbox/checkbox.component';
+import { SearchSelectComponent } from '../form-field/search-select.component';
 import { SelectFieldComponent, SelectOption } from '../form-field/select-field.component';
 import { TextFieldComponent } from '../form-field/text-field.component';
 
-export type FilterFieldType = 'select' | 'text' | 'number' | 'checkbox' | 'stars' | 'multiselect';
+export type FilterFieldType = 'select' | 'search' | 'text' | 'number' | 'checkbox' | 'stars' | 'multiselect';
 
 export interface FilterField {
   key: string;
@@ -20,6 +22,12 @@ export interface FilterField {
   placeholder?: string;
   /** 'stars' only — highest star selectable. Defaults to 5. */
   maxStars?: number;
+  /** 'search' only — finds the options matching what was typed, for sets too big to list. */
+  search?: (text: string) => Observable<SelectOption[]>;
+  /** 'search' only — labels of the values picked, kept by the caller so they show again when reopened. */
+  labels?: Record<string, string>;
+  /** 'search' only — shown when nothing matches. */
+  emptyText?: string;
 }
 
 export interface FilterDateRange {
@@ -47,6 +55,9 @@ export interface FiltersDialogData {
    *  filters. Mutually exclusive with `fields`. */
   groups?: FilterGroup[];
   dateRange?: FilterDateRange;
+  /** Already translated; the "Apply" and "Clear" buttons say these instead of the filter wording (a sort dialog, say). */
+  applyLabel?: string;
+  clearLabel?: string;
   /** Current value of every field/date key, all as strings; a checkbox is 'true' or ''. */
   values: Record<string, string>;
 }
@@ -67,6 +78,7 @@ export type FiltersDialogResult = Record<string, string>;
     ButtonComponent,
     IconComponent,
     CheckboxComponent,
+    SearchSelectComponent,
     SelectFieldComponent,
     TextFieldComponent,
     TranslatePipe,
@@ -127,8 +139,8 @@ export type FiltersDialogResult = Record<string, string>;
       </div>
 
       <div class="fd__footer">
-        <app-button variant="ghost" (click)="clear()">{{ 'common.filters.clear' | t }}</app-button>
-        <app-button variant="primary" (click)="apply()">{{ 'common.filters.apply' | t }}</app-button>
+        <app-button variant="ghost" (click)="clear()">{{ data.clearLabel ?? ('common.filters.clear' | t) }}</app-button>
+        <app-button variant="dark" (click)="apply()">{{ data.applyLabel ?? ('common.filters.apply' | t) }}</app-button>
       </div>
     </div>
 
@@ -139,6 +151,17 @@ export type FiltersDialogResult = Record<string, string>;
             [formControl]="stringControl(field.key)"
             [options]="field.options ?? []"
             [label]="field.label"
+          />
+        }
+        @case ('search') {
+          <app-search-select
+            [formControl]="stringControl(field.key)"
+            [label]="field.label"
+            [placeholder]="field.placeholder ?? ''"
+            [emptyText]="field.emptyText ?? ''"
+            [clearLabel]="'common.filters.clear' | t"
+            [search]="field.search!"
+            [labels]="field.labels ?? {}"
           />
         }
         @case ('text') {
@@ -454,6 +477,13 @@ export type FiltersDialogResult = Record<string, string>;
         }
       }
 
+      /* Clear and Apply are one pair: the same height, padding, type and corners. */
+      .fd__footer app-button ::ng-deep .btn {
+        height: 34px;
+        padding-inline: 15px;
+        font-size: var(--type-caption-size);
+        border-radius: var(--radius-sm);
+      }
       .fd__footer {
         display: flex;
         justify-content: flex-end;

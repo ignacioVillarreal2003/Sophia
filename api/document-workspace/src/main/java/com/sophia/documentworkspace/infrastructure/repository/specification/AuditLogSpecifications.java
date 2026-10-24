@@ -18,7 +18,7 @@ public final class AuditLogSpecifications {
 
     public static Specification<AuditLog> search(UUID workspaceId, String action, UUID userId, String resourceType,
                                                   String resourceId, AuditLog.Result result, String requestId,
-                                                  Instant from, Instant to) {
+                                                  Instant from, Instant to, String text) {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
             Expression<String> workspaceIdInDetails = cb.function(
@@ -47,6 +47,16 @@ public final class AuditLogSpecifications {
             }
             if (to != null) {
                 predicates.add(cb.lessThanOrEqualTo(root.get("createdAt"), to));
+            }
+            if (StringUtils.hasText(text)) {
+                // Part of who did it, what was done, or the name of what it was done to.
+                String escaped = text.trim().toLowerCase().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
+                String pattern = "%" + escaped + "%";
+                Expression<String> name = cb.function("jsonb_extract_path_text", String.class, root.get("details"), cb.literal("name"));
+                predicates.add(cb.or(
+                        cb.like(cb.lower(root.get("userEmail")), pattern, '\\'),
+                        cb.like(cb.lower(root.get("action")), pattern, '\\'),
+                        cb.like(cb.lower(name), pattern, '\\')));
             }
             return cb.and(predicates.toArray(Predicate[]::new));
         };

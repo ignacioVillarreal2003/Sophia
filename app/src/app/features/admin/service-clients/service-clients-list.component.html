@@ -9,6 +9,7 @@
   <input
     class="scl__search-input"
     type="search"
+    [attr.value]="search()"
     [placeholder]="'admin.serviceClients.searchPlaceholder' | t"
     (input)="onSearchInput($any($event.target).value)"
   />

@@ -15,6 +15,7 @@ const API_BASE_URLS = [
   environment.authenticationApiUrl,
   environment.documentWorkspaceApiUrl,
   environment.notificationApiUrl,
+  environment.aiApiUrl,
 ];
 
 function isApiRequest(url: string): boolean {

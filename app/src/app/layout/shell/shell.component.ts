@@ -24,12 +24,12 @@ import {findRouteData} from '@core/utils/route-data';
 import {DocumentWorkspaceService} from '@features/document-workspace/data/document-workspace.service';
 import {WorkspaceLogoService} from '@features/document-workspace/data/workspace-logo.service';
 import {NotificationService} from '@features/notifications/data/notification.service';
-import {WorkspaceListPrefsService} from '@features/document-workspace/data/workspace-list-prefs.service';
 import {WorkspaceActivityService} from '@features/document-workspace/data/workspace-extras.service';
 import {RealtimeService} from '@features/document-workspace/data/realtime.service';
 import {AppHeaderComponent} from './header/app-header.component';
 import {IconRailComponent, RailItem} from '@shared/ui/icon-rail/icon-rail.component';
 import {UploadProgressComponent} from '@features/document-workspace/ui/upload-progress.component';
+import {patternDataUrl} from '../../features/document-workspace/workspace-patterns';
 
 type WorkspaceKind = 'document';
 
@@ -66,7 +66,7 @@ const SIDEBAR_STORAGE_KEY = 'sophia.appSidebar.railPinned';
             [items]="sidebar.items"
             [footItems]="sidebar.footItems ?? []"
             [title]="sidebar.title ?? ''"
-            [titleImage]="sidebar.title ? logoSrc() : null"
+            [titleImage]="sidebar.title ? (logoSrc() ?? patternImage()) : null"
             [expandLabel]="'admin.rail.pin' | t"
             [collapseLabel]="'admin.rail.unpin' | t"
             [storageKey]="sidebarStorageKey"
@@ -92,7 +92,6 @@ const SIDEBAR_STORAGE_KEY = 'sophia.appSidebar.railPinned';
 })
 export class ShellComponent implements OnInit, OnDestroy {
   private readonly documentWorkspaces = inject(DocumentWorkspaceService);
-  private readonly listPrefs = inject(WorkspaceListPrefsService);
   private readonly workspaceActivity = inject(WorkspaceActivityService);
   private readonly logos = inject(WorkspaceLogoService);
   private readonly notifications = inject(NotificationService);
@@ -106,6 +105,11 @@ export class ShellComponent implements OnInit, OnDestroy {
   readonly sidebarExpanded = signal(false);
   /** Object URL of the active workspace's logo, shown next to its name in the sidebar. */
   readonly logoSrc = signal<string | null>(null);
+  /** The workspace's pattern as a picture, for when it has no logo. */
+  readonly patternImage = computed(() => {
+    const ws = this.documentWorkspaces.active();
+    return ws ? patternDataUrl(ws.color, ws.id) : null;
+  });
   private readonly workspaceKind = signal(this.computeWorkspaceKind());
   private readonly workspaceId = signal(this.computeWorkspaceId());
 
@@ -140,6 +144,10 @@ export class ShellComponent implements OnInit, OnDestroy {
         this.hideSidebar.set(this.computeHideSidebar());
         this.workspaceKind.set(this.computeWorkspaceKind());
         this.workspaceId.set(this.computeWorkspaceId());
+        // Back on a page of the list (the browser's back button, not the sidebar's exit) means no workspace is open any more.
+        if (this.workspaceKind() === 'document' && !this.workspaceId() && this.documentWorkspaces.active()) {
+          this.documentWorkspaces.setActive(null);
+        }
       });
 
     this.notifications.incoming$.pipe(takeUntilDestroyed()).subscribe((notification) => {
@@ -175,10 +183,12 @@ export class ShellComponent implements OnInit, OnDestroy {
       items: [
         {label: this.i18n.translate('nav.dashboard'), icon: 'home', link: base, exact: true},
         {label: this.i18n.translate('documentWorkspace.starred'), icon: 'star', link: `${base}/starred`},
+        {label: this.i18n.translate('nav.tags'), icon: 'tag', link: `${base}/tags`},
+        {label: this.i18n.translate('nav.ai'), icon: 'sparkles', link: `${base}/ai`},
         {label: this.i18n.translate('documentWorkspace.members'), icon: 'users', link: `${base}/members`},
         {label: this.i18n.translate('documentWorkspace.activity'), icon: 'clock', link: `${base}/activity`},
         {label: this.i18n.translate('nav.trash'), icon: 'trash', link: `${base}/trash`},
-        {label: this.i18n.translate('documentWorkspace.settings'), icon: 'settings', link: `${base}/settings`},
+        {label: this.i18n.translate('nav.settings'), icon: 'settings', link: `${base}/settings`},
       ],
       footItems: [
         {
@@ -201,7 +211,6 @@ export class ShellComponent implements OnInit, OnDestroy {
         onClick: () => this.documentWorkspaces.setActive(null),
       });
     }
-    const view = this.listPrefs.view();
     items.push(
       {
         label: this.i18n.translate('nav.documentWorkspaces'),
@@ -210,37 +219,15 @@ export class ShellComponent implements OnInit, OnDestroy {
         exact: true,
       },
       {
-        label: this.i18n.translate('nav.favorites'),
-        icon: 'star',
-        link: '/document-workspaces/favorites',
-      },
-      {
-        label: this.i18n.translate('nav.workspaceActivity'),
-        icon: 'clock',
-        link: '/document-workspaces/activity',
-      },
-      {
         label: this.i18n.translate('nav.trash'),
         icon: 'trash',
         link: '/document-workspaces/trash',
       },
+      // Workspaces other people invited the caller to.
       {
-        label: this.i18n.translate('nav.viewList'),
-        icon: 'list',
-        link: '#view-list',
-        group: this.i18n.translate('nav.view'),
-        action: true,
-        active: view === 'list',
-        onClick: () => this.listPrefs.setView('list'),
-      },
-      {
-        label: this.i18n.translate('nav.viewCards'),
-        icon: 'layout-cards',
-        link: '#view-cards',
-        group: this.i18n.translate('nav.view'),
-        action: true,
-        active: view === 'cards',
-        onClick: () => this.listPrefs.setView('cards'),
+        label: this.i18n.translate('nav.invitations'),
+        icon: 'inbox',
+        link: '/document-workspaces/invitations',
       },
     );
     return items;

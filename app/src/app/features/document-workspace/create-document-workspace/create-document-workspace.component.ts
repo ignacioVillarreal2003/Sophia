@@ -3,7 +3,6 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AppError } from '@core/models/api.model';
-import { WORKSPACE_TEMPLATES, WorkspaceTemplate } from '@core/models/document-workspace';
 import { TranslatePipe } from '@core/services/i18n/translate.pipe';
 import { TranslationService } from '@core/services/i18n';
 import { ToastService } from '@core/services/toast.service';
@@ -12,24 +11,21 @@ import { ButtonComponent } from '@shared/ui/button/button.component';
 import { CardComponent } from '@shared/ui/card/card.component';
 import { TextFieldComponent } from '@shared/ui/form-field/text-field.component';
 import { TextareaComponent } from '@shared/ui/form-field/textarea.component';
-import { IconComponent } from '@shared/ui/icon/icon.component';
-import { IconName } from '@shared/ui/icon/icons';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { firstErrorKey } from '@shared/utils/form-errors';
-import { WORKSPACE_COLORS } from '../workspace-colors';
+import { WorkspaceLogoComponent } from '../ui/workspace-logo.component';
+import { WORKSPACE_PATTERNS, randomPatternId } from '../workspace-patterns';
 
-const SWATCHES = WORKSPACE_COLORS;
 
 @Component({
   selector: 'app-create-document-workspace',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
+  imports: [WorkspaceLogoComponent, 
     ReactiveFormsModule,
     ButtonComponent,
     CardComponent,
     TextFieldComponent,
     TextareaComponent,
-    IconComponent,
     PageHeaderComponent,
     TranslatePipe,
   ],
@@ -43,16 +39,9 @@ export class CreateDocumentWorkspaceComponent {
   private readonly i18n = inject(TranslationService);
   private readonly toast = inject(ToastService);
 
-  readonly swatches = SWATCHES;
-  readonly templates = WORKSPACE_TEMPLATES;
-  readonly template = signal<WorkspaceTemplate>('BLANK');
-  readonly templateIcons: Record<WorkspaceTemplate, IconName> = {
-    BLANK: 'file',
-    PROJECT: 'target',
-    TEAM: 'users',
-    PERSONAL: 'book',
-  };
-  readonly color = signal(SWATCHES[0]);
+  readonly patterns = WORKSPACE_PATTERNS;
+  /** The mark chosen; one is picked to start, and it can be changed. */
+  readonly color = signal(randomPatternId());
   readonly loading = signal(false);
 
   readonly form = this.fb.nonNullable.group({
@@ -77,7 +66,7 @@ export class CreateDocumentWorkspaceComponent {
     const { name, description } = this.form.getRawValue();
 
     this.service
-      .create({ name, description, color: this.color(), language: this.i18n.locale(), template: this.template() })
+      .create({ name, description, color: this.color(), language: this.i18n.locale(), template: 'BLANK' })
       .subscribe({
         next: (ws) => {
           this.toast.success(this.i18n.translate('common.create'));

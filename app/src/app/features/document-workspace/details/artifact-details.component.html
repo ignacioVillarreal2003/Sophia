@@ -1,16 +1,96 @@
 <div class="ad app-container">
-  <app-page-header [title]="'details.title' | t">
-    <button type="button" class="ad__back" (click)="back()">
-      <app-icon name="arrow-left" [size]="16" />
-      <span>{{ 'common.back' | t }}</span>
-    </button>
-  </app-page-header>
+  <div class="ad__bar">
+    <div class="ad__bar-left">
+      <app-button
+        variant="primary"
+        size="sm"
+        icon="arrow-left"
+        iconOnly
+        [attr.aria-label]="'common.back' | t"
+        (click)="backToItem()"
+      />
+      <div class="ad__bar-text">
+        <h1 class="ad__bar-title">
+          @if (artifact(); as item) {
+            <span class="ad__bar-name">{{ item.name }}</span>
+          }
+        </h1>
+      </div>
+    </div>
+  </div>
 
   @if (loading()) {
     <div class="ad__loading"><app-spinner /></div>
   } @else if (artifact(); as a) {
-    <div class="ad__grid">
-      <div class="ad__col">
+    <!-- One section at a time -->
+    <div class="ad__tabs" role="tablist">
+      @for (t of tabs(); track t) {
+        <button
+          type="button"
+          role="tab"
+          class="ad__tab"
+          [class.ad__tab--active]="tab() === t"
+          [attr.aria-selected]="tab() === t"
+          (click)="selectTab(t)"
+        >
+          {{ 'details.tab.' + t | t }}
+        </button>
+      }
+    </div>
+
+    @switch (tab()) {
+      @case ('general') {
+        <div class="ad__col">
+        <!-- Tags of this item -->
+        <app-card>
+          <h2 class="ad__section-title">{{ 'nav.tags' | t }}</h2>
+          @if (itemTags().length > 0) {
+            <div class="ad__tags">
+              @for (tag of itemTags(); track tag.id) {
+                <span class="ad__chip">
+                  <span class="ad__chip-dot" [style.background]="tag.color || 'var(--text-subtle)'"></span>
+                  {{ tag.name }}
+                  <button type="button" class="ad__chip-x" [attr.aria-label]="'tags.remove' | t" (click)="removeTag(tag)">
+                    <app-icon name="x" [size]="12" />
+                  </button>
+                </span>
+              }
+            </div>
+          }
+          <div class="ad__tag-add">
+            <input
+              class="ad__tag-input"
+              type="text"
+              maxlength="80"
+              autocomplete="off"
+              [value]="tagText()"
+              [placeholder]="'tags.add' | t"
+              (input)="tagText.set($any($event.target).value); tagMenu.set(true)"
+              (focus)="tagMenu.set(true)"
+              (blur)="tagMenu.set(false)"
+              (keydown.enter)="onTagEnter()"
+            />
+            @if (tagMenu() && (tagSuggestions().length > 0 || canCreateTag())) {
+              <ul class="ad__tag-menu" role="listbox">
+                @for (tag of tagSuggestions(); track tag.id) {
+                  <li>
+                    <button type="button" class="ad__tag-opt" role="option" (mousedown)="$event.preventDefault()" (click)="addTag(tag)">
+                      <span class="ad__chip-dot" [style.background]="tag.color || 'var(--text-subtle)'"></span> {{ tag.name }}
+                    </button>
+                  </li>
+                }
+                @if (canCreateTag()) {
+                  <li>
+                    <button type="button" class="ad__tag-opt ad__tag-opt--new" role="option" (mousedown)="$event.preventDefault()" (click)="createTag()">
+                      <app-icon name="plus" [size]="14" /> {{ 'tags.create' | t: { name: tagText().trim() } }}
+                    </button>
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+        </app-card>
+
         <!-- General: every editable property -->
         <app-card>
           <h2 class="ad__section-title">{{ 'details.section.general' | t }}</h2>
@@ -111,31 +191,6 @@
         </app-card>
 
 
-        <!-- Sharing -->
-        <app-card>
-          <div class="ad__share-head">
-            <h2 class="ad__section-title ad__section-title--flush">{{ 'details.section.sharing' | t }}</h2>
-            <button type="button" class="ad__btn" (click)="manageAccess()">
-              <app-icon name="share" [size]="15" />
-              <span>{{ 'details.sharing.manage' | t }}</span>
-            </button>
-          </div>
-
-          @if (sharedWith().length === 0) {
-            <p class="ad__muted">{{ 'share.noAccessEntries' | t }}</p>
-          } @else {
-            <ul class="ad__people">
-              @for (p of sharedWith(); track p.id) {
-                <li class="ad__person">
-                  <app-avatar [name]="p.name" [photoUrl]="p.photoUrl" [size]="32" />
-                  <span class="ad__person-name">{{ p.name }}</span>
-                  <span class="ad__person-modes">{{ p.modes }}</span>
-                </li>
-              }
-            </ul>
-          }
-        </app-card>
-
         <!-- Actions -->
         <app-card>
           <h2 class="ad__section-title">{{ 'details.section.actions' | t }}</h2>
@@ -144,7 +199,6 @@
               <span class="ad__action-icon"><app-icon name="copy" [size]="18" /></span>
               <span class="ad__action-text">
                 <span class="ad__action-title">{{ 'details.actions.copy.title' | t }}</span>
-                <span class="ad__action-desc">{{ 'details.actions.copy.desc' | t }}</span>
               </span>
               <button type="button" class="ad__btn" [disabled]="busy() !== null" (click)="copy()">
                 {{ 'explorer.menu.duplicate' | t }}
@@ -155,7 +209,6 @@
               <span class="ad__action-icon"><app-icon name="arrow-right" [size]="18" /></span>
               <span class="ad__action-text">
                 <span class="ad__action-title">{{ 'details.actions.move.title' | t }}</span>
-                <span class="ad__action-desc">{{ 'details.actions.move.desc' | t }}</span>
               </span>
               <button type="button" class="ad__btn" [disabled]="busy() !== null" (click)="move()">
                 {{ 'explorer.menu.move' | t }}
@@ -166,7 +219,6 @@
               <span class="ad__action-icon"><app-icon name="trash" [size]="18" /></span>
               <span class="ad__action-text">
                 <span class="ad__action-title">{{ 'details.actions.trash.title' | t }}</span>
-                <span class="ad__action-desc">{{ 'details.actions.trash.desc' | t }}</span>
               </span>
               <button type="button" class="ad__btn ad__btn--danger" [disabled]="busy() !== null" (click)="trash()">
                 {{ 'explorer.menu.trash' | t }}
@@ -174,7 +226,57 @@
             </div>
           </div>
         </app-card>
-      </div>
-    </div>
+        </div>
+      }
+
+      @case ('comments') {
+        <app-comment-thread [documentWorkspaceId]="documentWorkspaceId()" [artifactId]="artifactId()" />
+      }
+
+      @case ('history') {
+        <div>
+          <app-revision-history
+            [documentWorkspaceId]="documentWorkspaceId()"
+            [documentId]="artifactId()"
+            [closable]="false"
+            (restored)="onRestored()"
+          />
+        </div>
+      }
+
+      @case ('activity') {
+        <app-workspace-activity [documentWorkspaceId]="documentWorkspaceId()" [artifactId]="artifactId()" [embedded]="true" />
+      }
+
+      @case ('ai') {
+        <app-card>
+          <h2 class="ad__section-title">{{ 'ai.assistant.title' | t }}</h2>
+          <div class="ad__actions-list">
+            <div class="ad__action">
+              <span class="ad__action-icon"><app-icon name="sparkles" [size]="18" /></span>
+              <span class="ad__action-text">
+                <span class="ad__action-title">{{ 'ai.assistant.title' | t }}</span>
+                <span class="ad__action-desc">{{ 'details.tools.ai.desc' | t }}</span>
+              </span>
+              <button type="button" class="ad__btn" (click)="openAi()">{{ 'details.open' | t }}</button>
+            </div>
+          </div>
+        </app-card>
+      }
+
+      @case ('download') {
+        <app-card>
+          <h2 class="ad__section-title">{{ 'documentView.download' | t }}</h2>
+          <p class="ad__muted ad__lead">{{ 'details.tools.download.desc' | t }}</p>
+          <span class="ad__formats ad__formats--start">
+            @for (format of exportFormats(); track format) {
+              <button type="button" class="ad__btn" [disabled]="busy() !== null" (click)="download(format)">{{ formatLabel(format) }}</button>
+            } @empty {
+              <button type="button" class="ad__btn" (click)="downloadFile()">{{ 'documentView.download' | t }}</button>
+            }
+          </span>
+        </app-card>
+      }
+    }
   }
 </div>

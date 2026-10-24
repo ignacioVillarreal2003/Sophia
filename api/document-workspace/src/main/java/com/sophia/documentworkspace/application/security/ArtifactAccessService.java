@@ -12,7 +12,7 @@ import java.util.UUID;
 /**
  * Convenience facade used by every artifact-facing service: resolves the
  * workspace access snapshot, loads the artifact and runs the full policy
- * chain (MAC + role + ownership + inherited ACLs) for the attempted mode.
+ * chain (role + ownership) for the attempted mode.
  */
 @Service
 @RequiredArgsConstructor

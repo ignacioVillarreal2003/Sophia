@@ -6,7 +6,13 @@
   } @else if (items().length === 0) {
     <app-empty-state icon="star" [title]="'common.empty' | t" [description]="'starred.empty' | t" />
   } @else {
-    <app-card flush>
+    <div class="st__table">
+      <div class="st__head" aria-hidden="true">
+        <span>{{ 'shared.col.name' | t }}</span>
+        <span class="st__h-type">{{ 'shared.col.type' | t }}</span>
+        <span class="st__h-when">{{ 'shared.col.modified' | t }}</span>
+        <span></span>
+      </div>
       @for (fav of items(); track fav.id) {
         <div
           class="st__row"
@@ -16,13 +22,14 @@
           (click)="open(fav.artifact)"
           (keydown.enter)="open(fav.artifact)"
         >
-          <span class="st__icon" [class.st__icon--tint]="fav.artifact.type === 'FOLDER'">
-            <app-icon [name]="icon(fav.artifact.type)" [size]="18" />
-          </span>
-          <div class="st__info">
+          <span class="st__name-cell">
+            <span class="st__icon" [class.st__icon--tint]="true">
+              <app-icon [name]="icon(fav.artifact.type)" [size]="18" />
+            </span>
             <span class="st__name">{{ fav.artifact.name }}</span>
-            <span class="st__meta">{{ fav.artifact.updatedAt | relativeTime }}</span>
-          </div>
+          </span>
+          <span class="st__type">{{ typeLabel(fav.artifact.type) }}</span>
+          <span class="st__meta">{{ fav.artifact.updatedAt | relativeTime }}</span>
           <button
             type="button"
             class="st__star"
@@ -34,6 +41,14 @@
           </button>
         </div>
       }
-    </app-card>
+    </div>
+
+    <app-pagination
+      [page]="page()"
+      [totalPages]="totalPages()"
+      [first]="first()"
+      [last]="last()"
+      (pageChange)="goTo($event)"
+    />
   }
 </div>

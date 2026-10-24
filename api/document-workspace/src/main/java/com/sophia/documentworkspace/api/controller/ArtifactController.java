@@ -76,8 +76,9 @@ public class ArtifactController {
             @CurrentUser AuthenticatedUser user,
             @PathVariable UUID workspaceId,
             @RequestParam(required = false, defaultValue = "") String q,
-            @RequestParam(defaultValue = "50") int limit) {
-        return ResponseEntity.ok(ApiResponse.ok(artifactService.findDocuments(user, workspaceId, q, limit)));
+            @RequestParam(defaultValue = "50") int limit,
+            @RequestParam(defaultValue = "false") boolean studySources) {
+        return ResponseEntity.ok(ApiResponse.ok(artifactService.findDocuments(user, workspaceId, q, limit, studySources)));
     }
 
     @GetMapping("/{artifactId}/breadcrumb")

@@ -1,14 +1,26 @@
 <div class="na app-container">
-  <app-page-header [title]="'newItem.title' | t">
-    <button type="button" class="na__back" (click)="cancel()">
-      <app-icon name="arrow-left" [size]="16" />
-      <span>{{ 'common.back' | t }}</span>
-    </button>
+  <app-page-header [title]="'newItem.title' | t" [backLink]="backUrl()">
+    <app-button variant="dark" class="na__create" [loading]="submitting()" (click)="submit()">
+      {{ 'newItem.create' | t }}
+    </app-button>
   </app-page-header>
 
-  <!-- Type -->
-  <section class="na__section">
-    <h2 class="na__section-title">{{ 'newItem.chooseType' | t }}</h2>
+  <!-- How the item will look in the list, as the fields below are filled in -->
+  <div class="na__preview" aria-hidden="true">
+    <span class="na__preview-icon" [style.--na-color]="selected() === 'FOLDER' && draft().color ? draft().color : 'var(--text-muted)'">
+      <app-icon [name]="option().icon" [size]="20" />
+    </span>
+    <span class="na__preview-text">
+      <span class="na__preview-name" [class.na__preview-name--empty]="!draft().name">
+        {{ draft().name || ('newItem.field.namePlaceholder' | t) }}
+      </span>
+      <span class="na__preview-sub">{{ 'newItem.type.' + selected() | t }}</span>
+    </span>
+  </div>
+
+  <!-- Type: one tile each, just the icon and the name -->
+  <app-card class="na__card">
+    <h2 class="na__h">{{ 'newItem.chooseType' | t }}</h2>
     <div class="na__types" role="radiogroup" [attr.aria-label]="'newItem.chooseType' | t">
       @for (opt of types; track opt.type) {
         <button
@@ -17,31 +29,26 @@
           class="na__type"
           [class.na__type--active]="selected() === opt.type"
           [attr.aria-checked]="selected() === opt.type"
+          [title]="'newItem.type.' + opt.type + '.desc' | t"
           (click)="select(opt.type)"
         >
-          <span class="na__type-icon"><app-icon [name]="opt.icon" [size]="20" /></span>
-          <span class="na__type-text">
-            <span class="na__type-name">{{ 'newItem.type.' + opt.type | t }}</span>
-            <span class="na__type-desc">{{ 'newItem.type.' + opt.type + '.desc' | t }}</span>
-          </span>
+          <app-icon [name]="opt.icon" [size]="18" [style.color]="selected() === opt.type ? null : tone(opt.type)" />
+          <span class="na__type-name">{{ 'newItem.type.' + opt.type | t }}</span>
         </button>
       }
     </div>
-  </section>
+  </app-card>
 
-  <!-- Data for the chosen type -->
+  <!-- The options of the chosen type -->
   <app-card class="na__card">
-    <div class="na__head">
-      <span class="na__preview-icon" [style.--na-color]="selected() === 'FOLDER' && draft().color ? draft().color : 'var(--text-muted)'">
-        <app-icon [name]="option().icon" [size]="20" />
-      </span>
-      <div class="na__head-text">
-        <h2 class="na__head-title">{{ draft().name || ('newItem.type.' + selected() | t) }}</h2>
-        <p class="na__head-sub">{{ 'newItem.location' | t }}: <strong>{{ location() }}</strong></p>
-      </div>
-    </div>
+    <h2 class="na__h">{{ 'newItem.details' | t }}</h2>
 
     <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <div class="na__field">
+        <span class="na__label">{{ 'newItem.locationLabel' | t }}</span>
+        <span class="na__location"><app-icon name="folder" [size]="16" /> {{ location() }}</span>
+      </div>
+
       <div class="na__field">
         <app-text-field
           formControlName="name"
@@ -88,54 +95,29 @@
           </div>
         }
       }
-
-      @if (starters().length > 0) {
-        <div class="na__field">
-          <label class="na__label">{{ 'newItem.starter' | t }}</label>
-          <div class="na__starters" role="radiogroup">
-            @for (st of starters(); track st.id) {
-              <button
-                type="button"
-                role="radio"
-                class="na__starter"
-                [class.na__starter--active]="starter() === st.id"
-                [attr.aria-checked]="starter() === st.id"
-                (click)="starter.set(st.id)"
-              >
-                <span class="na__starter-name">{{ 'newItem.starter.' + selected() + '.' + st.id | t }}</span>
-              </button>
-            }
-          </div>
-        </div>
-      }
-
-      <div class="na__actions">
-        <app-button variant="ghost" type="button" (click)="cancel()">{{ 'common.cancel' | t }}</app-button>
-        <app-button variant="primary" type="submit" [loading]="submitting()">{{ 'newItem.create' | t }}</app-button>
-      </div>
     </form>
   </app-card>
 
-  <!-- From the user's computer -->
-  <section class="na__section">
-    <h2 class="na__section-title">{{ 'newItem.fromComputer' | t }}</h2>
-    <div class="na__types">
-      <label class="na__type na__type--file" [class.na__type--busy]="busyFrom() === 'upload'">
+  <!-- Bring files in from the user's computer -->
+  <app-card class="na__card">
+    <h2 class="na__h">{{ 'newItem.fromComputer' | t }}</h2>
+    <div class="na__files">
+      <label class="na__file" [class.na__file--busy]="busyFrom() === 'upload'">
         <input type="file" multiple hidden (change)="onUploadPicked($event)" />
-        <span class="na__type-icon"><app-icon name="upload" [size]="20" /></span>
-        <span class="na__type-text">
-          <span class="na__type-name">{{ 'explorer.upload' | t }}</span>
-          <span class="na__type-desc">{{ 'newItem.upload.desc' | t }}</span>
+        <app-icon name="upload" [size]="18" />
+        <span class="na__file-text">
+          <span class="na__file-name">{{ 'explorer.upload' | t }}</span>
+          <span class="na__file-desc">{{ 'newItem.upload.desc' | t }}</span>
         </span>
       </label>
-      <label class="na__type na__type--file" [class.na__type--busy]="busyFrom() === 'import'">
+      <label class="na__file" [class.na__file--busy]="busyFrom() === 'import'">
         <input type="file" accept=".md,.markdown,.html,.txt,.docx,.pdf,.zip,.xlsx,.csv" hidden (change)="onImportPicked($event)" />
-        <span class="na__type-icon"><app-icon name="download" [size]="20" /></span>
-        <span class="na__type-text">
-          <span class="na__type-name">{{ 'explorer.import' | t }}</span>
-          <span class="na__type-desc">{{ 'newItem.import.desc' | t }}</span>
+        <app-icon name="download" [size]="18" />
+        <span class="na__file-text">
+          <span class="na__file-name">{{ 'explorer.import' | t }}</span>
+          <span class="na__file-desc">{{ 'newItem.import.desc' | t }}</span>
         </span>
       </label>
     </div>
-  </section>
+  </app-card>
 </div>

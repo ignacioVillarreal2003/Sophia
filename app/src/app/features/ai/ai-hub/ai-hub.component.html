@@ -1,0 +1,86 @@
+<div class="hub app-container">
+  <app-page-header [title]="'ai.title' | t">
+    @if (status(); as s) {
+      @if (s.quota.userLimit > 0) {
+        <span class="hub__quota" [attr.title]="'ai.quota.resets' | t">
+          {{ 'ai.quota.today' | t: { used: compact(s.quota.userUsed), limit: compact(s.quota.userLimit) } }}
+        </span>
+      }
+    }
+  </app-page-header>
+
+  <!-- One line when something stops it from working -->
+  @if (notice(); as n) {
+    <p class="hub__notice" role="status">
+      <app-icon name="alert-circle" [size]="16" />
+      <span>{{ n | t }}</span>
+    </p>
+  }
+
+  <!-- The usual tools are one click away; the rest are under "More" -->
+  <div class="hub__tabs" role="tablist" [attr.aria-label]="'ai.tools' | t">
+    @for (id of main; track id) {
+      <a
+        class="hub__tab"
+        role="tab"
+        [class.hub__tab--on]="active() === id"
+        [routerLink]="[]"
+        [queryParams]="{ tool: id }"
+        [attr.aria-selected]="active() === id"
+      >
+        <app-icon [name]="iconOf(id)" [size]="16" />
+        {{ 'ai.tool.' + id | t }}
+      </a>
+    }
+    <button
+      type="button"
+      class="hub__tab hub__tab--more"
+      [class.hub__tab--on]="isMore()"
+      [cdkMenuTriggerFor]="moreMenu"
+    >
+      @if (isMore()) {
+        <app-icon [name]="iconOf(active())" [size]="16" />
+        {{ 'ai.tool.' + active() | t }}
+      } @else {
+        {{ 'ai.more' | t }}
+      }
+      <app-icon name="chevron-down" [size]="14" />
+    </button>
+  </div>
+
+  <main class="hub__main">
+    @if (blocked()) {
+      <div class="hub__locked">
+        <app-icon name="lock" [size]="22" />
+        <span>{{ 'ai.locked' | t }}</span>
+      </div>
+    } @else {
+      @switch (active()) {
+        @case ('notes') { <app-ai-text-tool kind="notes" [workspaceId]="documentWorkspaceId()" /> }
+        @case ('review') { <app-ai-text-tool kind="review" [workspaceId]="documentWorkspaceId()" /> }
+        @case ('cards') { <app-ai-deck-tool [workspaceId]="documentWorkspaceId()" /> }
+        @case ('map') { <app-ai-map-tool [workspaceId]="documentWorkspaceId()" /> }
+        @case ('quiz') { <app-ai-quiz-tool [workspaceId]="documentWorkspaceId()" /> }
+        @case ('plan') { <app-ai-plan-tool [workspaceId]="documentWorkspaceId()" /> }
+        @case ('perspectives') { <app-ai-analysis-tool kind="perspectives" [workspaceId]="documentWorkspaceId()" /> }
+        @case ('debate') { <app-ai-analysis-tool kind="debate" [workspaceId]="documentWorkspaceId()" /> }
+        @case ('gaps') { <app-ai-analysis-tool kind="gaps" [workspaceId]="documentWorkspaceId()" /> }
+        @case ('scan') { <app-ai-scan-tool [workspaceId]="documentWorkspaceId()" /> }
+        @case ('table') { <app-ai-table-tool [workspaceId]="documentWorkspaceId()" /> }
+        @case ('diagram') { <app-ai-diagram-tool [workspaceId]="documentWorkspaceId()" /> }
+        @case ('listen') { <app-ai-listen-tool [workspaceId]="documentWorkspaceId()" /> }
+        @case ('chat') { <app-ai-chat-tool [workspaceId]="documentWorkspaceId()" /> }
+      }
+    }
+  </main>
+</div>
+
+<ng-template #moreMenu>
+  <div class="menu" cdkMenu>
+    @for (id of others; track id) {
+      <a class="menu__item" cdkMenuItem [routerLink]="[]" [queryParams]="{ tool: id }">
+        <app-icon [name]="iconOf(id)" [size]="15" /> {{ 'ai.tool.' + id | t }}
+      </a>
+    }
+  </div>
+</ng-template>

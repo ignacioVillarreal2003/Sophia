@@ -14,7 +14,7 @@ public record UpdateWorkspaceRequest(
         String description,
 
 
-        @Pattern(regexp = "^#[0-9A-Fa-f]{6}$", message = "color must be a hex color like #6366F1")
+        @Pattern(regexp = "^(#[0-9A-Fa-f]{6}|[a-z][a-z0-9-]{0,15})$", message = "color must be a hex color like #6366F1 or the id of a pattern")
         String color,
 
 

@@ -27,6 +27,7 @@ import {SpinnerComponent} from '@shared/ui/spinner/spinner.component';
 import {EmptyStateComponent} from '@shared/ui/empty-state/empty-state.component';
 import {PaginationComponent} from '@shared/ui/pagination/pagination.component';
 import {CheckboxComponent} from '@shared/ui/checkbox/checkbox.component';
+import { bindUrlState } from '@shared/utils/url-state';
 
 interface PermissionGroup {
   category: string;
@@ -66,6 +67,12 @@ export class PermissionsListComponent implements OnInit, AfterViewInit {
   readonly rawSearch = signal('');
   readonly search = signal('');
   readonly page = signal(0);
+
+  /** The address and this state are one: filters, order and page are read from it and kept in it. */
+  private readonly urlState = bindUrlState([
+    { signal: this.search, param: 'q' },
+    { signal: this.page, param: 'page', page: true },
+  ]);
   readonly totalPages = signal(0);
   readonly totalElements = signal(0);
   readonly first = signal(true);

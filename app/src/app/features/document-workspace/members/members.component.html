@@ -8,22 +8,20 @@
       <span class="mem__tile"><app-icon name="users" [size]="20" /></span>
       <div class="mem__invite-text">
         <h2 class="mem__invite-title">{{ 'documentWorkspace.members.add.title' | t }}</h2>
-        <p class="mem__invite-sub">{{ 'documentWorkspace.members.add.subtitle' | t }}</p>
       </div>
     </div>
 
     <form [formGroup]="addForm" (ngSubmit)="add()" novalidate>
       <div class="mem__invite-row">
         <div class="mem__invite-email">
-          <app-text-field
+          <app-person-search
             formControlName="email"
-            type="email"
-            icon="user"
-            [placeholder]="'documentWorkspace.invite.emailPlaceholder' | t"
+            [placeholder]="'documentWorkspace.members.add.search' | t"
+            [emptyText]="'documentWorkspace.members.add.noMatch' | t"
             [invalid]="emailInvalid()"
           />
         </div>
-        <app-button type="submit" variant="primary" icon="plus" [loading]="adding()">
+        <app-button type="submit" variant="dark" class="mem__send" [loading]="adding()">
           {{ 'documentWorkspace.members.add.send' | t }}
         </app-button>
       </div>
@@ -86,6 +84,43 @@
             <app-button size="sm" variant="ghost" [disabled]="busyRequest() === r.id" (click)="denyRequest(r)">
               {{ 'workspaces.access.deny' | t }}
             </app-button>
+          </div>
+        }
+      </app-card>
+    </section>
+  }
+
+  @if (isAdmin() && invitations().length > 0) {
+    <section class="mem__section">
+      <h2 class="mem__section-title">
+        {{ 'invitations.pending' | t }}
+        <span class="mem__count">{{ invitations().length }}</span>
+      </h2>
+      <app-card flush>
+        @for (i of invitations(); track i.id) {
+          <div class="mem__row mem__row--request">
+            <app-avatar [name]="i.displayName || i.email" [size]="40" />
+            <div class="mem__info">
+              <span class="mem__name">{{ i.displayName || i.email }}</span>
+              <span class="mem__meta">
+                {{ i.email }} · {{ 'invitations.expires' | t: { when: (i.expiresAt | relativeTime) } }}
+              </span>
+            </div>
+            @if (inviteRoles(i).length > 0) {
+              <span class="mem__select">
+                <select [attr.aria-label]="roleLabel(i.role)" (change)="changeInvitationRole(i, $any($event.target).value)">
+                  @for (r of inviteRoles(i); track r) {
+                    <option [value]="r" [selected]="r === i.role">{{ roleLabel(r) }}</option>
+                  }
+                </select>
+                <app-icon name="chevron-down" [size]="14" />
+              </span>
+            } @else {
+              <app-badge [tone]="i.role === 'ADMIN' ? 'accent' : 'neutral'">{{ roleLabel(i.role) }}</app-badge>
+            }
+            <button type="button" class="mem__btn" [disabled]="busyInvitation() === i.id" (click)="revokeInvitation(i)">
+              {{ 'invitations.revoke' | t }}
+            </button>
           </div>
         }
       </app-card>

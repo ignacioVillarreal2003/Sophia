@@ -6,51 +6,34 @@
   } @else if (items().length === 0) {
     <app-empty-state icon="trash" [title]="'common.empty' | t" [description]="'trash.emptyDescription' | t" />
   } @else {
-    <app-card flush>
+    <div class="tr__table">
+      <div class="tr__head" aria-hidden="true">
+        <span>{{ 'trash.col.workspace' | t }}</span>
+        <span>{{ 'trash.col.deleted' | t }}</span>
+        <span>{{ 'trash.col.left' | t }}</span>
+        <span>{{ 'workspaces.col.actions' | t }}</span>
+      </div>
       @for (item of items(); track item.id) {
-        <div class="trash__row" [style.--ws-color]="item.color || 'var(--accent)'">
-          <span class="trash__icon"><app-icon name="book" [size]="18" /></span>
-          <div class="trash__info">
-            <span class="trash__name">{{ item.name }}</span>
-            <span class="trash__meta">{{ 'trash.deleted' | t: { time: (item.deletedAt | relativeTime) } }}</span>
-            @if (daysLeft(item); as days) {
-              <span class="trash__expiry" [class.trash__expiry--urgent]="isUrgent(item)">
-                <app-icon [name]="isUrgent(item) ? 'alert-circle' : 'clock'" [size]="13" />
-                {{ 'trash.expiresIn' | t: { days: days } }}
-              </span>
-            } @else if (item.purgeAt) {
-              <span class="trash__expiry trash__expiry--urgent">
-                <app-icon name="alert-circle" [size]="13" />
-                {{ 'trash.expiresToday' | t }}
-              </span>
-            }
-          </div>
-          <div class="trash__actions">
-            <button type="button" class="trash__btn" [disabled]="busyId() === item.id" (click)="restore(item)">
-              <app-icon name="history" [size]="15" />
-              <span>{{ 'common.restore' | t }}</span>
-            </button>
-            <button
-              type="button"
-              class="trash__btn trash__btn--danger"
-              [disabled]="busyId() === item.id"
-              [attr.aria-label]="'trash.deletePermanently' | t"
-              [title]="'trash.deletePermanently' | t"
-              (click)="purge(item)"
-            >
-              <app-icon name="trash" [size]="15" />
-              <span>{{ 'trash.deletePermanently' | t }}</span>
-            </button>
-          </div>
+        <div class="tr__row" [style.--level]="levelColor(item)">
+          <span class="tr__name-cell">
+            <app-workspace-logo [pattern]="item.color" [seed]="item.id" [size]="40" />
+            <span class="tr__name tr__name--row">{{ item.name }}</span>
+          </span>
+          <span class="tr__when" [attr.title]="item.deletedAt | date: 'medium'">{{ item.deletedAt | relativeTime }}</span>
+          <span class="tr__left">
+            <span class="tr__left-text">{{ leftText(item) }}</span>
+          </span>
+          <span class="tr__actions">
+            <app-button variant="ghost" size="sm" [disabled]="busyId() === item.id" (click)="restore(item)">
+              {{ 'common.restore' | t }}
+            </app-button>
+            <app-button variant="dark" size="sm" class="tr__outline" [disabled]="busyId() === item.id" (click)="purge(item)">
+              {{ 'trash.deleteShort' | t }}
+            </app-button>
+          </span>
         </div>
       }
-    </app-card>
-    <app-pagination
-      [page]="page()"
-      [totalPages]="totalPages()"
-      [first]="first()"
-      [last]="last()"
-      (pageChange)="onPageChange($event)"
-    />
+    </div>
+    <app-pagination [page]="page()" [totalPages]="totalPages()" [first]="first()" [last]="last()" (pageChange)="onPageChange($event)" />
   }
 </div>

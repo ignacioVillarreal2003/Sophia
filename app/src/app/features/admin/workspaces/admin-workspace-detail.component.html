@@ -7,7 +7,7 @@
     @if (workspace(); as ws) {
       <!-- Identity -->
       <section class="awd__card awd__identity">
-        <app-workspace-logo [logoUrl]="ws.logoUrl" [color]="ws.color" [size]="56" [iconSize]="24" />
+        <app-workspace-logo [logoUrl]="ws.logoUrl" [pattern]="ws.color" [seed]="ws.id" [size]="56" />
         <div class="awd__identity-text">
           <span class="awd__identity-name">{{ ws.name }}</span>
           @if (d.description) {
@@ -25,7 +25,6 @@
         <div class="awd__stat"><span class="awd__stat-n">{{ ws.memberCount }}</span><span class="awd__stat-l">{{ 'documentWorkspace.members' | t }}</span></div>
         <div class="awd__stat"><span class="awd__stat-n">{{ d.stats.items }}</span><span class="awd__stat-l">{{ 'admin.workspaces.detail.items' | t }}</span></div>
         <div class="awd__stat"><span class="awd__stat-n">{{ d.stats.trashedItems }}</span><span class="awd__stat-l">{{ 'nav.trash' | t }}</span></div>
-        <div class="awd__stat"><span class="awd__stat-n">{{ d.stats.activePublicLinks }}</span><span class="awd__stat-l">{{ 'admin.workspaces.detail.publicLinks' | t }}</span></div>
       </section>
 
       <!-- Status -->
@@ -94,10 +93,6 @@
           <div class="awd__info-row">
             <dt>{{ 'documentWorkspace.settings.retention.title' | t }}</dt>
             <dd>{{ d.trashRetentionDays ? ('documentWorkspace.settings.retention.days' | t: { count: d.trashRetentionDays }) : ('documentWorkspace.settings.retention.default' | t) }}</dd>
-          </div>
-          <div class="awd__info-row">
-            <dt>{{ 'documentWorkspace.settings.sharing.public' | t }}</dt>
-            <dd>{{ (d.publicSharingEnabled ? 'common.yes' : 'common.no') | t }}</dd>
           </div>
         </dl>
       </section>

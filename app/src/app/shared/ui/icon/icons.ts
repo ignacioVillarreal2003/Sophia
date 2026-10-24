@@ -64,6 +64,7 @@ export type IconName =
   | 'plane'
   | 'film'
   | 'camera'
+  | 'volume'
   | 'smartphone'
   | 'archive'
   | 'filter'
@@ -189,6 +190,8 @@ export const ICONS: Record<IconName, string> = {
   book: '<path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v17H6.5A2.5 2.5 0 0 0 4 21.5v-17z"/><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>',
   plane: '<path d="M22 2 15 22l-4-9-9-4 20-7z"/><path d="M22 2 11 13"/>',
   film: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 3v18M17 3v18M3 8h4M3 16h4M17 8h4M17 16h4"/>',
+  volume:
+    '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>',
   camera:
     '<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>',
   smartphone:

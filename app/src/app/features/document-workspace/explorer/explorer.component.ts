@@ -7,8 +7,10 @@ import {
   inject,
   input,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { CdkContextMenuTrigger, CdkMenu, CdkMenuItem, CdkMenuTrigger } from '@angular/cdk/menu';
 import { Router } from '@angular/router';
 import { firstValueFrom, forkJoin } from 'rxjs';
@@ -24,16 +26,25 @@ import { Crumb, BreadcrumbsComponent } from '@shared/ui/breadcrumbs/breadcrumbs.
 import { DialogService } from '@shared/ui/dialog/dialog.service';
 import { ArtifactService } from '../data/artifact.service';
 import { FavoriteService } from '../data/favorite.service';
-import { ShareDialogComponent, ShareDialogData } from '../ui/share-dialog.component';
 import { MoveDialogComponent, MoveDialogData, MoveDialogResult } from '../ui/move-dialog.component';
 import { UploadManagerService } from '../data/upload-manager.service';
 import { ExportImportService } from '../data/export-import.service';
 import { DropZoneDirective } from '@shared/directives/drop-zone.directive';
+import { FilterToggleComponent } from '@shared/ui/filter-toggle/filter-toggle.component';
+import { FiltersDialogComponent, FiltersDialogData, FiltersDialogResult } from '@shared/ui/filters-dialog/filters-dialog.component';
+import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
+import { PaginationComponent } from '@shared/ui/pagination/pagination.component';
+import { FileSizePipe } from '@shared/pipes/file-size.pipe';
 import { RelativeTimePipe } from '@shared/pipes/relative-time.pipe';
 import { artifactIcon } from '@shared/utils/artifact-icon';
+import { artifactTone } from '@shared/utils/artifact-tone';
 import { RenameDialogComponent, RenameDialogData } from '../ui/rename-dialog.component';
+import { bindUrlState } from '@shared/utils/url-state';
 
 /** Folder contents, Drive-style: folders and files, right-click to create, drag & drop to upload. */
+/** Rows on one page of the list. */
+const PAGE_SIZE = 30;
+
 @Component({
   selector: 'app-explorer',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -47,6 +58,11 @@ import { RenameDialogComponent, RenameDialogData } from '../ui/rename-dialog.com
     BreadcrumbsComponent,
     DropZoneDirective,
     IconComponent,
+    FileSizePipe,
+    FilterToggleComponent,
+    NgTemplateOutlet,
+    PageHeaderComponent,
+    PaginationComponent,
     RelativeTimePipe,
     TranslatePipe,
   ],
@@ -69,7 +85,6 @@ export class ExplorerComponent {
   readonly uploadInput = viewChild.required<ElementRef<HTMLInputElement>>('uploadEl');
   readonly importInput = viewChild.required<ElementRef<HTMLInputElement>>('importEl');
 
-  readonly view = signal<'grid' | 'list'>(this.readView());
   readonly selectedId = signal<string | null>(null);
   /** Ids of the items the user starred in this workspace. */
   readonly starred = signal<ReadonlySet<string>>(new Set());
@@ -111,12 +126,46 @@ export class ExplorerComponent {
       if (since !== null && new Date(a.updatedAt).getTime() < since) return false;
       return type === 'all' || ExplorerComponent.group(a.type) === type;
     });
-    return [...list].sort((a, b) =>
-      this.sort() === 'name'
+    // Folders first, then everything else; each part in the order chosen.
+    return [...list].sort((a, b) => {
+      const apart = Number(a.type !== 'FOLDER') - Number(b.type !== 'FOLDER');
+      if (apart !== 0) return apart;
+      return this.sort() === 'name'
         ? a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
-        : b.updatedAt.localeCompare(a.updatedAt),
-    );
+        : b.updatedAt.localeCompare(a.updatedAt);
+    });
   });
+  /** The page of the list being shown; the list is read whole and cut here. */
+  readonly page = signal(0);
+
+  /** The address and this state are one: filters, order and page are read from it and kept in it. */
+  private readonly urlState = bindUrlState([
+    { signal: this.search, param: 'q' },
+    { signal: this.typeFilter, param: 'type', allowed: ['all', 'folders', 'documents', 'files'] },
+    { signal: this.personFilter, param: 'person' },
+    { signal: this.modifiedFilter, param: 'modified', allowed: ['any', 'today', 'week', 'month', 'year'] },
+    { signal: this.sort, param: 'sort', allowed: ['modified', 'name'] },
+    { signal: this.page, param: 'page', page: true },
+  ]);
+  readonly totalPages = computed(() => Math.max(1, Math.ceil(this.visible().length / PAGE_SIZE)));
+  readonly pageItems = computed(() => {
+    const from = Math.min(this.page(), this.totalPages() - 1) * PAGE_SIZE;
+    return this.visible().slice(from, from + PAGE_SIZE);
+  });
+  /** The two tables of the page: folders above, everything else below. */
+  readonly pageFolders = computed(() => this.pageItems().filter((a) => a.type === 'FOLDER'));
+  readonly pageFiles = computed(() => this.pageItems().filter((a) => a.type !== 'FOLDER'));
+
+  /** Who owns an item, by name; the id when the member is not known. */
+  ownerName(userId: string): string {
+    const member = this.members().find((m) => m.userId === userId);
+    return member ? member.fullName || member.email : '—';
+  }
+
+  typeLabel(type: ArtifactType): string {
+    return this.i18n.translate(`shared.type.${type}`);
+  }
+
   readonly folders = computed(() => this.visible().filter((a) => a.type === 'FOLDER'));
   readonly files = computed(() => this.visible().filter((a) => a.type !== 'FOLDER'));
 
@@ -143,6 +192,83 @@ export class ExplorerComponent {
     }
   }
 
+  readonly sortOptions: ('modified' | 'name')[] = ['modified', 'name'];
+
+  /** The order is chosen in a dialog, like the filters. */
+  openSort(): void {
+    const t = (key: string) => this.i18n.translate(key);
+    const ref = this.dialog.open<FiltersDialogComponent, FiltersDialogData, FiltersDialogResult | undefined>(FiltersDialogComponent, {
+      data: {
+        title: t('explorer.sort.label'),
+        fields: [{ key: 'sort', type: 'select', label: t('workspaces.sort.by'), options: this.sortOptions.map((o) => ({ value: o, label: t(`explorer.sort.${o}`) })) }],
+        applyLabel: t('workspaces.sort.apply'),
+        clearLabel: t('workspaces.sort.reset'),
+        values: { sort: this.sort() },
+      },
+    });
+    ref.closed.subscribe((result) => {
+      if (result) this.sort.set(result['sort'] === 'name' ? 'name' : 'modified');
+    });
+  }
+  readonly filtersOpen = signal(false);
+
+  /** The page title: the folder being looked at, or the workspace at its top. */
+  readonly title = computed(() => this.crumbs().at(-1)?.label ?? this.documentWorkspaces.active()?.name ?? '');
+
+  /** How many of the hidden filters are set. */
+  readonly filterCount = computed(
+    () => (this.typeFilter() !== 'all' ? 1 : 0) + (this.personFilter() !== '' ? 1 : 0) + (this.modifiedFilter() !== 'any' ? 1 : 0),
+  );
+
+  openFilters(): void {
+    this.filtersOpen.set(true);
+    const t = (key: string) => this.i18n.translate(key);
+    const ref = this.dialog.open<FiltersDialogComponent, FiltersDialogData, FiltersDialogResult | undefined>(
+      FiltersDialogComponent,
+      {
+        data: {
+          title: t('documentWorkspaces.filters'),
+          groups: [
+            {
+              label: t('workspaces.filter.tab.general'),
+              fields: [
+                {
+                  key: 'type',
+                  type: 'select',
+                  label: t('explorer.filter.type.label'),
+                  options: ['all', 'folders', 'documents', 'files'].map((v) => ({ value: v, label: t(`explorer.filter.type.${v}`) })),
+                },
+                {
+                  key: 'person',
+                  type: 'select',
+                  label: t('explorer.filter.people.label'),
+                  options: [
+                    { value: '', label: t('explorer.filter.people.all') },
+                    ...this.members().map((m) => ({ value: m.userId, label: m.fullName || m.email })),
+                  ],
+                },
+                {
+                  key: 'modified',
+                  type: 'select',
+                  label: t('explorer.filter.modified.label'),
+                  options: ['any', 'today', 'week', 'month', 'year'].map((v) => ({ value: v, label: t(`explorer.filter.modified.${v}`) })),
+                },
+              ],
+            },
+          ],
+          values: { type: this.typeFilter(), person: this.personFilter(), modified: this.modifiedFilter() },
+        },
+      },
+    );
+    ref.closed.subscribe((result) => {
+      this.filtersOpen.set(false);
+      if (!result) return;
+      this.typeFilter.set((result['type'] || 'all') as 'all' | 'folders' | 'documents' | 'files');
+      this.personFilter.set(result['person'] ?? '');
+      this.modifiedFilter.set((result['modified'] || 'any') as 'any' | 'today' | 'week' | 'month' | 'year');
+    });
+  }
+
   clearFilters(): void {
     this.search.set('');
     this.typeFilter.set('all');
@@ -150,9 +276,9 @@ export class ExplorerComponent {
     this.modifiedFilter.set('any');
   }
 
-  /** Folder colour chosen on the details screen . */
-  colorOf(artifact: Artifact): string | null {
-    return artifact.color || null;
+  /** The colour an item is drawn in: the one chosen for a folder, else the one of its kind. */
+  colorOf(artifact: Artifact): string {
+    return artifact.color || artifactTone(artifact.type);
   }
 
   // ---- drag & drop: drop an item onto a folder to move it ----
@@ -268,12 +394,6 @@ export class ExplorerComponent {
     this.moveArtifact(artifact, result.parentId);
   }
 
-  share(artifact: Artifact): void {
-    this.dialog.open<ShareDialogComponent, ShareDialogData>(ShareDialogComponent, {
-      data: { documentWorkspaceId: this.documentWorkspaceId(), artifactId: artifact.id },
-    });
-  }
-
   toggleStar(artifact: Artifact): void {
     const ws = this.documentWorkspaceId();
     const starred = this.starred().has(artifact.id);
@@ -295,6 +415,20 @@ export class ExplorerComponent {
   }
 
   constructor() {
+    // A new search, filter or order starts again from the first page.
+    let first = true;
+    effect(() => {
+      this.search();
+      this.typeFilter();
+      this.sort();
+      this.personFilter();
+      this.modifiedFilter();
+      if (first) {
+        first = false;
+        return;
+      }
+      untracked(() => this.page.set(0));
+    });
     effect(() => {
       const ws = this.documentWorkspaceId();
       const folder = this.folderId() ?? null;
@@ -312,9 +446,9 @@ export class ExplorerComponent {
       next: (list) => this.starred.set(new Set(list.map((f) => f.artifactId))),
       error: () => this.starred.set(new Set()),
     });
-    this.artifacts.list(documentWorkspaceId, folderId).subscribe({
-      next: (page) => {
-        this.items.set(page.content);
+    this.artifacts.listAll(documentWorkspaceId, folderId).subscribe({
+      next: (list) => {
+        this.items.set(list);
         this.loading.set(false);
       },
       error: () => this.loading.set(false),
@@ -350,14 +484,6 @@ export class ExplorerComponent {
 
   pickImport(): void {
     this.importInput().nativeElement.click();
-  }
-
-  private readView(): 'grid' | 'list' {
-    try {
-      return localStorage.getItem('sophia.explorer.view') === 'list' ? 'list' : 'grid';
-    } catch {
-      return 'grid';
-    }
   }
 
   /** Drive behaviour: click selects, double-click opens. Touch screens have no double-click, so a tap opens. */

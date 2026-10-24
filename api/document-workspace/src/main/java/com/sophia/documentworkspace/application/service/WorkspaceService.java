@@ -76,6 +76,7 @@ public class WorkspaceService {
     private final WorkspaceStarterService starterService;
     private final WorkspaceLabelRepository labelRepository;
     private final ApplicationProperties properties;
+    private final UserWorkspacePreferencesService preferences;
 
     @org.springframework.beans.factory.annotation.Value("${sophia.workspaces.default-storage-quota-mb:5120}")
     private long defaultStorageQuotaMb;
@@ -182,7 +183,7 @@ public class WorkspaceService {
     /** When a trashed workspace will be erased for good. */
     public Instant purgeDate(Workspace workspace) {
         return workspace.getDeletedAt() == null ? null
-                : workspace.getDeletedAt().plus(Duration.ofDays(properties.retention().workspaceTrashDays()));
+                : workspace.getDeletedAt().plus(Duration.ofDays(preferences.trashRetentionDays(workspace.getOwnerId())));
     }
 
     // ---- logo ----------------------------------------------------------------------------------

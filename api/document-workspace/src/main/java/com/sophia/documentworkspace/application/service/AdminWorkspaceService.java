@@ -16,7 +16,6 @@ import com.sophia.documentworkspace.domain.exception.ForbiddenOperationException
 import com.sophia.documentworkspace.domain.exception.ResourceNotFoundException;
 import com.sophia.documentworkspace.infrastructure.messaging.DomainEventPublisher;
 import com.sophia.documentworkspace.infrastructure.repository.ArtifactRepository;
-import com.sophia.documentworkspace.infrastructure.repository.PublicLinkRepository;
 import com.sophia.documentworkspace.infrastructure.repository.WorkspaceLimitsRepository;
 import com.sophia.documentworkspace.infrastructure.repository.WorkspaceMemberRepository;
 import com.sophia.documentworkspace.infrastructure.repository.WorkspaceRepository;
@@ -42,7 +41,6 @@ public class AdminWorkspaceService {
     private final ArtifactRepository artifactRepository;
     private final WorkspaceAccessCache accessCache;
     private final DomainEventPublisher eventPublisher;
-    private final PublicLinkRepository publicLinkRepository;
     private final StorageQuotaService quotaService;
 
     @Transactional(readOnly = true)
@@ -67,8 +65,7 @@ public class AdminWorkspaceService {
                 .toList();
         var stats = new AdminWorkspaceDetailResponse.Stats(
                 artifactRepository.countByWorkspaceIdAndDeletedAtIsNull(workspaceId),
-                artifactRepository.countByWorkspaceIdAndDeletedAtIsNotNull(workspaceId),
-                publicLinkRepository.countActive(workspaceId, java.time.Instant.now()));
+                artifactRepository.countByWorkspaceIdAndDeletedAtIsNotNull(workspaceId));
         return new AdminWorkspaceDetailResponse(toResponse(workspace), workspace.getDescription(), workspace.getLanguage(),
                 workspace.getTimezone(), workspace.getDateFormat(), workspace.getTrashRetentionDays(),
                 workspace.isPublicSharingEnabled(), workspace.getUpdatedBy(), stats, members);

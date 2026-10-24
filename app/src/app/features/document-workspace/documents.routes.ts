@@ -49,9 +49,23 @@ export const DOCUMENT_ROUTES: Routes = [
           import('./details/artifact-details.component').then((m) => m.ArtifactDetailsComponent),
       },
       {
-        path: 'starred',
+        path: 'ai',
+        loadComponent: () => import('../ai/ai-hub/ai-hub.component').then((m) => m.AiHubComponent),
+      },
+      {
+        path: 'tags/new',
+        loadComponent: () => import('./tags/new-tag.component').then((m) => m.NewTagComponent),
+      },
+      {
+        path: 'tags',
+        loadComponent: () => import('./tags/tags.component').then((m) => m.TagsComponent),
+      },
+      {
+        path: 'favorites',
         loadComponent: () => import('./starred/starred.component').then((m) => m.StarredComponent),
       },
+      // The page used to be called "starred"; saved links keep working.
+      { path: 'starred', redirectTo: 'favorites', pathMatch: 'full' },
       {
         path: 'activity',
         loadComponent: () =>

@@ -4,6 +4,7 @@ import { ArtifactNode } from '@core/models/document-workspace';
 import { IconComponent } from '@shared/ui/icon/icon.component';
 import { TranslatePipe } from '@core/services/i18n/translate.pipe';
 import { artifactIcon } from '@shared/utils/artifact-icon';
+import { artifactTone } from '@shared/utils/artifact-tone';
 import { ArtifactTreeStore } from '../data/artifact-tree.store';
 
 /**
@@ -29,7 +30,7 @@ import { ArtifactTreeStore } from '../data/artifact-tree.store';
               name="chevron-right"
               [size]="14"
             />
-            <app-icon class="tree__icon" [name]="node.expanded ? 'folder-open' : 'folder'" [size]="16" />
+            <app-icon class="tree__icon" [style.color]="tone(node)" [name]="node.expanded ? 'folder-open' : 'folder'" [size]="16" />
             <span class="tree__name">{{ node.name }}</span>
             <button
               class="tree__add"
@@ -58,7 +59,7 @@ import { ArtifactTreeStore } from '../data/artifact-tree.store';
             [routerLink]="['/document-workspaces', documentWorkspaceId(), 'a', node.id]"
             routerLinkActive="tree__row--active"
           >
-            <app-icon class="tree__icon" [name]="iconFor(node)" [size]="16" />
+            <app-icon class="tree__icon" [style.color]="tone(node)" [name]="iconFor(node)" [size]="16" />
             <span class="tree__name">{{ node.name }}</span>
           </a>
         }
@@ -77,6 +78,10 @@ export class ArtifactTreeComponent {
 
   isFolder(node: ArtifactNode): boolean {
     return node.type === 'FOLDER';
+  }
+
+  tone(node: ArtifactNode): string {
+    return artifactTone(node.type);
   }
 
   iconFor(node: ArtifactNode) {

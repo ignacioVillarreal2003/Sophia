@@ -2,7 +2,6 @@ package com.sophia.documentworkspace.application.service;
 
 import com.sophia.documentworkspace.domain.entity.enums.NotificationType;
 import com.sophia.documentworkspace.domain.event.MembershipEvents;
-import com.sophia.documentworkspace.domain.event.PermissionEvents;
 import com.sophia.documentworkspace.infrastructure.messaging.NotificationCommandPayload;
 import com.sophia.documentworkspace.infrastructure.messaging.NotificationCommandPublisher;
 import com.sophia.documentworkspace.infrastructure.repository.WorkspaceRepository;
@@ -56,21 +55,6 @@ public class NotificationCommandComposer {
                 "Your membership in this workspace was removed",
                 context(event.workspaceId(), null),
                 NotificationCommandPayload.TARGET_WORKSPACE, event.workspaceId()));
-    }
-
-    @EventListener
-    public void onAclGranted(PermissionEvents.AclGranted event) {
-        if (event.subjectUserId().equals(event.actorId())) {
-            return;
-        }
-        commandPublisher.publish(NotificationCommandPayload.inApp(
-                CATEGORY_SHARING, event.subjectUserId(), event.actorId(), NotificationType.SHARED.name(),
-                "Content shared with you",
-                "You were granted " + event.modes() + " access",
-                context(event.workspaceId(), event.resourceId()),
-                event.resourceId() != null
-                        ? NotificationCommandPayload.TARGET_ARTIFACT : NotificationCommandPayload.TARGET_WORKSPACE,
-                event.resourceId() != null ? event.resourceId() : event.workspaceId()));
     }
 
     static Map<String, String> context(UUID workspaceId, UUID artifactId) {

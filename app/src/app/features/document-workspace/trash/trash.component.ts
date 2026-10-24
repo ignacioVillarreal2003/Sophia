@@ -1,31 +1,34 @@
+import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { DocumentWorkspace } from '@core/models/document-workspace';
 import { TranslatePipe } from '@core/services/i18n/translate.pipe';
 import { TranslationService } from '@core/services/i18n';
 import { ToastService } from '@core/services/toast.service';
 import { DocumentWorkspaceService } from '@features/document-workspace/data/document-workspace.service';
-import { CardComponent } from '@shared/ui/card/card.component';
-import { IconComponent } from '@shared/ui/icon/icon.component';
+import { ButtonComponent } from '@shared/ui/button/button.component';
 import { SpinnerComponent } from '@shared/ui/spinner/spinner.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { PaginationComponent } from '@shared/ui/pagination/pagination.component';
 import { DialogService } from '@shared/ui/dialog/dialog.service';
 import { RelativeTimePipe } from '@shared/pipes/relative-time.pipe';
+import { WorkspaceLogoComponent } from '../ui/workspace-logo.component';
+import { bindUrlState } from '@shared/utils/url-state';
 
 /** Deleted document workspaces (not their content): restore or delete for good. */
 @Component({
   selector: 'app-trash',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    CardComponent,
-    IconComponent,
+    ButtonComponent,
+    DatePipe,
     SpinnerComponent,
     EmptyStateComponent,
     PageHeaderComponent,
     PaginationComponent,
     RelativeTimePipe,
     TranslatePipe,
+    WorkspaceLogoComponent,
   ],
   templateUrl: './trash.component.html',
   styleUrl: './trash.component.scss',
@@ -40,6 +43,11 @@ export class TrashComponent implements OnInit {
   readonly loading = signal(true);
   readonly busyId = signal<string | null>(null);
   readonly page = signal(0);
+
+  /** The address and this state are one: filters, order and page are read from it and kept in it. */
+  private readonly urlState = bindUrlState([
+    { signal: this.page, param: 'page', page: true },
+  ]);
   readonly totalPages = signal(0);
   readonly first = signal(true);
   readonly last = signal(true);
@@ -52,6 +60,23 @@ export class TrashComponent implements OnInit {
   daysLeft(item: DocumentWorkspace): number | null {
     if (!item.purgeAt) return null;
     return Math.max(0, Math.ceil((new Date(item.purgeAt).getTime() - Date.now()) / 86_400_000));
+  }
+
+  /** "Deleted for good in 12 days": what is left of the retention period, in words. */
+  leftText(item: DocumentWorkspace): string {
+    const days = this.daysLeft(item);
+    if (days !== null && days > 0) {
+      return this.i18n.translate('trash.expiresIn', { days });
+    }
+    return item.purgeAt ? this.i18n.translate('trash.expiresToday') : '';
+  }
+
+  /** Grey while there is plenty of time, amber in the last week, red in the last three days. */
+  levelColor(item: DocumentWorkspace): string {
+    const days = this.daysLeft(item);
+    if (days === null) return 'var(--text-subtle)';
+    if (days <= 3) return '#d92d20';
+    return days <= 7 ? '#b54708' : 'var(--text-subtle)';
   }
 
   /** Close enough to the end that the owner should act now. */

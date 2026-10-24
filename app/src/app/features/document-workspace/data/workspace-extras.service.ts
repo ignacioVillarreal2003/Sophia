@@ -10,55 +10,7 @@ import {
   DocumentWorkspaceRole,
   StorageRequest,
   WorkspaceActivityItem,
-  WorkspaceLabel,
 } from '@core/models/document-workspace';
-
-/** Personal labels a user puts on their workspaces. */
-@Injectable({ providedIn: 'root' })
-export class WorkspaceLabelService {
-  private readonly api = inject(ApiService);
-
-  private readonly _labels = signal<WorkspaceLabel[]>([]);
-  private readonly _loaded = signal(false);
-  readonly labels = this._labels.asReadonly();
-  readonly loaded = this._loaded.asReadonly();
-
-  load(): Observable<WorkspaceLabel[]> {
-    return this.api.get<WorkspaceLabel[]>('/api/v1/workspace-labels').pipe(
-      tap((labels) => {
-        this._labels.set(labels);
-        this._loaded.set(true);
-      }),
-    );
-  }
-
-  create(name: string, color: string): Observable<WorkspaceLabel> {
-    return this.api
-      .post<WorkspaceLabel>('/api/v1/workspace-labels', { name, color })
-      .pipe(tap((label) => this._labels.update((list) => this.sorted([...list, label]))));
-  }
-
-  update(id: string, patch: { name?: string; color?: string }): Observable<WorkspaceLabel> {
-    return this.api.patch<WorkspaceLabel>(`/api/v1/workspace-labels/${id}`, patch).pipe(
-      tap((label) => this._labels.update((list) => this.sorted(list.map((l) => (l.id === id ? label : l))))),
-    );
-  }
-
-  remove(id: string): Observable<void> {
-    return this.api
-      .delete<void>(`/api/v1/workspace-labels/${id}`)
-      .pipe(tap(() => this._labels.update((list) => list.filter((l) => l.id !== id))));
-  }
-
-  /** Replaces the caller's labels on one workspace with exactly these. */
-  assign(workspaceId: string, labelIds: string[]): Observable<WorkspaceLabel[]> {
-    return this.api.put<WorkspaceLabel[]>(`/api/v1/workspaces/${workspaceId}/labels`, { labelIds });
-  }
-
-  private sorted(list: WorkspaceLabel[]): WorkspaceLabel[] {
-    return [...list].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
-  }
-}
 
 /** Access requests (non-members asking in) and storage requests (owners asking for more space). */
 @Injectable({ providedIn: 'root' })

@@ -18,6 +18,15 @@ import { OutlineEntry, extractOutline, markdownStats } from './markdown-render';
 
 export type MarkdownMode = 'edit' | 'split' | 'preview';
 
+/** The selection of the source pane with some of the text around it, for the AI assistant. */
+export interface EditorSelection {
+  readonly start: number;
+  readonly end: number;
+  readonly text: string;
+  readonly before: string;
+  readonly after: string;
+}
+
 export interface LinkTarget {
   readonly id: string;
   readonly name: string;
@@ -148,6 +157,41 @@ export class MarkdownEditorComponent {
       return;
     }
     this.replace(element.selectionStart, element.selectionEnd, text);
+  }
+
+  /**
+   * What the assistant works on: the selection, the text around it, and where it is. Null while the source pane is
+   * not on screen (preview mode), since there is then no selection to speak of.
+   */
+  selectionContext(): EditorSelection | null {
+    const element = this.textarea()?.nativeElement;
+    if (!element) {
+      return null;
+    }
+    const { selectionStart: start, selectionEnd: end, value } = element;
+    return {
+      start,
+      end,
+      text: value.slice(start, end),
+      before: value.slice(Math.max(0, start - 12000), start),
+      after: value.slice(end, end + 4000),
+    };
+  }
+
+  /**
+   * Replaces `[start, end)` with `text` when that range still holds `expected` and is still preceded by `preceding`
+   * (the document may have changed while the assistant was writing); returns false, changing nothing, when not.
+   */
+  replaceChecked(start: number, end: number, expected: string, text: string, preceding = ''): boolean {
+    const element = this.textarea()?.nativeElement;
+    if (!element || this.readonly() || element.value.slice(start, end) !== expected) {
+      return false;
+    }
+    if (preceding && element.value.slice(Math.max(0, start - preceding.length), start) !== preceding) {
+      return false;
+    }
+    this.replace(start, end, text);
+    return true;
   }
 
   // ------------------------------------------------------------------

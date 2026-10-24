@@ -4,6 +4,7 @@ export interface AppEnvironment {
   readonly authenticationApiUrl: string;
   readonly documentWorkspaceApiUrl: string;
   readonly notificationApiUrl: string;
+  readonly aiApiUrl: string;
   readonly googleClientId: string;
   readonly wsUrl: string;
   readonly defaultLocale: string;

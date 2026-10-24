@@ -45,8 +45,9 @@ public class AuditLogController {
             @RequestParam(required = false) String requestId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
+            @RequestParam(required = false, name = "q") String text,
             @ParameterObject @PageableDefault(size = 50) Pageable pageable) {
         return ResponseEntity.ok(ApiResponse.ok(auditService.query(user, workspaceId, action, userId, resourceType,
-                resourceId, result, requestId, from, to, pageable)));
+                resourceId, result, requestId, from, to, text, pageable)));
     }
 }

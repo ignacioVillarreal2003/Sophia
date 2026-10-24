@@ -1,11 +1,12 @@
 <div class="cw app-container">
   <app-page-header [title]="'documentWorkspace.create.title' | t" backLink="..">
-    <app-button [loading]="loading()" (click)="submit()">{{ 'documentWorkspace.create.title' | t }}</app-button>
+    <app-button variant="dark" [loading]="loading()" (click)="submit()">{{ 'documentWorkspace.create.title' | t }}</app-button>
   </app-page-header>
 
+  <!-- How it will look in the list, on its own -->
   <app-card class="cw__card">
-    <div class="cw__preview" [style.--ws-color]="color()" aria-hidden="true">
-      <span class="cw__preview-icon"><app-icon name="book" [size]="20" /></span>
+    <div class="cw__preview" aria-hidden="true">
+      <app-workspace-logo class="cw__preview-mark" [pattern]="color()" [size]="80" />
       <span class="cw__preview-text">
         <span class="cw__preview-name" [class.cw__preview-name--empty]="!draft().name">
           {{ draft().name || ('documentWorkspace.namePlaceholder' | t) }}
@@ -15,7 +16,10 @@
         }
       </span>
     </div>
+  </app-card>
 
+  <!-- What to fill in -->
+  <app-card class="cw__card">
     <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
       <div class="cw__field">
         <app-text-field
@@ -38,41 +42,19 @@
       </div>
 
       <div class="cw__field">
-        <label class="cw__label" id="cw-template-label">{{ 'workspaces.template.label' | t }}</label>
-        <div class="cw__templates" role="radiogroup" aria-labelledby="cw-template-label">
-          @for (tpl of templates; track tpl) {
+        <label class="cw__label">{{ 'documentWorkspace.patternLabel' | t }}</label>
+        <div class="cw__patterns" role="radiogroup">
+          @for (p of patterns; track p.id) {
             <button
               type="button"
               role="radio"
-              class="cw__template"
-              [class.cw__template--active]="template() === tpl"
-              [attr.aria-checked]="template() === tpl"
-              (click)="template.set(tpl)"
+              class="cw__pattern"
+              [class.cw__pattern--on]="color() === p.id"
+              [attr.aria-label]="p.id"
+              [attr.aria-checked]="color() === p.id"
+              (click)="color.set(p.id)"
             >
-              <span class="cw__template-icon"><app-icon [name]="templateIcons[tpl]" [size]="18" /></span>
-              <span class="cw__template-name">{{ 'workspaces.template.' + tpl | t }}</span>
-              <span class="cw__template-desc">{{ 'workspaces.template.' + tpl + '.desc' | t }}</span>
-            </button>
-          }
-        </div>
-      </div>
-
-      <div class="cw__field">
-        <label class="cw__label">{{ 'documentWorkspace.colorLabel' | t }}</label>
-        <div class="cw__swatches">
-          @for (c of swatches; track c) {
-            <button
-              type="button"
-              class="cw__swatch"
-              [class.cw__swatch--active]="color() === c"
-              [style.--swatch]="c"
-              (click)="color.set(c)"
-              [attr.aria-label]="c"
-              [attr.aria-pressed]="color() === c"
-            >
-              @if (color() === c) {
-                <app-icon name="check" [size]="16" />
-              }
+              <app-workspace-logo [pattern]="p.id" [size]="72" />
             </button>
           }
         </div>

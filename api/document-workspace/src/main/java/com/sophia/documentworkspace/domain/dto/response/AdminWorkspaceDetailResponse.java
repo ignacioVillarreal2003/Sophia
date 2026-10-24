@@ -20,7 +20,7 @@ public record AdminWorkspaceDetailResponse(
         Stats stats,
         List<Member> members
 ) {
-    public record Stats(long items, long trashedItems, long activePublicLinks) {
+    public record Stats(long items, long trashedItems) {
     }
 
     public record Member(UUID userId, String email, String displayName, WorkspaceRole role,

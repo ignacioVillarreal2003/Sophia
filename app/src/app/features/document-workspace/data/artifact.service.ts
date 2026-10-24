@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, map, of, switchMap } from 'rxjs';
 import { ApiService } from '@core/services/document-workspace/api.service';
 import { Artifact, BreadcrumbEntry, CreateArtifactRequest, MoveArtifactRequest, UpdateArtifactRequest } from '@core/models/document-workspace';
 import { PageResponse } from '@core/models/api.model';
@@ -10,6 +10,16 @@ export class ArtifactService {
   private readonly api = inject(ApiService);
   private base(ws: string): string {
     return `/api/v1/workspaces/${ws}/artifacts`;
+  }
+
+  /** Every child of a folder (or of the root), read a page at a time. */
+  listAll(documentWorkspaceId: string, parentId: string | null): Observable<Artifact[]> {
+    const SIZE = 200;
+    const from = (page: number): Observable<Artifact[]> =>
+      this.list(documentWorkspaceId, parentId, page, SIZE).pipe(
+        switchMap((result) => (result.last ? of(result.content) : from(page + 1).pipe(map((rest) => [...result.content, ...rest])))),
+      );
+    return from(0);
   }
 
   list(
@@ -31,8 +41,8 @@ export class ArtifactService {
   }
 
   /** Documents (notes, checklists, spreadsheets) by name, most recently edited first. */
-  documents(documentWorkspaceId: string, q = '', limit = 50): Observable<Artifact[]> {
-    return this.api.get<Artifact[]>(`${this.base(documentWorkspaceId)}/documents`, { q, limit });
+  documents(documentWorkspaceId: string, q = '', limit = 50, studySources = false): Observable<Artifact[]> {
+    return this.api.get<Artifact[]>(`${this.base(documentWorkspaceId)}/documents`, { q, limit, ...(studySources ? { studySources } : {}) });
   }
 
   breadcrumb(documentWorkspaceId: string, artifactId: string): Observable<BreadcrumbEntry[]> {

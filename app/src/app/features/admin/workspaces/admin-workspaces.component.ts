@@ -14,6 +14,7 @@ import { DialogService } from '@shared/ui/dialog/dialog.service';
 import { WorkspaceLogoComponent } from '@features/document-workspace/ui/workspace-logo.component';
 import { WorkspaceRequestsService } from '@features/document-workspace/data/workspace-extras.service';
 import { AdminWorkspace, AdminWorkspaceService, WorkspaceStatusValue } from './admin-workspace.service';
+import { bindUrlState } from '@shared/utils/url-state';
 
 const MB = 1024 * 1024;
 const STATUSES: WorkspaceStatusValue[] = ['ACTIVE', 'READ_ONLY', 'SUSPENDED'];
@@ -52,6 +53,13 @@ export class AdminWorkspacesComponent implements OnInit {
   readonly search = signal('');
   readonly statusFilter = signal<WorkspaceStatusValue | ''>('');
   readonly page = signal(0);
+
+  /** The address and this state are one: filters, order and page are read from it and kept in it. */
+  private readonly urlState = bindUrlState([
+    { signal: this.search, param: 'q' },
+    { signal: this.statusFilter, param: 'status' },
+    { signal: this.page, param: 'page', page: true },
+  ]);
   readonly totalPages = signal(0);
   readonly first = signal(true);
   readonly last = signal(true);

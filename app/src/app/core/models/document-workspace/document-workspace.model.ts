@@ -34,8 +34,6 @@ export interface DocumentWorkspace {
   readonly pinned?: boolean;
   /** When the caller last opened it. */
   readonly lastAccessedAt?: string | null;
-  /** The caller's own labels on it. */
-  readonly labels?: WorkspaceLabel[];
   /** Only present when the list is asked for stats (detailed cards). */
   readonly stats?: WorkspaceStats | null;
 }
@@ -55,12 +53,6 @@ export interface WorkspaceStats {
   readonly members: WorkspaceMemberPreview[];
 }
 
-export interface WorkspaceLabel {
-  readonly id: string;
-  readonly name: string;
-  readonly color: string;
-}
-
 export type WorkspaceOwnership = 'MINE' | 'SHARED';
 export type WorkspaceSortKey = 'NAME' | 'CREATED' | 'ACTIVITY' | 'ACCESSED';
 export type WorkspaceTemplate = 'BLANK' | 'PROJECT' | 'TEAM' | 'PERSONAL';
@@ -74,7 +66,6 @@ export interface DocumentWorkspaceListQuery {
   status?: DocumentWorkspaceStatus;
   ownership?: WorkspaceOwnership;
   pinned?: boolean;
-  labelId?: string;
   createdFrom?: string;
   createdTo?: string;
   activeFrom?: string;
@@ -101,7 +92,6 @@ export interface WorkspaceImpact {
   readonly files: number;
   readonly usedBytes: number;
   readonly members: number;
-  readonly activePublicLinks: number;
   readonly pendingAccessRequests: number;
 }
 
@@ -159,11 +149,6 @@ export interface WorkspaceActivityItem {
   readonly occurredAt: string;
 }
 
-export interface RestoredWorkspace {
-  readonly workspace: DocumentWorkspace;
-  readonly artifacts: number;
-}
-
 export interface UpdateDocumentWorkspaceRequest {
   name?: string;
   description?: string;
@@ -187,4 +172,21 @@ export interface DocumentWorkspaceMember {
 export interface AddMemberRequest {
   email: string;
   role: DocumentWorkspaceRole;
+}
+
+export type InvitationStatus = 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'REVOKED';
+
+/** An offer to join a workspace with a role; the invited person has to accept it. */
+export interface WorkspaceInvitation {
+  readonly id: string;
+  readonly workspaceId: string;
+  readonly workspaceName: string;
+  readonly workspaceColor: string | null;
+  readonly email: string;
+  readonly displayName: string | null;
+  readonly role: DocumentWorkspaceRole;
+  readonly invitedByEmail: string | null;
+  readonly status: InvitationStatus;
+  readonly createdAt: string;
+  readonly expiresAt: string;
 }

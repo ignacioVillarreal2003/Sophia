@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { AccessRequest, DocumentWorkspaceMember, DocumentWorkspaceRole } from '@core/models/document-workspace';
+import { AccessRequest, DocumentWorkspaceMember, DocumentWorkspaceRole, WorkspaceInvitation } from '@core/models/document-workspace';
 import { AppError } from '@core/models/api.model';
 import { AuthenticationService } from '@core/services/authentication/authentication.service';
 import { TranslatePipe } from '@core/services/i18n/translate.pipe';
@@ -9,6 +9,7 @@ import { TranslationService } from '@core/services/i18n';
 import { ToastService } from '@core/services/toast.service';
 import { DocumentWorkspaceService } from '../data/document-workspace.service';
 import { WorkspaceRequestsService } from '../data/workspace-extras.service';
+import { WorkspaceInvitationsService } from '../data/workspace-invitations.service';
 import { ButtonComponent } from '@shared/ui/button/button.component';
 import { CardComponent } from '@shared/ui/card/card.component';
 import { AvatarComponent } from '@shared/ui/avatar/avatar.component';
@@ -16,7 +17,7 @@ import { BadgeComponent } from '@shared/ui/badge/badge.component';
 import { IconComponent } from '@shared/ui/icon/icon.component';
 import { SpinnerComponent } from '@shared/ui/spinner/spinner.component';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
-import { TextFieldComponent } from '@shared/ui/form-field/text-field.component';
+import { PersonSearchComponent } from '@shared/ui/form-field/person-search.component';
 import { DialogService } from '@shared/ui/dialog/dialog.service';
 import { RelativeTimePipe } from '@shared/pipes/relative-time.pipe';
 
@@ -39,7 +40,7 @@ const SWAPPABLE_ROLES: DocumentWorkspaceRole[] = ['EDITOR', 'VIEWER'];
     IconComponent,
     SpinnerComponent,
     PageHeaderComponent,
-    TextFieldComponent,
+    PersonSearchComponent,
     RelativeTimePipe,
     TranslatePipe,
   ],
@@ -50,6 +51,7 @@ export class MembersComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly service = inject(DocumentWorkspaceService);
   private readonly requestsService = inject(WorkspaceRequestsService);
+  private readonly invitationsService = inject(WorkspaceInvitationsService);
   private readonly auth = inject(AuthenticationService);
   private readonly toast = inject(ToastService);
   private readonly dialog = inject(DialogService);
@@ -79,12 +81,19 @@ export class MembersComponent implements OnInit {
   readonly busyRequest = signal<string | null>(null);
   private requestsLoaded = false;
 
+  /** Invitations nobody has answered yet (admins only). */
+  readonly invitations = signal<WorkspaceInvitation[]>([]);
+  readonly busyInvitation = signal<string | null>(null);
+
   constructor() {
     // The role (and so admin-ness) arrives with the workspace, which may load after this page opens.
     effect(() => {
       if (this.isAdmin() && !untracked(() => this.requestsLoaded)) {
         this.requestsLoaded = true;
-        untracked(() => this.loadRequests());
+        untracked(() => {
+          this.loadRequests();
+          this.loadInvitations();
+        });
       }
     });
   }
@@ -95,6 +104,29 @@ export class MembersComponent implements OnInit {
 
   ngOnInit(): void {
     this.reload();
+  }
+
+  private loadInvitations(): void {
+    this.invitationsService.pending(this.documentWorkspaceId()).subscribe({
+      next: (list) => this.invitations.set(list),
+      error: () => undefined,
+    });
+  }
+
+  revokeInvitation(invitation: WorkspaceInvitation): void {
+    this.busyInvitation.set(invitation.id);
+    this.invitationsService.revoke(this.documentWorkspaceId(), invitation.id).subscribe({
+      next: () => {
+        this.busyInvitation.set(null);
+        this.invitations.update((list) => list.filter((i) => i.id !== invitation.id));
+        this.toast.success(this.i18n.translate('invitations.revoked', { email: invitation.email }));
+      },
+      error: (err: AppError) => {
+        this.busyInvitation.set(null);
+        this.toast.error(err.message);
+        this.loadInvitations();
+      },
+    });
   }
 
   private loadRequests(): void {
@@ -177,6 +209,22 @@ export class MembersComponent implements OnInit {
     return [];
   }
 
+  /** Roles the current user may offer instead on this open invitation; empty when it is fixed for them. */
+  inviteRoles(invitation: WorkspaceInvitation): DocumentWorkspaceRole[] {
+    if (this.isOwner()) return ALL_ROLES;
+    return SWAPPABLE_ROLES.includes(invitation.role) ? SWAPPABLE_ROLES : [];
+  }
+
+  changeInvitationRole(invitation: WorkspaceInvitation, role: string): void {
+    this.invitationsService.changeRole(this.documentWorkspaceId(), invitation.id, role as DocumentWorkspaceRole).subscribe({
+      next: (updated) => this.invitations.update((list) => list.map((i) => (i.id === updated.id ? updated : i))),
+      error: (err: AppError) => {
+        this.toast.error(err.message);
+        this.invitations.update((list) => [...list]);
+      },
+    });
+  }
+
   canRemove(member: DocumentWorkspaceMember): boolean {
     if (this.isOwnerMember(member) || this.isMe(member)) return false;
     return this.isOwner() || (this.isAdmin() && member.role !== 'ADMIN');
@@ -207,12 +255,12 @@ export class MembersComponent implements OnInit {
       return;
     }
     this.adding.set(true);
-    this.service.addMember(this.documentWorkspaceId(), this.addForm.getRawValue()).subscribe({
-      next: (member) => {
-        this.members.update((list) => [...list, member]);
+    this.invitationsService.invite(this.documentWorkspaceId(), this.addForm.getRawValue()).subscribe({
+      next: (invitation) => {
+        this.invitations.update((list) => [invitation, ...list]);
         this.addForm.reset({ email: '', role: 'EDITOR' });
         this.adding.set(false);
-        this.toast.success(this.i18n.translate('documentWorkspace.toast.memberAdded'));
+        this.toast.success(this.i18n.translate('invitations.sent', { email: invitation.email }));
       },
       error: (err: AppError) => {
         this.adding.set(false);

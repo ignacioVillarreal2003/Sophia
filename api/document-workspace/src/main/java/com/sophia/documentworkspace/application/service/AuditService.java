@@ -103,13 +103,13 @@ public class AuditService {
     public PageResponse<AuditLogResponse> query(AuthenticatedUser user, UUID workspaceId,
                                                 String action, UUID userId, String resourceType, String resourceId,
                                                 AuditLog.Result result, String requestId, Instant from, Instant to,
-                                                Pageable pageable) {
+                                                String text, Pageable pageable) {
         workspaceAuthorization.requirePermission(workspaceId, user, WorkspacePermission.VIEW_AUDIT);
         Pageable sorted = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),
                 Sort.by("createdAt").descending());
         return PageResponse.from(
                 auditLogRepository.findAll(AuditLogSpecifications.search(workspaceId, action, userId, resourceType,
-                        resourceId, result, requestId, from, to), sorted),
+                        resourceId, result, requestId, from, to, text), sorted),
                 auditLogMapper::toResponse);
     }
 }

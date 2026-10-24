@@ -4,7 +4,7 @@ import { Observable, map, tap } from 'rxjs';
 import { environment } from '@env/environment';
 import { silentErrors } from '@core/services/http-context';
 import { ApiService } from '@core/services/document-workspace/api.service';
-import { WorkspaceUsage, AddMemberRequest, CreateDocumentWorkspaceRequest, UpdateDocumentWorkspaceRequest, DocumentWorkspace, DocumentWorkspaceListQuery, DocumentWorkspaceMember, DocumentWorkspaceRole, RestoredWorkspace, WorkspaceAuditEntry, WorkspaceAuditQuery, WorkspaceImpact } from '@core/models/document-workspace';
+import { WorkspaceUsage, AddMemberRequest, CreateDocumentWorkspaceRequest, UpdateDocumentWorkspaceRequest, DocumentWorkspace, DocumentWorkspaceListQuery, DocumentWorkspaceMember, DocumentWorkspaceRole, WorkspaceAuditEntry, WorkspaceAuditQuery, WorkspaceImpact } from '@core/models/document-workspace';
 import { PageResponse } from '@core/models/api.model';
 
 /**
@@ -124,16 +124,6 @@ export class DocumentWorkspaceService {
           URL.revokeObjectURL(url);
         }),
       );
-  }
-
-  /** Creates a new workspace, owned by the caller, from a ZIP produced by {@link downloadArchive}. */
-  restoreArchive(file: File, name?: string): Observable<RestoredWorkspace> {
-    const form = new FormData();
-    form.append('file', file, file.name);
-    const query = name ? `?name=${encodeURIComponent(name)}` : '';
-    return this.api
-      .post<RestoredWorkspace>(`/api/v1/workspaces/restore${query}`, form)
-      .pipe(tap((result) => this.upsert(result.workspace)));
   }
 
   update(id: string, request: UpdateDocumentWorkspaceRequest): Observable<DocumentWorkspace> {

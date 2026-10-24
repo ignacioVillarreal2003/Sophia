@@ -13,7 +13,6 @@ import com.sophia.documentworkspace.domain.entity.enums.WorkspacePermission;
 import com.sophia.documentworkspace.domain.event.ArtifactEvents;
 import com.sophia.documentworkspace.domain.exception.ConflictException;
 import com.sophia.documentworkspace.infrastructure.messaging.DomainEventPublisher;
-import com.sophia.documentworkspace.infrastructure.repository.AclEntryRepository;
 import com.sophia.documentworkspace.infrastructure.repository.ArtifactRepository;
 import com.sophia.documentworkspace.infrastructure.repository.FavoriteRepository;
 import com.sophia.documentworkspace.infrastructure.repository.TagArtifactRepository;
@@ -50,7 +49,6 @@ public class TrashService {
     private static final int PURGE_BATCH_SIZE = 500;
 
     private final ArtifactRepository artifactRepository;
-    private final AclEntryRepository aclEntryRepository;
     private final FavoriteRepository favoriteRepository;
     private final TagArtifactRepository tagArtifactRepository;
     private final YjsUpdateRepository yjsUpdateRepository;
@@ -201,7 +199,6 @@ public class TrashService {
             candidateKeys.add(version.getStorageKey());
         }
 
-        aclEntryRepository.deleteAllByResourceIdIn(artifactIds);
         favoriteRepository.deleteAllByArtifactIdIn(artifactIds);
         tagArtifactRepository.deleteAllByArtifactIdIn(artifactIds);
         documentVersionRepository.deleteAllByArtifactIdIn(artifactIds);

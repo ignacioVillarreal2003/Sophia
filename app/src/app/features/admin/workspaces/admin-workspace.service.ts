@@ -29,7 +29,7 @@ export interface AdminWorkspaceDetail {
   readonly trashRetentionDays: number | null;
   readonly publicSharingEnabled: boolean;
   readonly updatedBy: string | null;
-  readonly stats: { readonly items: number; readonly trashedItems: number; readonly activePublicLinks: number };
+  readonly stats: { readonly items: number; readonly trashedItems: number };
   readonly members: {
     readonly userId: string;
     readonly email: string;

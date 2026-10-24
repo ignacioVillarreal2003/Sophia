@@ -24,6 +24,7 @@ import {SelectFieldComponent, SelectOption} from '@shared/ui/form-field/select-f
 import {DialogService} from '@shared/ui/dialog/dialog.service';
 import {RelativeTimePipe} from '@shared/pipes/relative-time.pipe';
 import {NotificationAdminService} from './data/notification-admin.service';
+import { bindUrlState } from '@shared/utils/url-state';
 import {
   CategoryDialogComponent,
   CategoryDialogData,
@@ -74,6 +75,8 @@ export class NotificationsAdminComponent implements OnInit {
   readonly auditEntries = signal<NotificationAuditEntry[]>([]);
   readonly loadingAudit = signal(true);
   readonly auditPage = signal(0);
+
+  private readonly urlState = bindUrlState([{ signal: this.auditPage, param: 'page', page: true }]);
   readonly auditTotalPages = signal(0);
   readonly auditFirst = signal(true);
   readonly auditLast = signal(true);

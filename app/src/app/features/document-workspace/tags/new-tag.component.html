@@ -1,0 +1,44 @@
+<div class="nt app-container">
+  <app-page-header [title]="'tags.createTitle' | t" [backLink]="backUrl()" />
+
+  <section class="nt__card">
+    <div class="nt__field">
+      <label class="nt__label" for="nt-name">{{ 'tags.field.name' | t }}</label>
+      <input
+        id="nt-name"
+        class="nt__input"
+        type="text"
+        maxlength="80"
+        [value]="name()"
+        [placeholder]="'tags.namePlaceholder' | t"
+        (input)="name.set($any($event.target).value)"
+        (keydown.enter)="create()"
+      />
+    </div>
+
+    <div class="nt__field">
+      <span class="nt__label" id="nt-color">{{ 'documentWorkspace.colorLabel' | t }}</span>
+      <div class="nt__swatches" role="radiogroup" aria-labelledby="nt-color">
+        @for (c of swatches; track c) {
+          <button
+            type="button"
+            class="nt__swatch"
+            [class.nt__swatch--on]="color() === c"
+            [style.--swatch]="c"
+            [attr.aria-label]="c"
+            [attr.aria-pressed]="color() === c"
+            (click)="color.set(c)"
+          >
+            @if (color() === c) { <app-icon name="check" [size]="14" /> }
+          </button>
+        }
+      </div>
+    </div>
+
+    <div class="nt__actions">
+      <button type="button" class="nt__create" [disabled]="!name().trim() || saving()" (click)="create()">
+        {{ 'tags.createButton' | t }}
+      </button>
+    </div>
+  </section>
+</div>

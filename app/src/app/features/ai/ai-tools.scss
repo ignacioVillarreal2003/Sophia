@@ -1,0 +1,304 @@
+@use 'mixins' as *;
+
+// Shared by every AI tool: one form, one result, a few actions.
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.ait {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+// The explanation of a tool and the small hints under its fields are left out: the labels say enough.
+.ait > .ait__intro:first-child,
+.ait__form .ait__field > .ait__hint {
+  display: none;
+}
+
+.ait__intro {
+  margin: 0;
+  font-size: var(--type-caption-size);
+  color: var(--text-subtle);
+  line-height: 1.5;
+}
+
+.ait__form {
+  display: grid;
+  gap: var(--space-md);
+}
+
+.ait__row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: var(--space-md);
+}
+
+.ait__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.ait__label {
+  font-size: var(--type-caption-size);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.ait__hint {
+  font-size: var(--type-fine-size);
+  line-height: 1.4;
+  color: var(--text-subtle);
+}
+
+.ait__input,
+.ait__select,
+.ait__textarea {
+  width: 100%;
+  padding: 0 14px;
+  font: inherit;
+  font-size: var(--type-caption-size);
+  color: var(--text);
+  background: var(--surface);
+  border: none;
+  box-shadow: inset 0 0 0 1px var(--border);
+  border-radius: var(--radius-md);
+  transition: box-shadow var(--duration-fast) var(--ease-standard);
+
+  &::placeholder {
+    color: var(--text-subtle);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: inset 0 0 0 1.5px var(--accent-focus);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.ait__input,
+.ait__select {
+  height: 44px;
+}
+
+.ait__textarea {
+  padding-block: 11px;
+  min-height: 84px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.ait__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ait__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  font: inherit;
+  font-size: var(--type-caption-size);
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--surface);
+  border: none;
+  box-shadow: inset 0 0 0 1px var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard);
+
+  &:hover {
+    background: var(--surface-muted);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent-focus);
+    outline-offset: 1px;
+  }
+
+  &--on {
+    color: var(--surface);
+    background: var(--text);
+    box-shadow: none;
+  }
+}
+
+.ait__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.ait__spacer {
+  flex: 1;
+}
+
+.ait__error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  padding: 10px 14px;
+  font-size: var(--type-caption-size);
+  color: var(--danger);
+  background: var(--danger-surface);
+  border-radius: var(--radius-md);
+}
+
+.ait__result {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  padding: 20px 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.ait__result-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.ait__result-title {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+  font-size: var(--type-body-strong-size);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.ait__live {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--type-fine-size);
+  color: var(--text-subtle);
+}
+
+.ait__paper {
+  max-height: 560px;
+  overflow: auto;
+  padding: var(--space-md);
+  background: var(--surface-sunken);
+  border-radius: var(--radius-md);
+}
+
+.ait__empty {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: var(--space-xl);
+  text-align: center;
+  color: var(--text-subtle);
+  font-size: var(--type-caption-size);
+}
+
+// A small block of cards, used by the card previews.
+.ait__cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: var(--space-sm);
+}
+
+.ait__card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  background: color-mix(in srgb, var(--tone, #64748b) 10%, var(--surface));
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--tone, #64748b);
+  border-radius: var(--radius-md);
+
+  h4 {
+    margin: 0;
+    font-size: var(--type-caption-size);
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  p {
+    margin: 0;
+    font-size: var(--type-caption-size);
+    color: var(--text-muted);
+    white-space: pre-line;
+    line-height: 1.45;
+  }
+}
+
+.ait__meter {
+  height: 6px;
+  overflow: hidden;
+  background: var(--surface-sunken);
+  border-radius: var(--radius-full);
+
+  > span {
+    display: block;
+    height: 100%;
+    background: var(--accent);
+    border-radius: inherit;
+  }
+}
+
+// The buttons of every tool: square, like the rest of the app.
+.ait ::ng-deep .btn,
+.chat ::ng-deep .btn {
+  height: 40px;
+  padding-inline: 20px;
+  border-radius: var(--radius-sm);
+}
+
+// Extra settings, closed until asked for.
+.ait__more {
+  border-radius: var(--radius-md);
+  box-shadow: inset 0 0 0 1px var(--border);
+  background: var(--surface);
+
+  > summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 44px;
+    padding-inline: 14px;
+    font-size: var(--type-caption-size);
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    list-style: none;
+
+    &::-webkit-details-marker { display: none; }
+    &::after { content: '+'; font-size: 18px; font-weight: 400; color: var(--text-subtle); }
+  }
+
+  &[open] > summary::after { content: '–'; }
+  &[open] > summary { border-bottom: 1px solid var(--divider); color: var(--text); }
+}
+
+.ait__more-body {
+  display: grid;
+  gap: var(--space-md);
+  padding: 16px 14px 18px;
+}
+
+// A counter, not an explanation: it stays.
+.ait__count {
+  font-size: var(--type-fine-size);
+  color: var(--text-subtle);
+}

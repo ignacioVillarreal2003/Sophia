@@ -47,6 +47,11 @@ export const ADMIN_ROUTES: Routes = [
           import('./workspaces/admin-workspace-detail.component').then((m) => m.AdminWorkspaceDetailComponent),
       },
       {
+        path: 'ai',
+        canActivate: [permissionGuard('WORKSPACE_MANAGE')],
+        loadComponent: () => import('./ai/ai-admin.component').then((m) => m.AiAdminComponent),
+      },
+      {
         path: 'roles',
         canActivate: [permissionGuard('ROLE_READ')],
         loadComponent: () =>

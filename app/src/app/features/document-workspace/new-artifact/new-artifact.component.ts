@@ -4,6 +4,7 @@ import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AppError } from '@core/models/api.model';
 import { ArtifactType, CreateArtifactRequest } from '@core/models/document-workspace';
+import { artifactTone } from '@shared/utils/artifact-tone';
 import { TranslatePipe } from '@core/services/i18n/translate.pipe';
 import { TranslationService } from '@core/services/i18n';
 import { ToastService } from '@core/services/toast.service';
@@ -212,8 +213,14 @@ export class NewArtifactComponent implements OnInit {
 
   readonly selected = signal<CreatableType>('MARKDOWN_DOCUMENT');
   readonly submitting = signal(false);
-  readonly busyFrom = signal<'upload' | 'import' | null>(null);
   readonly location = signal('');
+  readonly busyFrom = signal<'upload' | 'import' | null>(null);
+
+  /** Where the back arrow leads: the folder the item would have gone into. */
+  readonly backUrl = computed(() => {
+    const base = `/document-workspaces/${this.documentWorkspaceId()}`;
+    return this.folder() ? `${base}/folder/${this.folder()}` : base;
+  });
 
   readonly form = this.fb.nonNullable.group({
     name: [''],
@@ -271,6 +278,10 @@ export class NewArtifactComponent implements OnInit {
     const base = ['/document-workspaces', this.documentWorkspaceId()];
     const folderId = this.folder();
     this.router.navigate(folderId ? [...base, 'folder', folderId] : base);
+  }
+
+  tone(type: ArtifactType): string {
+    return artifactTone(type);
   }
 
   cancel(): void {

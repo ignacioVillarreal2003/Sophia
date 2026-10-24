@@ -35,6 +35,8 @@ export interface WorkspaceAuditQuery {
   resourceId?: string;
   result?: WorkspaceAuditResult;
   requestId?: string;
+  /** Part of who did it, what was done, or the name of what it was done to. */
+  q?: string;
   from?: string;
   to?: string;
   [key: string]: string | number | undefined;

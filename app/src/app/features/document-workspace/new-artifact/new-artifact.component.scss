@@ -4,122 +4,17 @@
   padding-block: var(--space-xl);
 }
 
-.na__back {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
+.na__create ::ng-deep .btn {
   height: 36px;
-  padding-inline: 14px;
-  border-radius: var(--radius-md);
-  background: var(--surface);
-  box-shadow: inset 0 0 0 1px var(--border);
-  font-family: var(--font-text);
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text);
-  cursor: pointer;
-  transition: background var(--duration-fast) var(--ease-standard);
-
-  &:hover { background: var(--surface-muted); }
-  &:focus-visible { outline: 2px solid var(--accent-focus); outline-offset: 2px; }
+  border-radius: var(--radius-sm);
 }
 
-.na__section {
-  margin-bottom: var(--space-xl);
-}
-
-.na__section-title {
-  margin-bottom: var(--space-sm);
-  font-size: var(--type-caption-size);
-  font-weight: 600;
-  color: var(--text-muted);
-}
-
-// ---- type tiles ----
-.na__types {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-  gap: var(--space-sm);
-}
-
-.na__type {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
-  text-align: left;
-  border-radius: var(--radius-md);
-  background: var(--surface);
-  box-shadow: inset 0 0 0 1px var(--border);
-  color: var(--text);
-  cursor: pointer;
-  transition: background var(--duration-fast) var(--ease-standard),
-    box-shadow var(--duration-fast) var(--ease-standard);
-
-  &:hover:not(.na__type--active) {
-    background: var(--surface-muted);
-    box-shadow: inset 0 0 0 1px var(--border-strong, var(--border));
-  }
-  &:focus-visible,
-  &:focus-within { outline: 2px solid var(--accent-focus); outline-offset: 2px; }
-
-  &--active {
-    background: var(--surface-muted);
-    box-shadow: inset 0 0 0 1.5px var(--text);
-  }
-
-  &--busy {
-    opacity: 0.55;
-    pointer-events: none;
-  }
-}
-
-.na__type-icon {
-  display: grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  flex-shrink: 0;
-  border-radius: var(--radius-md);
-  background: var(--surface-sunken);
-  box-shadow: inset 0 0 0 1px var(--border);
-  color: var(--text-muted);
-}
-
-.na__type--active .na__type-icon {
-  background: var(--text);
-  box-shadow: none;
-  color: var(--surface);
-}
-
-.na__type-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.na__type-name {
-  font-size: var(--type-body-strong-size);
-  font-weight: 600;
-}
-
-.na__type-desc {
-  font-size: 12px;
-  line-height: 1.35;
-  color: var(--text-subtle);
-}
-
-// ---- form card ----
-.na__card {
-  margin-bottom: var(--space-xl);
-}
-
-.na__head {
+// How the item will look in the list.
+.na__preview {
   display: flex;
   align-items: center;
   gap: var(--space-md);
-  margin-bottom: var(--space-xl);
+  margin-bottom: var(--space-lg);
   padding: 16px 18px;
   border-radius: var(--radius-md);
   background: var(--surface-muted);
@@ -135,28 +30,114 @@
   border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--na-color) 16%, var(--surface));
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--na-color) 28%, transparent);
-  color: color-mix(in srgb, var(--na-color) 75%, var(--text));
-  transition: background var(--duration-base) var(--ease-standard),
-    color var(--duration-base) var(--ease-standard);
+  color: color-mix(in srgb, var(--na-color) 70%, var(--text));
 }
 
-.na__head-text {
-  min-width: 0;
-}
+.na__preview-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 
-.na__head-title {
+.na__preview-name {
   font-size: var(--type-body-strong-size);
   font-weight: 600;
-  @include truncate;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  &--empty { color: var(--text-subtle); font-weight: 500; }
 }
 
-.na__head-sub {
-  margin: 2px 0 0;
-  font-size: 13px;
-  color: var(--text-subtle);
-  @include truncate;
+.na__preview-sub { font-size: 13px; color: var(--text-subtle); }
 
-  strong { font-weight: 600; color: var(--text-muted); }
+// Where it will be created, shown as a plain read-only value.
+.na__location {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding-inline: 14px;
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--border);
+  font-size: var(--type-body-size);
+  color: var(--text);
+  max-width: 100%;
+}
+
+// Upload / import options.
+.na__files {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--space-sm);
+}
+
+.na__file {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--border);
+  color: var(--text-muted);
+  cursor: pointer;
+
+  &:hover { box-shadow: inset 0 0 0 1px var(--border-strong, var(--border)); color: var(--text); }
+  &:focus-within { outline: 2px solid var(--accent-focus); outline-offset: 2px; }
+  &--busy { opacity: 0.55; pointer-events: none; }
+}
+
+.na__file-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.na__file-name { font-size: var(--type-caption-size); font-weight: 600; color: var(--text); }
+.na__file-desc { font-size: 12px; line-height: 1.35; color: var(--text-subtle); }
+
+.na__card {
+  margin-bottom: var(--space-lg);
+}
+
+.na__h {
+  margin: 0 0 var(--space-md);
+  font-size: var(--type-body-strong-size);
+  font-weight: 600;
+  color: var(--text);
+}
+
+// ---- type tiles: flat, icon and name ----
+.na__types {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: var(--space-sm);
+}
+
+.na__type {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 46px;
+  padding-inline: 14px;
+  text-align: left;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--border);
+  color: var(--text-muted);
+  cursor: pointer;
+
+  &:hover:not(.na__type--active) { box-shadow: inset 0 0 0 1px var(--border-strong, var(--border)); color: var(--text); }
+  &:focus-visible { outline: 2px solid var(--accent-focus); outline-offset: 2px; }
+
+  &--active {
+    background: var(--text);
+    box-shadow: none;
+    color: var(--surface);
+  }
+}
+
+.na__type-name {
+  font-size: var(--type-caption-size);
+  font-weight: 600;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .na__field {

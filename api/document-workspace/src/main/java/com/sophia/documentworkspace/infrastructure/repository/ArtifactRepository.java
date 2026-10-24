@@ -51,6 +51,23 @@ public interface ArtifactRepository extends JpaRepository<Artifact, UUID> {
                                        @Param("text") String text,
                                        Pageable pageable);
 
+    /** Everything the AI service can read as study material: documents plus decks and boards (as text). */
+    @Query("""
+            select a from Artifact a
+            where a.workspaceId = :workspaceId
+              and a.deletedAt is null
+              and a.type in (com.sophia.documentworkspace.domain.entity.enums.ArtifactType.MARKDOWN_DOCUMENT,
+                             com.sophia.documentworkspace.domain.entity.enums.ArtifactType.CHECKLIST,
+                             com.sophia.documentworkspace.domain.entity.enums.ArtifactType.SPREADSHEET,
+                             com.sophia.documentworkspace.domain.entity.enums.ArtifactType.PRESENTATION,
+                             com.sophia.documentworkspace.domain.entity.enums.ArtifactType.WHITEBOARD)
+              and (:text = '' or lower(a.name) like lower(concat('%', :text, '%')))
+            order by a.updatedAt desc
+            """)
+    List<Artifact> findStudySourcesByName(@Param("workspaceId") UUID workspaceId,
+                                          @Param("text") String text,
+                                          Pageable pageable);
+
     /** Whole live subtree of a node, the node excluded. */
     @Query("""
             select a from Artifact a

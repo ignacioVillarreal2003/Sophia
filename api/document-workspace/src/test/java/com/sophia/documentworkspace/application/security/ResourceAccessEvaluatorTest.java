@@ -1,7 +1,6 @@
 package com.sophia.documentworkspace.application.security;
 
 import com.sophia.documentworkspace.application.security.policy.AccessDecision;
-import com.sophia.documentworkspace.application.security.policy.AclPolicy;
 import com.sophia.documentworkspace.application.security.policy.RolePolicy;
 import com.sophia.documentworkspace.domain.entity.enums.AccessMode;
 import com.sophia.documentworkspace.domain.entity.enums.MemberStatus;
@@ -12,30 +11,19 @@ import com.sophia.documentworkspace.domain.exception.ForbiddenOperationException
 import com.sophia.documentworkspace.domain.security.SecuredResource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyCollection;
-import static org.mockito.Mockito.lenient;
 
-/** Access has two sources: the member role (whole workspace) and direct grants on a folder or file. */
-@ExtendWith(MockitoExtension.class)
+/** Access has one source: the member role, which covers the whole workspace. */
 class ResourceAccessEvaluatorTest {
 
     private final UUID workspaceId = UUID.randomUUID();
     private final UUID userId = UUID.randomUUID();
     private final UUID ownerId = UUID.randomUUID();
-
-    @Mock
-    private AclResolver aclResolver;
 
     private ResourceAccessEvaluator evaluator;
 
@@ -44,8 +32,7 @@ class ResourceAccessEvaluatorTest {
 
     @BeforeEach
     void setUp() {
-        evaluator = new ResourceAccessEvaluator(new RolePolicy(), new AclPolicy(), aclResolver);
-        lenient().when(aclResolver.effectiveModes(any(), anyCollection())).thenReturn(Set.of());
+        evaluator = new ResourceAccessEvaluator(new RolePolicy());
     }
 
     private WorkspaceAccessSnapshot access(WorkspaceRole role, WorkspaceStatus status) {
@@ -74,24 +61,19 @@ class ResourceAccessEvaluatorTest {
         assertThat(denied.errorCode()).isEqualTo(ErrorCode.INSUFFICIENT_ROLE);
     }
 
-    @Test
-    void directGrantAllowsWhatTheRoleDenies() {
-        SecuredResource resource = resource(UUID.randomUUID());
-        lenient().when(aclResolver.effectiveModes(any(), anyCollection())).thenReturn(Set.of(AccessMode.WRITE));
+    // ---- someone who is not a member ----------------------------------------------------------------------
 
-        AccessDecision decision = evaluator.evaluate(access(WorkspaceRole.VIEWER, WorkspaceStatus.ACTIVE),
-                resource, AccessMode.WRITE, List.of(resource.getId()));
-        assertThat(decision.allowed()).isTrue();
+    private WorkspaceAccessSnapshot guest(WorkspaceStatus status) {
+        return WorkspaceAccessSnapshot.nonMember(workspaceId, status, ownerId, userId);
     }
 
     @Test
-    void directGrantIsLimitedToTheGrantedModes() {
-        SecuredResource resource = resource(UUID.randomUUID());
-        lenient().when(aclResolver.effectiveModes(any(), anyCollection())).thenReturn(Set.of(AccessMode.COMMENT));
-
-        AccessDecision decision = evaluator.evaluate(access(WorkspaceRole.VIEWER, WorkspaceStatus.ACTIVE),
-                resource, AccessMode.DELETE, List.of(resource.getId()));
+    void someoneWhoIsNotAMemberHasNoAccess() {
+        SecuredResource resource = resource(ownerId);
+        AccessDecision decision = evaluator.evaluate(guest(WorkspaceStatus.ACTIVE), resource, AccessMode.READ,
+                List.of(resource.getId()));
         assertThat(decision.denied()).isTrue();
+        assertThat(decision.errorCode()).isEqualTo(ErrorCode.MEMBERSHIP_REQUIRED);
     }
 
     @Test

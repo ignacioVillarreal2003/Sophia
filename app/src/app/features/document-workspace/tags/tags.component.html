@@ -1,0 +1,40 @@
+<div class="tg app-container">
+  <app-page-header [title]="'nav.tags' | t">
+    <app-button variant="dark" icon="plus" [routerLink]="newUrl()">{{ 'tags.new' | t }}</app-button>
+  </app-page-header>
+
+  @if (loading()) {
+    <div class="tg__loading"><app-spinner /></div>
+  } @else if (tags().length === 0) {
+    <app-empty-state icon="tag" [title]="'tags.empty' | t" [description]="'tags.emptyHint' | t" />
+  } @else {
+    <div class="tg__table">
+      <div class="tg__head" aria-hidden="true">
+        <span>{{ 'tags.col.tag' | t }}</span>
+        <span class="tg__h-created">{{ 'tags.col.created' | t }}</span>
+        <span>{{ 'tags.col.actions' | t }}</span>
+      </div>
+      @for (tag of pageTags(); track tag.id) {
+        <div class="tg__row">
+          <span class="tg__tag">
+            <span class="tg__dot" [style.background]="tag.color || 'var(--text-subtle)'"></span>
+            <span class="tg__name">{{ tag.name }}</span>
+          </span>
+          <span class="tg__created">{{ tag.createdAt | relativeTime }}</span>
+          <span class="tg__actions">
+            <button type="button" class="tg__btn tg__btn--danger" (click)="remove(tag)">{{ 'tags.delete' | t }}</button>
+          </span>
+        </div>
+      }
+    </div>
+
+    <app-pagination
+      [page]="page()"
+      [totalPages]="totalPages()"
+      [first]="page() === 0"
+      [last]="page() >= totalPages() - 1"
+      (pageChange)="page.set($event)"
+    />
+  }
+
+</div>

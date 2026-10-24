@@ -25,5 +25,6 @@ create_db() {
 create_db "$AUTHENTICATION_DB"
 create_db "$DOCUMENT_WORKSPACE_DB"
 create_db "$NOTIFICATION_DB"
+create_db "${AI_DB:-sophia_ai}"
 
 echo "==> databases ready"

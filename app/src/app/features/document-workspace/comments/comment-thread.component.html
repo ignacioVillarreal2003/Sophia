@@ -1,71 +1,109 @@
 <div class="ct">
-  <header class="ct__head">
-    <h3 class="ct__title"><app-icon name="message-circle" [size]="16" /> {{ 'comments.title' | t }}</h3>
-    <app-button variant="text" size="sm" icon="x" iconOnly (click)="close.emit()" />
-  </header>
+  @if (closable()) {
+    <header class="ct__head">
+      <h3 class="ct__title"><app-icon name="message-circle" [size]="16" /> {{ 'comments.title' | t }}</h3>
+      <app-button variant="text" size="sm" icon="x" iconOnly (click)="close.emit()" />
+    </header>
+  }
 
+  <!-- Write a new comment -->
+  <section class="ct__section">
+  <h2 class="ct__h">{{ 'comments.new' | t }}</h2>
+  <div class="ct__compose">
+    <app-avatar [name]="me()?.email ?? ''" [size]="34" />
+    <div class="ct__compose-main">
+      <textarea
+        class="ct__input"
+        rows="2"
+        [value]="draft()"
+        (input)="draft.set($any($event.target).value)"
+        (keydown.control.enter)="post()"
+        (keydown.meta.enter)="post()"
+        [placeholder]="'comments.composePlaceholder' | t"
+      ></textarea>
+      <div class="ct__compose-bar">
+        <span></span>
+        <app-button variant="dark" size="sm" class="ct__send" [loading]="posting()" [disabled]="!draft().trim()" (click)="post()">
+          {{ 'comments.send' | t }}
+        </app-button>
+      </div>
+    </div>
+  </div>
+
+  </section>
+
+  <!-- What has been said -->
+  <section class="ct__section">
+  <h2 class="ct__h">{{ 'comments.title' | t }} <span class="ct__badge">{{ count() }}</span></h2>
   <div class="ct__list">
     @if (loading()) {
       <div class="ct__loading"><app-spinner [size]="20" /></div>
-    } @else if (comments().length === 0) {
+    } @else if (shown().length === 0) {
       <app-empty-state icon="message-circle" [title]="'comments.empty' | t" [description]="'comments.emptyDescription' | t" />
     } @else {
-      @for (c of comments(); track c.id) {
-        <div class="ct__comment" [class.ct__comment--resolved]="c.resolved">
-          <app-avatar [name]="c.author.fullName" [photoUrl]="c.author.photoUrl" [size]="30" />
+      @for (s of shown(); track s.comment.id) {
+        <article class="ct__comment" [class.ct__comment--resolved]="s.comment.resolved">
+          <app-avatar [name]="s.name" [photoUrl]="s.photoUrl" [size]="34" />
           <div class="ct__comment-body">
             <div class="ct__comment-head">
-              <span class="ct__author">{{ c.author.fullName }}</span>
-              <span class="ct__time">{{ c.createdAt | relativeTime }}</span>
+              <span class="ct__author">{{ s.name }}</span>
+              <span class="ct__time">{{ s.comment.createdAt | relativeTime }}</span>
+              @if (s.comment.resolved) {
+                <span class="ct__tag">{{ 'comments.resolvedTag' | t }}</span>
+              }
             </div>
-            <p class="ct__text">{{ c.body }}</p>
+            <p class="ct__text">{{ s.comment.body }}</p>
 
             <div class="ct__actions">
-              <button class="ct__action" (click)="startReply(c.id)">{{ 'comments.reply' | t }}</button>
-              <button class="ct__action" (click)="toggleResolve(c)">
-                {{ (c.resolved ? 'comments.reopen' : 'comments.resolve') | t }}
+              <button type="button" class="ct__action" (click)="startReply(s.comment.id)">{{ 'comments.reply' | t }}</button>
+              <button type="button" class="ct__action" (click)="toggleResolve(s.comment)">
+                {{ (s.comment.resolved ? 'comments.reopen' : 'comments.resolve') | t }}
               </button>
-              @if (c.author.id === me()?.id) {
-                <button class="ct__action ct__action--danger" (click)="remove(c)">{{ 'comments.delete' | t }}</button>
+              @if (s.mine) {
+                <button type="button" class="ct__action ct__action--danger" (click)="remove(s.comment)">{{ 'comments.delete' | t }}</button>
               }
             </div>
 
-            @for (reply of c.replies ?? []; track reply.id) {
-              <div class="ct__reply">
-                <app-avatar [name]="reply.author.fullName" [photoUrl]="reply.author.photoUrl" [size]="24" />
-                <div>
-                  <span class="ct__author">{{ reply.author.fullName }}</span>
-                  <p class="ct__text">{{ reply.body }}</p>
-                </div>
+            @if (s.replies.length > 0) {
+              <div class="ct__replies">
+                @for (r of s.replies; track r.comment.id) {
+                  <div class="ct__reply">
+                    <app-avatar [name]="r.name" [photoUrl]="r.photoUrl" [size]="26" />
+                    <div class="ct__reply-body">
+                      <div class="ct__comment-head">
+                        <span class="ct__author">{{ r.name }}</span>
+                        <span class="ct__time">{{ r.comment.createdAt | relativeTime }}</span>
+                        @if (r.mine) {
+                          <button type="button" class="ct__action ct__action--danger ct__action--push" (click)="remove(r.comment, s.comment)">
+                            {{ 'comments.delete' | t }}
+                          </button>
+                        }
+                      </div>
+                      <p class="ct__text">{{ r.comment.body }}</p>
+                    </div>
+                  </div>
+                }
               </div>
             }
 
-            @if (replyTo() === c.id) {
+            @if (replyTo() === s.comment.id) {
               <div class="ct__reply-box">
                 <input
-                  class="ct__input"
+                  class="ct__field"
                   [value]="replyDraft()"
                   (input)="replyDraft.set($any($event.target).value)"
-                  (keydown.enter)="postReply(c)"
+                  (keydown.enter)="postReply(s.comment)"
                   [placeholder]="'comments.replyPlaceholder' | t"
                 />
-                <app-button variant="primary" size="sm" (click)="postReply(c)">{{ 'comments.send' | t }}</app-button>
+                <app-button variant="dark" size="sm" class="ct__send" [disabled]="!replyDraft().trim()" (click)="postReply(s.comment)">
+                  {{ 'comments.send' | t }}
+                </app-button>
               </div>
             }
           </div>
-        </div>
+        </article>
       }
     }
   </div>
-
-  <footer class="ct__compose">
-    <input
-      class="ct__input"
-      [value]="draft()"
-      (input)="draft.set($any($event.target).value)"
-      (keydown.enter)="post()"
-      [placeholder]="'comments.composePlaceholder' | t"
-    />
-    <app-button variant="primary" size="sm" icon="arrow-right" iconOnly [loading]="posting()" (click)="post()" />
-  </footer>
+  </section>
 </div>

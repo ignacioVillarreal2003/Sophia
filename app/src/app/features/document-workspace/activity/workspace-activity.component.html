@@ -1,38 +1,64 @@
-<div class="act app-container">
-  <app-page-header [title]="'documentWorkspace.activity' | t" />
+<div class="act" [class.app-container]="!embedded()" [class.act--embedded]="embedded()">
+  @if (!embedded()) {
+    <app-page-header [title]="'documentWorkspace.activity' | t" />
+  }
+
+  @if (!forbidden()) {
+    <div class="wsl__filters">
+      <div class="wsl__search">
+        <app-icon name="search" [size]="16" class="wsl__search-icon" />
+        <input
+          class="wsl__search-input"
+          type="search"
+          [attr.value]="q()"
+          [placeholder]="'activity.search' | t"
+          (input)="typed.next($any($event.target).value)"
+        />
+      </div>
+
+      <app-filter-toggle
+        [open]="filtersOpen()"
+        [label]="'documentWorkspaces.filters' | t"
+        [count]="filterCount()"
+        (toggle)="openFilters()"
+      />
+    </div>
+  }
 
   @if (loading()) {
     <div class="act__loading"><app-spinner /></div>
   } @else if (forbidden()) {
     <app-empty-state icon="lock" [title]="'activity.forbidden' | t" [description]="'activity.forbiddenDesc' | t" />
-  } @else if (days().length === 0) {
-    <app-empty-state icon="clock" [title]="'common.empty' | t" [description]="'activity.empty' | t" />
-  } @else {
-    @for (day of days(); track day.key) {
-      <section class="act__day">
-        <h2 class="act__day-title">{{ dayLabel(day) ?? (day.date | wsDate: 'date') }}</h2>
-        <ul class="act__list">
-          @for (row of day.rows; track row.id) {
-            <li class="act__row" [class.act__row--failed]="row.failed">
-              <span class="act__icon act__icon--{{ row.visual.tone }}"><app-icon [name]="row.visual.icon" [size]="18" /></span>
-              <div class="act__text">
-                <span class="act__label">{{ row.label }}</span>
-                @if (row.detail) {
-                  <span class="act__detail">{{ row.detail }}</span>
-                }
-              </div>
-              <div class="act__who">
-                <app-avatar [name]="row.actor" [photoUrl]="row.photoUrl" [size]="24" />
-                <span class="act__actor">{{ row.actor }}</span>
-              </div>
-              <time class="act__time" [attr.datetime]="row.createdAt" [title]="row.createdAt | wsDate">
-                {{ row.createdAt | relativeTime }}
-              </time>
-            </li>
-          }
-        </ul>
-      </section>
+  } @else if (rows().length === 0) {
+    @if (hasCriteria()) {
+      <app-empty-state icon="search" [title]="'documentWorkspaces.noResults' | t">
+        <app-button variant="ghost" (click)="clearAll()">{{ 'common.filters.clear' | t }}</app-button>
+      </app-empty-state>
+    } @else {
+      <app-empty-state icon="clock" [title]="'common.empty' | t" [description]="'activity.empty' | t" />
     }
+  } @else {
+    <div class="act__table">
+      <div class="act__head" aria-hidden="true">
+        <span>{{ 'activity.col.action' | t }}</span>
+        <span>{{ 'activity.col.item' | t }}</span>
+        <span>{{ 'activity.col.person' | t }}</span>
+        <span>{{ 'activity.col.when' | t }}</span>
+      </div>
+      @for (row of rows(); track row.id) {
+        <div class="act__row" [class.act__row--failed]="row.failed">
+          <span class="act__label">{{ row.label }}</span>
+          <span class="act__detail">{{ row.detail || '—' }}</span>
+          <span class="act__who">
+            <app-avatar [name]="row.actor" [photoUrl]="row.photoUrl" [size]="22" />
+            <span class="act__actor">{{ row.actor }}</span>
+          </span>
+          <time class="act__time" [attr.datetime]="row.createdAt" [title]="row.createdAt | wsDate">
+            {{ row.createdAt | relativeTime }}
+          </time>
+        </div>
+      }
+    </div>
 
     <app-pagination
       [page]="page()"

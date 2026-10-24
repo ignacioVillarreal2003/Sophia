@@ -1,0 +1,57 @@
+name: sophia-ai
+
+services:
+  ai-api:
+    build: ../ai
+    container_name: sophia-ai-api
+    restart: unless-stopped
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      SERVER_PORT: "8083"
+      DB_URL: jdbc:postgresql://${POSTGRES_HOST:-sophia-postgres}:${POSTGRES_PORT:-5432}/${AI_DB:-sophia_ai}
+      DB_USERNAME: ${POSTGRES_USER:-sophia}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-sophia}
+      REDIS_HOST: ${REDIS_HOST:-sophia-redis}
+      REDIS_PORT: "${REDIS_PORT:-6379}"
+      REDIS_SSL: "${REDIS_SSL:-false}"
+      # The Google Gemini key (same variables as the Lumen services). Without it the service starts, but every generation answers AI_NOT_CONFIGURED.
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_API_BASE_URL: ${GEMINI_API_BASE_URL:-https://generativelanguage.googleapis.com/v1beta}
+      # gemini (real) | mock (canned answers, for local UI work only)
+      AI_PROVIDER: ${AI_PROVIDER:-gemini}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.6-flash}
+      AI_ENABLED: ${AI_ENABLED:-true}
+      AI_DAILY_TOKENS_PER_USER: "${AI_DAILY_TOKENS_PER_USER:-400000}"
+      AI_DAILY_TOKENS_PER_WORKSPACE: "${AI_DAILY_TOKENS_PER_WORKSPACE:-2000000}"
+      AI_MAX_CONCURRENT_PER_USER: "${AI_MAX_CONCURRENT_PER_USER:-2}"
+      AI_RATE_LIMIT_REQUESTS: "${AI_RATE_LIMIT_REQUESTS:-20}"
+      WORKSPACE_API_URL: ${WORKSPACE_API_URL:-http://sophia-document-workspace-api:8081}
+      JWT_JSON_WEB_KEY_SET_URI: ${JWT_JSON_WEB_KEY_SET_URI:-http://sophia-authentication-api:8080/.well-known/json-web-key-set.json}
+      JWT_ISSUER: ${JWT_ISSUER:-sophia-authentication}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:4200,http://localhost:3000}
+      OTLP_TRACING_ENDPOINT: ${OTLP_TRACING_ENDPOINT:-http://sophia-tempo:4318/v1/traces}
+      TRACING_SAMPLING_PROBABILITY: "${TRACING_SAMPLING_PROBABILITY:-0.1}"
+      MONITORING_USERNAME: ${MONITORING_USERNAME:-prometheus}
+      MONITORING_PASSWORD: ${MONITORING_PASSWORD:-prometheus}
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8083/actuator/health/liveness"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: "1.00"
+          memory: 768M
+        reservations:
+          memory: 384M
+    networks:
+      - sophia
+
+networks:
+  sophia:
+    external: true

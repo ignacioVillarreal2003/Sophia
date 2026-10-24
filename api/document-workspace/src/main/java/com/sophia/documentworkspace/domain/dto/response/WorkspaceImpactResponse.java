@@ -10,7 +10,6 @@ public record WorkspaceImpactResponse(
         long files,
         long usedBytes,
         long members,
-        long activePublicLinks,
         long pendingAccessRequests
 ) {
 }

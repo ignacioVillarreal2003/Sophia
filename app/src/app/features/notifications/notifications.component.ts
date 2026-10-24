@@ -35,6 +35,7 @@ import { SelectFieldComponent, SelectOption } from '@shared/ui/form-field/select
 import { DialogService } from '@shared/ui/dialog/dialog.service';
 import { RelativeTimePipe } from '@shared/pipes/relative-time.pipe';
 import { IconName } from '@shared/ui/icon/icons';
+import { bindUrlControls, bindUrlState } from '@shared/utils/url-state';
 
 const PAGE_SIZE = 20;
 
@@ -107,6 +108,17 @@ export class NotificationsComponent implements OnInit {
   readonly search = new FormControl<string>('', { nonNullable: true });
   readonly category = new FormControl<string>('', { nonNullable: true });
   readonly severity = new FormControl<string>('', { nonNullable: true });
+
+  /** The address and this state are one: filters and page are read from it and kept in it. */
+  private readonly urlState = bindUrlState([
+    { signal: this.unreadOnly, param: 'unread' },
+    { signal: this.page, param: 'page', page: true },
+  ]);
+  private readonly urlControls = bindUrlControls([
+    { control: this.search, param: 'q' },
+    { control: this.category, param: 'category' },
+    { control: this.severity, param: 'severity' },
+  ]);
 
   readonly busyId = signal<string | null>(null);
 

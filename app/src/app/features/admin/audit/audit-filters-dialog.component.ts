@@ -143,7 +143,7 @@ export interface AuditFiltersDialogData {
 
       <div class="afd__footer">
         <app-button variant="ghost" (click)="clear()">{{ 'admin.audit.filtersDialog.clear' | t }}</app-button>
-        <app-button variant="primary" (click)="apply()">{{ 'admin.audit.filtersDialog.apply' | t }}</app-button>
+        <app-button variant="dark" (click)="apply()">{{ 'admin.audit.filtersDialog.apply' | t }}</app-button>
       </div>
     </div>
   `,
@@ -348,6 +348,12 @@ export interface AuditFiltersDialogData {
         @include truncate;
       }
 
+      .afd__footer app-button ::ng-deep .btn {
+        height: 34px;
+        padding-inline: 15px;
+        font-size: var(--type-caption-size);
+        border-radius: var(--radius-sm);
+      }
       .afd__footer {
         display: flex;
         justify-content: flex-end;

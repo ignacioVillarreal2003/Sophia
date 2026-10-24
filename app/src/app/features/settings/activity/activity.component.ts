@@ -12,6 +12,7 @@ import {EmptyStateComponent} from '@shared/ui/empty-state/empty-state.component'
 import {PaginationComponent} from '@shared/ui/pagination/pagination.component';
 import {PageHeaderComponent} from '@shared/ui/page-header/page-header.component';
 import {RelativeTimePipe} from '@shared/pipes/relative-time.pipe';
+import { bindUrlState } from '@shared/utils/url-state';
 
 const ACTION_ICONS: Record<string, IconName> = {
   LOGIN: 'arrow-right',
@@ -58,6 +59,11 @@ export class ActivityComponent implements OnInit {
   readonly entries = signal<AuditLogEntry[]>([]);
   readonly loading = signal(true);
   readonly page = signal(0);
+
+  /** The address and this state are one: filters, order and page are read from it and kept in it. */
+  private readonly urlState = bindUrlState([
+    { signal: this.page, param: 'page', page: true },
+  ]);
   readonly totalPages = signal(0);
   readonly first = signal(true);
   readonly last = signal(true);
